@@ -13,7 +13,12 @@ import { requisitionService, storeService, itemService } from '../../services'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
-import { STATUS } from '../../utils/constants'
+import { STATUS, ROLES } from '../../utils/constants'
+import {
+  canPerformAction,
+  canApproveRequisition,
+  canRejectRequisition
+} from '../../utils/rolePermissions'
 
 const EMPTY_LINE = { item: '', qty: '' }
 
@@ -32,6 +37,11 @@ export default function RequisitionList() {
 
   const [header, setHeader] = useState({ department: '', store: '', date: '' })
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
+
+  const canCreate = canPerformAction(user?.role, 'create', 'requisitions')
+  const canDelete = canPerformAction(user?.role, 'delete', 'requisitions')
+  const isPao = user?.role === ROLES.PAO
+  const isDeptHead = user?.role === ROLES.DEPT_HEAD
 
   async function load() {
     setLoading(true)
@@ -53,7 +63,15 @@ export default function RequisitionList() {
   }, [rows, query])
 
   function openCreate() {
-    setHeader({ department: '', store: '', date: '' })
+    if (!canCreate) {
+      push('You do not have permission to create requisitions.', 'error')
+      return
+    }
+    setHeader({
+      department: user?.department || '',
+      store: '',
+      date: new Date().toISOString().slice(0, 10)
+    })
     setLines([{ ...EMPTY_LINE }])
     setModalOpen(true)
   }
@@ -86,6 +104,16 @@ export default function RequisitionList() {
   }
 
   async function decide(row, status) {
+    const allowed =
+      status === STATUS.APPROVED
+        ? canApproveRequisition(user, row)
+        : canRejectRequisition(user, row)
+
+    if (!allowed) {
+      push('You do not have permission to action this requisition.', 'error')
+      return
+    }
+
     await requisitionService.update(row.id, { status })
     push(status === STATUS.APPROVED ? `${row.srRef} approved. Storekeeper can now create the issue voucher.` : `${row.srRef} rejected.`, status === STATUS.APPROVED ? 'success' : 'info')
     setViewing(null)
@@ -115,9 +143,11 @@ export default function RequisitionList() {
           <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600">
             <Eye size={15} />
           </button>
-          <button onClick={() => setDeleteTarget(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-red-50 hover:text-red-600">
-            <Trash2 size={15} />
-          </button>
+          {canDelete && (
+            <button onClick={() => setDeleteTarget(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700">
+              <Trash2 size={15} />
+            </button>
+          )}
         </div>
       )
     }
@@ -127,11 +157,19 @@ export default function RequisitionList() {
     <div>
       <PageHeader
         title="Store Requisitions"
-        subtitle="Departments raise a store requisition and the PAO approves before issue."
+        subtitle={
+          isPao
+            ? 'Review and approve department requisitions before the storekeeper issues materials.'
+            : isDeptHead
+              ? 'Submit and approve requisitions for your department.'
+              : 'Departments raise store requisitions for approval before issue.'
+        }
         actions={
-          <Button icon={Plus} onClick={openCreate}>
-            New Requisition
-          </Button>
+          canCreate ? (
+            <Button icon={Plus} onClick={openCreate}>
+              New Requisition
+            </Button>
+          ) : null
         }
       />
 
@@ -188,14 +226,19 @@ export default function RequisitionList() {
         onClose={() => setViewing(null)}
         title={viewing?.srRef}
         footer={
-          viewing?.status === STATUS.PENDING && (
+          viewing?.status === STATUS.PENDING &&
+          (canApproveRequisition(user, viewing) || canRejectRequisition(user, viewing)) && (
             <>
-              <Button variant="danger" icon={XCircle} onClick={() => decide(viewing, STATUS.REJECTED)}>
-                Reject
-              </Button>
-              <Button icon={CheckCircle2} onClick={() => decide(viewing, STATUS.APPROVED)}>
-                Approve
-              </Button>
+              {canRejectRequisition(user, viewing) && (
+                <Button variant="danger" icon={XCircle} onClick={() => decide(viewing, STATUS.REJECTED)}>
+                  Reject
+                </Button>
+              )}
+              {canApproveRequisition(user, viewing) && (
+                <Button icon={CheckCircle2} onClick={() => decide(viewing, STATUS.APPROVED)}>
+                  Approve
+                </Button>
+              )}
             </>
           )
         }

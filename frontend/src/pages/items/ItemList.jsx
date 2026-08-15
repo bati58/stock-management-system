@@ -145,7 +145,7 @@ export default function ItemList() {
           <span className="font-medium">{formatNumber(r.qtyOnHand)} {r.unit}</span>
           {Number(r.qtyOnHand) <= Number(r.reorderLevel) && (
             <span title="At or below reorder level">
-              <AlertTriangle size={14} className="text-amber-500" />
+              <AlertTriangle size={14} className="text-warning-500" />
             </span>
           )}
         </div>
@@ -178,7 +178,7 @@ export default function ItemList() {
           {canDelete ? (
             <button
               onClick={() => setDeleteTarget(row)}
-              className="rounded-md p-1.5 text-ink-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+              className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700 transition-colors"
               title="Delete"
             >
               <Trash2 size={15} />
@@ -216,8 +216,8 @@ export default function ItemList() {
       />
 
       {!canCreate && !canEdit && !canDelete && (
-        <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 p-4">
-          <p className="text-sm text-amber-800">
+        <div className="mb-4 rounded-lg bg-warning-50 border border-warning-100 p-4">
+          <p className="text-sm text-warning-700">
             <strong>View Only:</strong> Your role does not have permission to create, edit, or delete items.
           </p>
         </div>

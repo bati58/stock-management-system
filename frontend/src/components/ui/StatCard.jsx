@@ -1,10 +1,10 @@
 export default function StatCard({ label, value, icon: Icon, tone = 'brand', hint }) {
   const tones = {
     brand: 'bg-brand-50 text-brand-600',
-    amber: 'bg-amber-50 text-amber-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    red: 'bg-red-50 text-red-600',
-    violet: 'bg-violet-50 text-violet-600'
+    warning: 'bg-warning-50 text-warning-500',
+    success: 'bg-success-50 text-success-500',
+    danger: 'bg-danger-50 text-danger-500',
+    info: 'bg-info-50 text-info-500'
   }
   return (
     <div className="card flex items-center gap-4 p-5">

@@ -15,7 +15,8 @@ import {
   Repeat,
   Trash2,
   BarChart3,
-  ShieldCheck
+  ShieldCheck,
+  Shield
 } from 'lucide-react'
 import { ROLES } from '../../utils/constants'
 
@@ -80,8 +81,14 @@ export const NAV_SECTIONS = [
   {
     label: 'Requisitions & Issues',
     items: [
-      { to: '/requisitions', label: 'Store Requisitions', icon: FileText, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.DEPT_HEAD] },
-      { to: '/issue-vouchers', label: 'Issue Vouchers', icon: Send, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER] }
+      { to: '/requisitions', label: 'Store Requisitions', icon: FileText, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.DEPT_HEAD] },
+      { to: '/issue-vouchers', label: 'Issue Vouchers', icon: Send, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.ACCOUNTANT, ROLES.SECURITY] }
+    ]
+  },
+  {
+    label: 'Security',
+    items: [
+      { to: '/gate-pass', label: 'Gate Pass Verification', icon: Shield, roles: [ROLES.ADMIN, ROLES.SECURITY] }
     ]
   },
   {
@@ -102,7 +109,7 @@ export const NAV_SECTIONS = [
     label: 'Administration',
     items: [
       { to: '/users', label: 'Users', icon: Users, roles: [ROLES.ADMIN] },
-      { to: '/reports', label: 'Reports', icon: BarChart3, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.DEPT_HEAD, ROLES.ACCOUNTANT] },
+      { to: '/reports', label: 'Reports', icon: BarChart3, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOCK_CLERK, ROLES.TEC, ROLES.DEPT_HEAD, ROLES.ACCOUNTANT] },
       { to: '/audit-log', label: 'Audit Log', icon: ShieldCheck, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.ACCOUNTANT, ROLES.SECURITY] }
     ]
   }

@@ -10,9 +10,9 @@ const ICONS = {
 }
 
 const STYLES = {
-  success: 'bg-emerald-50 border-emerald-200 text-emerald-800',
-  error: 'bg-red-50 border-red-200 text-red-800',
-  info: 'bg-blue-50 border-blue-200 text-blue-800'
+  success: 'bg-success-50 border-success-50 text-success-700',
+  error: 'bg-danger-50 border-danger-50 text-danger-700',
+  info: 'bg-info-50 border-info-50 text-info-700'
 }
 
 export function ToastProvider({ children }) {

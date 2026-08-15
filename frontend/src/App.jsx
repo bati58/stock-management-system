@@ -21,6 +21,7 @@ import MaterialTransferList from './pages/material-transfer/MaterialTransferList
 import DisposalList from './pages/disposal/DisposalList'
 import Reports from './pages/reports/Reports'
 import AuditLog from './pages/audit/AuditLog'
+import GatePassVerification from './pages/gate-pass/GatePassVerification'
 import Settings from './pages/settings/Settings'
 import NotFound from './pages/NotFound'
 
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/audit-log" element={<AuditLog />} />
+          <Route path="/gate-pass" element={<GatePassVerification />} />
         </Route>
       </Route>
 

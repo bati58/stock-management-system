@@ -9,8 +9,9 @@ export function seedDatabase() {
     { id: 4, name: 'Sara Alemu', username: 'storekeeper', role: ROLES.STOREKEEPER, email: 'storekeeper@sms.local', active: true },
     { id: 5, name: 'Kaleb Mulugeta', username: 'clerk', role: ROLES.STOCK_CLERK, email: 'clerk@sms.local', active: true },
     { id: 6, name: 'Dr. Fikru Wolde', username: 'tec', role: ROLES.TEC, email: 'tec@sms.local', active: true },
-    { id: 7, name: 'Hana Girma', username: 'depthead', role: ROLES.DEPT_HEAD, email: 'depthead@sms.local', active: true },
-    { id: 8, name: 'Biniam Assefa', username: 'accountant', role: ROLES.ACCOUNTANT, email: 'accountant@sms.local', active: true }
+    { id: 7, name: 'Hana Girma', username: 'depthead', role: ROLES.DEPT_HEAD, email: 'depthead@sms.local', department: 'Electrical Engineering Dept.', active: true },
+    { id: 8, name: 'Biniam Assefa', username: 'accountant', role: ROLES.ACCOUNTANT, email: 'accountant@sms.local', active: true },
+    { id: 9, name: 'Samuel Tadesse', username: 'security', role: ROLES.SECURITY, email: 'security@sms.local', active: true }
   ]
 
   const existingUsers = JSON.parse(localStorage.getItem('sms_v1_users') || '[]')

@@ -151,7 +151,7 @@ export default function Settings() {
                         <label className="block text-sm font-medium text-ink-700 mb-1">Role</label>
                         <Input type="text" value={user?.role} disabled />
                     </div>
-                    <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
+                    <div className="rounded-lg bg-info-50 border border-info-50 p-3 text-sm text-info-700">
                         <p className="font-medium">Read-only Information</p>
                         <p className="text-xs mt-1">Your profile information is managed by system administrators.</p>
                     </div>

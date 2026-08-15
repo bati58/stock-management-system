@@ -6,9 +6,11 @@ import Select from '../../components/ui/Select'
 import Button from '../../components/ui/Button'
 import Table from '../../components/ui/Table'
 import { itemService, stockTransactionService, goodsReceiptService, requisitionService } from '../../services'
+import { useAuth } from '../../context/AuthContext'
 import { formatCurrency, formatDate, formatNumber } from '../../utils/formatters'
+import { canPerformAction } from '../../utils/rolePermissions'
 
-const REPORT_TYPES = [
+const BASE_REPORT_TYPES = [
   { value: 'inventory-summary', label: 'Inventory Summary (value by item)' },
   { value: 'low-stock', label: 'Low / Reorder Level Stock' },
   { value: 'stock-movement', label: 'Stock Movement (receipts & issues)' },
@@ -16,7 +18,38 @@ const REPORT_TYPES = [
   { value: 'requisition-status', label: 'Requisition Status Report' }
 ]
 
+const FIFO_REPORT = { value: 'fifo-valuation', label: 'FIFO Inventory Valuation (Accountant)' }
+
+function computeFifoValue(itemName, qtyOnHand, transactions, fallbackUnitPrice = 0) {
+  const receipts = transactions
+    .filter((t) => t.item === itemName && t.type === 'Receipt')
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+
+  let remaining = Number(qtyOnHand || 0)
+  let value = 0
+
+  for (const receipt of receipts) {
+    if (remaining <= 0) break
+    const layerQty = Math.min(remaining, Number(receipt.qtyIn || 0))
+    value += layerQty * Number(receipt.unitPrice || fallbackUnitPrice)
+    remaining -= layerQty
+  }
+
+  if (remaining > 0) {
+    value += remaining * Number(fallbackUnitPrice)
+  }
+
+  return value
+}
+
 export default function Reports() {
+  const { user } = useAuth()
+  const canViewFifo = canPerformAction(user?.role, 'viewFifoValuation')
+  const reportTypes = useMemo(
+    () => (canViewFifo ? [...BASE_REPORT_TYPES, FIFO_REPORT] : BASE_REPORT_TYPES),
+    [canViewFifo]
+  )
+
   const [reportType, setReportType] = useState('inventory-summary')
   const [items, setItems] = useState([])
   const [transactions, setTransactions] = useState([])
@@ -37,6 +70,15 @@ export default function Reports() {
   }, [])
 
   const totalValue = useMemo(() => items.reduce((sum, i) => sum + Number(i.qtyOnHand) * Number(i.unitPrice), 0), [items])
+
+  const fifoTotal = useMemo(
+    () =>
+      items.reduce(
+        (sum, item) => sum + computeFifoValue(item.name, item.qtyOnHand, transactions, item.unitPrice),
+        0
+      ),
+    [items, transactions]
+  )
 
   function exportCsv(columns, rows) {
     const header = columns.map((c) => c.header).join(',')
@@ -102,30 +144,52 @@ export default function Reports() {
       { key: 'status', header: 'Status' }
     ]
     rows = reqs
+  } else if (reportType === 'fifo-valuation') {
+    columns = [
+      { key: 'code', header: 'Item Code' },
+      { key: 'name', header: 'Item Name' },
+      { key: 'store', header: 'Store' },
+      { key: 'qtyOnHand', header: 'Qty on Hand', render: (r) => formatNumber(r.qtyOnHand) },
+      { key: 'unitPrice', header: 'Current Unit Price', render: (r) => formatCurrency(r.unitPrice) },
+      {
+        key: 'fifoValue',
+        header: 'FIFO Value',
+        render: (r) => formatCurrency(computeFifoValue(r.name, r.qtyOnHand, transactions, r.unitPrice))
+      }
+    ]
+    rows = items.map((item) => ({
+      ...item,
+      fifoValue: computeFifoValue(item.name, item.qtyOnHand, transactions, item.unitPrice)
+    }))
   }
 
   return (
     <div>
-      <PageHeader title="Reports" subtitle="Generate, print and export inventory reports." />
+      <PageHeader
+        title="Reports"
+        subtitle={canViewFifo ? 'Generate, print and export inventory and FIFO valuation reports.' : 'Generate, print and export inventory reports.'}
+      />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card title="Total Inventory Value" className="sm:col-span-1">
           <p className="text-2xl font-semibold text-ink-900">{formatCurrency(totalValue)}</p>
           <p className="text-sm text-ink-400">Across {items.length} item(s)</p>
         </Card>
+        {canViewFifo && (
+          <Card title="FIFO Inventory Value" className="sm:col-span-1">
+            <p className="text-2xl font-semibold text-brand-600">{formatCurrency(fifoTotal)}</p>
+            <p className="text-sm text-ink-400">First-In-First-Out valuation</p>
+          </Card>
+        )}
         <Card title="Items at/below reorder" className="sm:col-span-1">
-          <p className="text-2xl font-semibold text-amber-600">{items.filter((i) => Number(i.qtyOnHand) <= Number(i.reorderLevel)).length}</p>
+          <p className="text-2xl font-semibold text-warning-700">{items.filter((i) => Number(i.qtyOnHand) <= Number(i.reorderLevel)).length}</p>
           <p className="text-sm text-ink-400">Needs replenishment action</p>
-        </Card>
-        <Card title="Open Goods Receipts" className="sm:col-span-1">
-          <p className="text-2xl font-semibold text-blue-600">{grns.filter((g) => g.status !== 'Approved' && g.status !== 'Rejected').length}</p>
-          <p className="text-sm text-ink-400">Pending or under evaluation</p>
         </Card>
       </div>
 
       <div className="card p-5">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <Select label="Report Type" className="sm:w-80" options={REPORT_TYPES} value={reportType} onChange={(e) => setReportType(e.target.value)} />
+          <Select label="Report Type" className="sm:w-80" options={reportTypes} value={reportType} onChange={(e) => setReportType(e.target.value)} />
           <div className="flex gap-2">
             <Button variant="secondary" icon={Download} onClick={() => exportCsv(columns, rows)}>
               Export CSV

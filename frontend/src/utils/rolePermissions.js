@@ -1,8 +1,8 @@
-import { ROLES } from './constants'
+import { ROLES, STATUS } from './constants'
 
 /**
- * Role-Based Access Control (RBAC) system.
- * Defines permissions for each role across pages and actions.
+ * Role-Based Access Control (RBAC) aligned with SRS section 4.4.8.
+ * Maps each actor to pages and actions they may perform in the system.
  */
 
 export const ROLE_PERMISSIONS = {
@@ -27,7 +27,8 @@ export const ROLE_PERMISSIONS = {
             '/disposal',
             '/users',
             '/reports',
-            '/audit-log'
+            '/audit-log',
+            '/gate-pass'
         ],
         canCreate: [
             'stores',
@@ -45,29 +46,47 @@ export const ROLE_PERMISSIONS = {
             'users'
         ],
         canEdit: ['stores', 'categories', 'items', 'users', 'fixedAssets'],
-        canDelete: ['stores', 'categories', 'items', 'users'],
-        canApprove: ['goodsReceipts', 'requisitions', 'issueVouchers', 'materialReturns', 'materialTransfers', 'disposals'],
-        canReject: ['goodsReceipts', 'requisitions', 'issueVouchers', 'materialReturns', 'materialTransfers', 'disposals'],
+        canDelete: ['stores', 'categories', 'items', 'users', 'requisitions'],
+        canApprove: ['goodsReceipts', 'requisitions', 'issueVouchers', 'materialReturns', 'materialTransfers', 'disposals', 'stockTransfer'],
+        canReject: ['goodsReceipts', 'requisitions', 'issueVouchers', 'materialReturns', 'materialTransfers', 'disposals', 'stockTransfer'],
         canEvaluate: ['goodsReceipts'],
+        canVerifyGatePass: true,
         canAddUsers: true,
         canDeleteUsers: true,
         canViewAuditLog: true,
+        canViewFifoValuation: true,
         sidebar: 'full'
     },
 
     [ROLES.PAO]: {
         name: 'Property Administration Officer',
-        canAccessPages: ['/', '/settings', '/fixed-assets', '/disposal', '/reports', '/audit-log'],
-        canCreate: ['fixedAssets', 'disposals'],
-        canEdit: ['fixedAssets', 'disposals'],
+        // SRS: approves requests and monitors inventory activities
+        canAccessPages: [
+            '/',
+            '/settings',
+            '/requisitions',
+            '/material-transfer',
+            '/fixed-assets',
+            '/disposal',
+            '/stock-transfer',
+            '/stock-cards',
+            '/bin-cards',
+            '/goods-receipt',
+            '/reports',
+            '/audit-log'
+        ],
+        canCreate: ['disposals', 'stockTransfer'],
+        canEdit: ['disposals', 'stockTransfer'],
         canDelete: [],
-        canApprove: ['disposals'],
-        canReject: ['disposals'],
+        canApprove: ['requisitions', 'disposals', 'stockTransfer', 'materialTransfers', 'goodsReceipts'],
+        canReject: ['requisitions', 'disposals', 'stockTransfer', 'materialTransfers'],
         canEvaluate: [],
+        canVerifyGatePass: false,
         canAddUsers: false,
         canDeleteUsers: false,
         canViewAuditLog: true,
-        sidebar: 'minimal'
+        canViewFifoValuation: false,
+        sidebar: 'limited'
     },
 
     [ROLES.STORE_HEAD]: {
@@ -91,102 +110,121 @@ export const ROLE_PERMISSIONS = {
         canCreate: ['goodsReceipts', 'requisitions', 'issueVouchers', 'materialReturns', 'materialTransfers', 'stockTransfer'],
         canEdit: ['goodsReceipts', 'requisitions', 'issueVouchers', 'materialReturns', 'materialTransfers', 'stockTransfer'],
         canDelete: [],
-        canApprove: ['goodsReceipts', 'requisitions', 'issueVouchers', 'materialReturns', 'materialTransfers'],
-        canReject: ['goodsReceipts', 'requisitions', 'issueVouchers', 'materialReturns', 'materialTransfers'],
+        canApprove: ['goodsReceipts', 'issueVouchers', 'materialReturns', 'materialTransfers'],
+        canReject: ['goodsReceipts', 'issueVouchers', 'materialReturns', 'materialTransfers'],
         canEvaluate: [],
+        canVerifyGatePass: false,
         canAddUsers: false,
         canDeleteUsers: false,
         canViewAuditLog: false,
+        canViewFifoValuation: false,
         sidebar: 'limited'
     },
 
     [ROLES.STOREKEEPER]: {
         name: 'Storekeeper',
+        // SRS: receives and issues stock, updates inventory records (bin cards)
         canAccessPages: ['/', '/settings', '/items', '/goods-receipt', '/stock-cards', '/bin-cards', '/issue-vouchers', '/stock-transfer'],
-        canCreate: ['goodsReceipts', 'issueVouchers', 'stockTransfer'],
-        canEdit: [],
+        canCreate: ['goodsReceipts', 'issueVouchers', 'stockTransfer', 'binCards'],
+        canEdit: ['binCards', 'goodsReceipts'],
         canDelete: [],
         canApprove: [],
         canReject: [],
         canEvaluate: [],
+        canVerifyGatePass: false,
         canAddUsers: false,
         canDeleteUsers: false,
         canViewAuditLog: false,
+        canViewFifoValuation: false,
         sidebar: 'minimal'
     },
 
     [ROLES.STOCK_CLERK]: {
         name: 'Stock Clerk',
-        canAccessPages: ['/', '/settings', '/items', '/stock-cards', '/bin-cards', '/stock-transfer'],
+        // SRS: maintains stock records, updates transactions, prepares reports
+        canAccessPages: ['/', '/settings', '/items', '/stock-cards', '/bin-cards', '/stock-transfer', '/reports'],
         canCreate: ['binCards', 'stockTransfer'],
-        canEdit: [],
+        canEdit: ['binCards', 'stockTransfer'],
         canDelete: [],
         canApprove: [],
         canReject: [],
         canEvaluate: [],
+        canVerifyGatePass: false,
         canAddUsers: false,
         canDeleteUsers: false,
         canViewAuditLog: false,
+        canViewFifoValuation: false,
         sidebar: 'minimal'
     },
 
     [ROLES.TEC]: {
         name: 'Technical Evaluation Committee',
-        canAccessPages: ['/', '/settings', '/goods-receipt', '/goods-receipt/evaluation', '/reports'],
+        canAccessPages: ['/', '/settings', '/goods-receipt', '/goods-receipt/evaluation', '/material-return', '/reports'],
         canCreate: [],
         canEdit: [],
         canDelete: [],
         canApprove: ['goodsReceipts'],
         canReject: ['goodsReceipts'],
         canEvaluate: ['goodsReceipts'],
+        canVerifyGatePass: false,
         canAddUsers: false,
         canDeleteUsers: false,
         canViewAuditLog: false,
+        canViewFifoValuation: false,
         sidebar: 'minimal'
     },
 
     [ROLES.DEPT_HEAD]: {
         name: 'Department Head',
+        // SRS: approves requisitions from their department
         canAccessPages: ['/', '/settings', '/requisitions', '/issue-vouchers', '/material-return', '/material-transfer', '/reports'],
         canCreate: ['requisitions', 'materialReturns', 'materialTransfers'],
         canEdit: ['requisitions', 'materialReturns', 'materialTransfers'],
         canDelete: [],
         canApprove: ['requisitions', 'materialReturns', 'materialTransfers'],
-        canReject: [],
+        canReject: ['requisitions', 'materialReturns'],
         canEvaluate: [],
+        canVerifyGatePass: false,
         canAddUsers: false,
         canDeleteUsers: false,
         canViewAuditLog: false,
+        canViewFifoValuation: false,
         sidebar: 'limited'
     },
 
     [ROLES.ACCOUNTANT]: {
         name: 'Accountant',
-        canAccessPages: ['/', '/settings', '/reports', '/audit-log'],
+        // SRS: views financial reports and manages inventory valuation (FIFO)
+        canAccessPages: ['/', '/settings', '/items', '/stock-cards', '/bin-cards', '/goods-receipt', '/issue-vouchers', '/material-return', '/material-transfer', '/reports', '/audit-log'],
         canCreate: [],
         canEdit: [],
         canDelete: [],
         canApprove: [],
         canReject: [],
         canEvaluate: [],
+        canVerifyGatePass: false,
         canAddUsers: false,
         canDeleteUsers: false,
         canViewAuditLog: true,
-        sidebar: 'minimal'
+        canViewFifoValuation: true,
+        sidebar: 'limited'
     },
 
     [ROLES.SECURITY]: {
         name: 'Security Officer',
-        canAccessPages: ['/', '/settings', '/audit-log'],
+        // SRS: monitors goods entering and leaving the organization
+        canAccessPages: ['/', '/settings', '/gate-pass', '/goods-receipt', '/issue-vouchers', '/stock-transfer', '/audit-log'],
         canCreate: [],
         canEdit: [],
         canDelete: [],
         canApprove: [],
         canReject: [],
         canEvaluate: [],
+        canVerifyGatePass: true,
         canAddUsers: false,
         canDeleteUsers: false,
         canViewAuditLog: true,
+        canViewFifoValuation: false,
         sidebar: 'minimal'
     }
 }
@@ -211,12 +249,16 @@ export function canPerformAction(userRole, action, entityType) {
             return perms.canReject.includes(entityType)
         case 'evaluate':
             return perms.canEvaluate.includes(entityType)
+        case 'verifyGatePass':
+            return perms.canVerifyGatePass
         case 'addUser':
             return perms.canAddUsers
         case 'deleteUser':
             return perms.canDeleteUsers
         case 'viewAuditLog':
             return perms.canViewAuditLog
+        case 'viewFifoValuation':
+            return perms.canViewFifoValuation
         default:
             return false
     }
@@ -247,4 +289,29 @@ export function getSidebarType(userRole) {
     const perms = ROLE_PERMISSIONS[userRole]
     if (!perms) return 'none'
     return perms.sidebar
+}
+
+/**
+ * Department heads may only approve requisitions raised for their department.
+ */
+export function canApproveRequisition(user, requisition) {
+    if (!user || !requisition) return false
+    if (!canPerformAction(user.role, 'approve', 'requisitions')) return false
+    if (user.role === ROLES.DEPT_HEAD) {
+        if (requisition.status !== STATUS.PENDING) return false
+        const dept = user.department || ''
+        return requisition.department === dept || requisition.requestedBy === user.name
+    }
+    return requisition.status === STATUS.PENDING
+}
+
+export function canRejectRequisition(user, requisition) {
+    if (!user || !requisition) return false
+    if (!canPerformAction(user.role, 'reject', 'requisitions')) return false
+    if (requisition.status !== STATUS.PENDING) return false
+    if (user.role === ROLES.DEPT_HEAD) {
+        const dept = user.department || ''
+        return requisition.department === dept || requisition.requestedBy === user.name
+    }
+    return true
 }
