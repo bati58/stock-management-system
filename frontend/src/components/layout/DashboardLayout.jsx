@@ -7,7 +7,7 @@ export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex h-screen bg-gradient-to-b from-ink-50 via-white to-ink-50 overflow-hidden">
+    <div className="print-shell flex h-screen bg-gradient-to-b from-ink-50 via-white to-ink-50 overflow-hidden">
       {/* Sidebar - Fixed on desktop, overlays on mobile */}
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -17,7 +17,7 @@ export default function DashboardLayout() {
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Scrollable content area */}
-        <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
+        <main className="print-content flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
           <Outlet />
         </main>
 

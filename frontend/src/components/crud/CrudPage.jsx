@@ -78,6 +78,9 @@ export default function CrudPage({
     fields.forEach((f) => {
       initial[f.name] = f.type === 'checkbox' ? true : ''
     })
+    if (entityType === 'users') {
+      initial.active = true
+    }
     setForm(initial)
     setEditing(null)
     setModalOpen(true)
@@ -97,11 +100,16 @@ export default function CrudPage({
     e.preventDefault()
     setSaving(true)
     try {
+      const payload = { ...form }
+      if (entityType === 'users' && payload.active === undefined) {
+        payload.active = true
+      }
+
       if (editing) {
-        await service.update(editing.id, form)
+        await service.update(editing.id, payload)
         push('Record updated successfully.', 'success')
       } else {
-        await service.create(form)
+        await service.create(payload)
         push('Record created successfully.', 'success')
       }
       setModalOpen(false)
