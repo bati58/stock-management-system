@@ -2,7 +2,7 @@ import { seedIfEmpty } from './localDb'
 import { ROLES, STATUS } from '../utils/constants'
 
 export function seedDatabase() {
-  seedIfEmpty('users', [
+  const canonicalUsers = [
     { id: 1, name: 'Abel Tesfaye', username: 'admin', role: ROLES.ADMIN, email: 'admin@sms.local', active: true },
     { id: 2, name: 'Meron Getachew', username: 'pao', role: ROLES.PAO, email: 'pao@sms.local', active: true },
     { id: 3, name: 'Yonas Bekele', username: 'storehead', role: ROLES.STORE_HEAD, email: 'storehead@sms.local', active: true },
@@ -11,7 +11,26 @@ export function seedDatabase() {
     { id: 6, name: 'Dr. Fikru Wolde', username: 'tec', role: ROLES.TEC, email: 'tec@sms.local', active: true },
     { id: 7, name: 'Hana Girma', username: 'depthead', role: ROLES.DEPT_HEAD, email: 'depthead@sms.local', active: true },
     { id: 8, name: 'Biniam Assefa', username: 'accountant', role: ROLES.ACCOUNTANT, email: 'accountant@sms.local', active: true }
-  ])
+  ]
+
+  const existingUsers = JSON.parse(localStorage.getItem('sms_v1_users') || '[]')
+  const byUsername = new Map()
+
+    ;[...existingUsers, ...canonicalUsers].forEach((user) => {
+      const key = String(user?.username || '').trim().toLowerCase()
+      if (!key) return
+      const current = byUsername.get(key)
+      if (!current || Number(current.id) <= Number(user.id || 0)) {
+        byUsername.set(key, { ...current, ...user, username: user.username, active: user.active ?? current?.active ?? true })
+      }
+    })
+
+  const normalizedUsers = canonicalUsers.map((seedUser) => {
+    const key = String(seedUser.username || '').trim().toLowerCase()
+    return byUsername.get(key) || seedUser
+  })
+
+  localStorage.setItem('sms_v1_users', JSON.stringify(normalizedUsers))
 
   seedIfEmpty('stores', [
     { id: 1, name: 'Main Store', code: 'STR-MAIN', type: 'Main Store', location: 'Central Warehouse', headOfStore: 'Yonas Bekele', active: true },

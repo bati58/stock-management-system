@@ -12,7 +12,24 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     seedDatabase()
     const saved = localStorage.getItem(SESSION_KEY)
-    if (saved) setUser(JSON.parse(saved))
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        const users = userService.list()
+        users.then((rows) => {
+          const validUser = rows.find((u) => String(u.id) === String(parsed.id) && String(u.username || '').toLowerCase() === String(parsed.username || '').toLowerCase())
+          if (!validUser) {
+            localStorage.removeItem(SESSION_KEY)
+            setUser(null)
+          } else {
+            setUser(validUser)
+          }
+        })
+      } catch {
+        localStorage.removeItem(SESSION_KEY)
+        setUser(null)
+      }
+    }
     setReady(true)
   }, [])
 
@@ -23,10 +40,14 @@ export function AuthProvider({ children }) {
     if (!password || password.length < 4) {
       throw new Error('Password must be at least 4 characters.')
     }
+
     const users = await userService.list()
-    const match = users.find((u) => u.username.toLowerCase() === username.trim().toLowerCase())
+    const matches = users.filter((u) => u.username && u.username.toLowerCase() === username.trim().toLowerCase())
+    const match = [...matches].sort((a, b) => Number(Boolean(b.active)) - Number(Boolean(a.active)) || a.id - b.id)[0]
+
     if (!match) throw new Error('No account found for that username.')
     if (!match.active) throw new Error('This account has been deactivated.')
+
     localStorage.setItem(SESSION_KEY, JSON.stringify(match))
     setUser(match)
     return match

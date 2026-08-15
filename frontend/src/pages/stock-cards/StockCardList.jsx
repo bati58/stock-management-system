@@ -112,7 +112,7 @@ export default function StockCardList() {
               </table>
             </div>
             <p className="text-xs text-ink-400">
-              Valuation method: First-In-First-Out (FIFO), per the FGE accounting system, Manual III, Volume III.
+              Valuation method: First-In-First-Out (FIFO), applied consistently across the stock ledger.
             </p>
           </div>
         )}

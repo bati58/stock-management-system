@@ -43,7 +43,7 @@ export default function AuditLog() {
 
   return (
     <div>
-      <PageHeader title="Audit Log" subtitle="Read-only trail of user activity and system changes across all modules." />
+      <PageHeader title="Audit Log" subtitle="Track the latest user actions and system changes across all modules." />
       <div className="card p-5">
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="w-full lg:max-w-md">

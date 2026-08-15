@@ -105,6 +105,24 @@ export default function CrudPage({
         payload.active = true
       }
 
+      if (entityType === 'users') {
+        const normalizedUsername = String(payload.username || '').trim()
+        if (!normalizedUsername) {
+          throw new Error('Username is required.')
+        }
+
+        const duplicateUsername = rows.find((row) => {
+          const sameUsername = String(row.username || '').trim().toLowerCase() === normalizedUsername.toLowerCase()
+          return sameUsername && (!editing || String(row.id) !== String(editing.id))
+        })
+
+        if (duplicateUsername) {
+          throw new Error(`Username "${normalizedUsername}" is already in use. Please choose another one.`)
+        }
+
+        payload.username = normalizedUsername
+      }
+
       if (editing) {
         await service.update(editing.id, payload)
         push('Record updated successfully.', 'success')

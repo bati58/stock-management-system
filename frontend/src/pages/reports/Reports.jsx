@@ -106,7 +106,7 @@ export default function Reports() {
 
   return (
     <div>
-      <PageHeader title="Reports" subtitle="Generate, print and export inventory reports (SRS: Report Management)." />
+      <PageHeader title="Reports" subtitle="Generate, print and export inventory reports." />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card title="Total Inventory Value" className="sm:col-span-1">
