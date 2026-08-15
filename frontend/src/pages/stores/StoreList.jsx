@@ -6,7 +6,7 @@ export default function StoreList() {
   return (
     <CrudPage
       title="Stores"
-      subtitle="Manage the main store and each department / cafe store (SRS Use Case 1)."
+      subtitle="Manage the main store and each department / cafe store."
       service={storeService}
       addLabel="Add Store" entityType="stores" searchKeys={['name', 'code', 'type', 'location']}
       emptyTitle="No stores yet"

@@ -10,6 +10,7 @@ export const ROLE_PERMISSIONS = {
         name: 'Administrator',
         canAccessPages: [
             '/',
+            '/settings',
             '/stores',
             '/categories',
             '/items',
@@ -56,7 +57,7 @@ export const ROLE_PERMISSIONS = {
 
     [ROLES.PAO]: {
         name: 'Property Administration Officer',
-        canAccessPages: ['/', '/fixed-assets', '/disposal', '/reports', '/audit-log'],
+        canAccessPages: ['/', '/settings', '/fixed-assets', '/disposal', '/reports', '/audit-log'],
         canCreate: ['fixedAssets', 'disposals'],
         canEdit: ['fixedAssets', 'disposals'],
         canDelete: [],
@@ -73,6 +74,7 @@ export const ROLE_PERMISSIONS = {
         name: 'Store Head',
         canAccessPages: [
             '/',
+            '/settings',
             '/stores',
             '/items',
             '/goods-receipt',
@@ -100,7 +102,7 @@ export const ROLE_PERMISSIONS = {
 
     [ROLES.STOREKEEPER]: {
         name: 'Storekeeper',
-        canAccessPages: ['/', '/items', '/goods-receipt', '/stock-cards', '/bin-cards', '/issue-vouchers', '/stock-transfer'],
+        canAccessPages: ['/', '/settings', '/items', '/goods-receipt', '/stock-cards', '/bin-cards', '/issue-vouchers', '/stock-transfer'],
         canCreate: ['goodsReceipts', 'issueVouchers', 'stockTransfer'],
         canEdit: [],
         canDelete: [],
@@ -115,7 +117,7 @@ export const ROLE_PERMISSIONS = {
 
     [ROLES.STOCK_CLERK]: {
         name: 'Stock Clerk',
-        canAccessPages: ['/', '/items', '/stock-cards', '/bin-cards', '/stock-transfer'],
+        canAccessPages: ['/', '/settings', '/items', '/stock-cards', '/bin-cards', '/stock-transfer'],
         canCreate: ['binCards', 'stockTransfer'],
         canEdit: [],
         canDelete: [],
@@ -130,7 +132,7 @@ export const ROLE_PERMISSIONS = {
 
     [ROLES.TEC]: {
         name: 'Technical Evaluation Committee',
-        canAccessPages: ['/', '/goods-receipt', '/goods-receipt/evaluation', '/reports'],
+        canAccessPages: ['/', '/settings', '/goods-receipt', '/goods-receipt/evaluation', '/reports'],
         canCreate: [],
         canEdit: [],
         canDelete: [],
@@ -145,7 +147,7 @@ export const ROLE_PERMISSIONS = {
 
     [ROLES.DEPT_HEAD]: {
         name: 'Department Head',
-        canAccessPages: ['/', '/requisitions', '/issue-vouchers', '/material-return', '/material-transfer', '/reports'],
+        canAccessPages: ['/', '/settings', '/requisitions', '/issue-vouchers', '/material-return', '/material-transfer', '/reports'],
         canCreate: ['requisitions', 'materialReturns', 'materialTransfers'],
         canEdit: ['requisitions', 'materialReturns', 'materialTransfers'],
         canDelete: [],
@@ -160,7 +162,7 @@ export const ROLE_PERMISSIONS = {
 
     [ROLES.ACCOUNTANT]: {
         name: 'Accountant',
-        canAccessPages: ['/', '/reports', '/audit-log'],
+        canAccessPages: ['/', '/settings', '/reports', '/audit-log'],
         canCreate: [],
         canEdit: [],
         canDelete: [],
@@ -175,7 +177,7 @@ export const ROLE_PERMISSIONS = {
 
     [ROLES.SECURITY]: {
         name: 'Security Officer',
-        canAccessPages: ['/', '/audit-log'],
+        canAccessPages: ['/', '/settings', '/audit-log'],
         canCreate: [],
         canEdit: [],
         canDelete: [],

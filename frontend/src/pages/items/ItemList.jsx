@@ -201,7 +201,7 @@ export default function ItemList() {
     <div>
       <PageHeader
         title="Items & Locations"
-        subtitle="Maintain the item master, its bin location, and min/max/reorder levels (SRS Use Case 3)."
+        subtitle="Maintain the item master, its bin location, and min/max/reorder levels."
         actions={
           canCreate ? (
             <Button icon={Plus} onClick={openCreate}>

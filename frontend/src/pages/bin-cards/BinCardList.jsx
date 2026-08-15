@@ -36,7 +36,7 @@ export default function BinCardList() {
     <div>
       <PageHeader
         title="Bin Cards"
-        subtitle="Auto-generated per bin/location, recording inbound/outbound movement and running balance (SRS Use Case 9)."
+        subtitle="Auto-generated per bin and location, recording inbound and outbound movement with the running balance."
       />
       <div className="card p-5">
         <div className="mb-4">

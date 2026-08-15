@@ -14,7 +14,7 @@ export default function MaterialTransferList() {
   return (
     <CrudPage
       title="Material Transfers"
-      subtitle="Initiate and approve stock transfers between stores (SRS Use Cases 21-22)."
+      subtitle="Initiate and approve stock transfers between stores."
       service={materialTransferService}
       addLabel="New Transfer Request"
       entityType="materialTransfers"

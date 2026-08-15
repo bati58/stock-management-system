@@ -7,7 +7,7 @@ export default function UserList() {
   return (
     <CrudPage
       title="Users"
-      subtitle="Create accounts and assign roles that drive access across the system (SRS Use Case 17)."
+      subtitle="Create accounts and assign roles that drive access across the system."
       service={userService}
       addLabel="Add User"
       entityType="users"

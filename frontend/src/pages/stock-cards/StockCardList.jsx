@@ -57,7 +57,7 @@ export default function StockCardList() {
     <div>
       <PageHeader
         title="Stock Cards"
-        subtitle="Auto-updated cost/quantity ledger for every item, valued using FIFO (SRS Use Cases 7-8)."
+        subtitle="Auto-updated cost and quantity ledger for every item, valued using FIFO."
       />
 
       <div className="card p-5">

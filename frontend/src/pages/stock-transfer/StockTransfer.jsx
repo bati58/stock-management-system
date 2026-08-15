@@ -13,7 +13,7 @@ export default function StockTransfer() {
   return (
     <CrudPage
       title="Stock Transfer Between Bins"
-      subtitle="Move stock from one bin/location to another within the same store (SRS Use Case 10)."
+      subtitle="Move stock from one bin or location to another within the same store."
       service={binTransferService}
       addLabel="New Bin Transfer"
       searchKeys={['item', 'fromBin', 'toBin']}

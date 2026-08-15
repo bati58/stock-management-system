@@ -96,7 +96,7 @@ export default function IssueVoucherList() {
     <div>
       <PageHeader
         title="Issue Vouchers (SIV / ISIV)"
-        subtitle="Generate Model 20/22 issue vouchers from approved requisitions and update stock automatically (SRS Use Cases 13-15)."
+        subtitle="Generate issue vouchers from approved requisitions and update stock automatically."
         actions={
           <Button icon={Send} onClick={() => setModalOpen(true)} disabled={!approvedReqs.length}>
             Generate Voucher

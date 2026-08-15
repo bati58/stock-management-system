@@ -6,7 +6,7 @@ export default function FixedAssetList() {
   return (
     <CrudPage
       title="Fixed Assets"
-      subtitle="Register and track fixed assets issued from store, per GOFAMM (SRS Use Case 16)."
+      subtitle="Register and track fixed assets issued from store."
       service={fixedAssetService}
       addLabel="Register Asset"
       entityType="fixedAssets"

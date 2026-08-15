@@ -82,7 +82,7 @@ export default function Evaluation() {
     <div>
       <PageHeader
         title="Technical Evaluation"
-        subtitle="Inspect materials awaiting evaluation and record an approve/reject decision (SRS Use Case 5)."
+        subtitle="Inspect materials awaiting evaluation and record an approve or reject decision."
       />
 
       <div className="card p-5">

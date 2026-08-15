@@ -8,7 +8,7 @@ export default function DisposalList() {
   return (
     <CrudPage
       title="Disposal Management"
-      subtitle="Flag obsolete/damaged stock and manage the disposal workflow (SRS Use Cases 23-26)."
+      subtitle="Flag obsolete or damaged stock and manage the disposal workflow."
       service={disposalService}
       addLabel="Flag Item for Disposal"
       entityType="disposals"

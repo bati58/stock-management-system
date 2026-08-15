@@ -8,8 +8,14 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 
 export default function Settings() {
-    const { user, updateUser } = useAuth()
+    const { user, updateUser, logout } = useAuth()
     const { push } = useToast()
+
+    const [profileForm, setProfileForm] = useState({
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || ''
+    })
 
     const [settings, setSettings] = useState({
         theme: 'light',
@@ -26,11 +32,29 @@ export default function Settings() {
         confirmPassword: ''
     })
 
+    const handleProfileChange = (key, value) => {
+        setProfileForm((prev) => ({ ...prev, [key]: value }))
+    }
+
     const handleSettingChange = (key, value) => {
         setSettings((prev) => ({
             ...prev,
             [key]: value
         }))
+    }
+
+    const handleSaveProfile = () => {
+        if (!profileForm.name.trim()) {
+            push('Full name is required', 'error')
+            return
+        }
+
+        updateUser({
+            name: profileForm.name.trim(),
+            email: profileForm.email.trim(),
+            phone: profileForm.phone.trim()
+        })
+        push('Account details updated successfully', 'success')
     }
 
     const handleSaveSettings = () => {
@@ -60,6 +84,57 @@ export default function Settings() {
                 title="Settings"
                 description="Manage your account preferences and system settings"
             />
+
+            <Card title="Account Management" className="mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-ink-700 mb-2">Full name</label>
+                        <Input
+                            type="text"
+                            value={profileForm.name}
+                            onChange={(e) => handleProfileChange('name', e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-ink-700 mb-2">Username</label>
+                        <Input type="text" value={user?.username || ''} disabled />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-ink-700 mb-2">Email address</label>
+                        <Input
+                            type="email"
+                            value={profileForm.email}
+                            onChange={(e) => handleProfileChange('email', e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-ink-700 mb-2">Role</label>
+                        <Input type="text" value={user?.role || ''} disabled />
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-ink-700 mb-2">Phone number</label>
+                        <Input
+                            type="text"
+                            value={profileForm.phone}
+                            placeholder="e.g. +254 700 000000"
+                            onChange={(e) => handleProfileChange('phone', e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                    <Button onClick={handleSaveProfile} variant="primary">
+                        Save profile
+                    </Button>
+                    <Button onClick={logout} variant="secondary">
+                        Sign out
+                    </Button>
+                </div>
+            </Card>
 
             {/* User Profile Section */}
             <Card title="User Profile" className="mb-6">

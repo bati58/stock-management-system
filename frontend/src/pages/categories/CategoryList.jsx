@@ -12,7 +12,7 @@ export default function CategoryList() {
   return (
     <CrudPage
       title="Item Categories"
-      subtitle="Maintain item categories per store, aligned to the FGE chart-of-account codes (SRS Use Case 2)."
+      subtitle="Maintain item categories per store and align them with your accounting structure."
       service={categoryService}
       addLabel="Add Category"
       entityType="categories"

@@ -37,6 +37,16 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  function updateUser(updates) {
+    setUser((current) => {
+      const nextUser = { ...(current || {}), ...updates }
+      if (nextUser) {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(nextUser))
+      }
+      return nextUser
+    })
+  }
+
   const value = useMemo(
     () => ({
       user,
@@ -44,6 +54,7 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(user),
       login,
       logout,
+      updateUser,
       hasRole: (...roles) => Boolean(user) && roles.includes(user.role)
     }),
     [user, ready]

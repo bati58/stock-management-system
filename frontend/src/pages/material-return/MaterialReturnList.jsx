@@ -8,7 +8,7 @@ export default function MaterialReturnList() {
   return (
     <CrudPage
       title="Material Returns (SRN)"
-      subtitle="Create and track Store Return Notes for excess or unused materials (SRS Use Cases 18-20)."
+      subtitle="Create and track store return notes for excess or unused materials."
       service={materialReturnService}
       addLabel="New Return Request"
       entityType="materialReturns"

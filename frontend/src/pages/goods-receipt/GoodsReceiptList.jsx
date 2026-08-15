@@ -122,7 +122,7 @@ export default function GoodsReceiptList() {
     <div>
       <PageHeader
         title="Goods Receipt (GRN)"
-        subtitle="Record incoming materials, verify against the PO/donation, then hand off to Technical Evaluation (SRS Use Cases 4-6)."
+        subtitle="Record incoming materials, verify against the purchase or donation, and hand off to technical evaluation."
         actions={
           <Button icon={Plus} onClick={openCreate}>
             Record Goods Receipt

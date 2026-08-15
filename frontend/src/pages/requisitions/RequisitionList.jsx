@@ -127,7 +127,7 @@ export default function RequisitionList() {
     <div>
       <PageHeader
         title="Store Requisitions"
-        subtitle="Departments raise a Store Requisition (Model 20); the PAO approves before issue (SRS Use Cases 11-12)."
+        subtitle="Departments raise a store requisition and the PAO approves before issue."
         actions={
           <Button icon={Plus} onClick={openCreate}>
             New Requisition
