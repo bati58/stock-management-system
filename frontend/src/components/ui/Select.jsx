@@ -1,0 +1,24 @@
+export default function Select({ label, error, className = '', required, options = [], placeholder = 'Select...', ...rest }) {
+  return (
+    <div className={className}>
+      {label && (
+        <label className="label">
+          {label} {required && <span className="text-red-500 font-bold">*</span>}
+        </label>
+      )}
+      <select className="input cursor-pointer" {...rest}>
+        <option value="">{placeholder}</option>
+        {options.map((opt) => {
+          const value = typeof opt === 'string' ? opt : opt.value
+          const text = typeof opt === 'string' ? opt : opt.label
+          return (
+            <option key={value} value={value}>
+              {text}
+            </option>
+          )
+        })}
+      </select>
+      {error && <p className="mt-2 text-xs text-red-600 font-medium">{error}</p>}
+    </div>
+  )
+}

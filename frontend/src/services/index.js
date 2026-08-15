@@ -1,0 +1,17 @@
+import { createEntityService } from './entityService'
+
+export const storeService = createEntityService('stores')
+export const categoryService = createEntityService('categories')
+export const itemService = createEntityService('items')
+export const goodsReceiptService = createEntityService('goodsReceipts')
+export const stockTransactionService = createEntityService('stockTransactions')
+export const binCardService = createEntityService('binCards')
+export const requisitionService = createEntityService('requisitions')
+export const issueVoucherService = createEntityService('issueVouchers')
+export const fixedAssetService = createEntityService('fixedAssets')
+export const userService = createEntityService('users')
+export const materialReturnService = createEntityService('materialReturns')
+export const materialTransferService = createEntityService('materialTransfers')
+export const disposalService = createEntityService('disposals')
+export const auditLogService = createEntityService('auditLogs')
+export const binTransferService = createEntityService('binTransfers')
