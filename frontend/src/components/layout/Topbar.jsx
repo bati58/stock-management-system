@@ -70,14 +70,19 @@ export default function Topbar({ onMenuClick, title }) {
           <button
             onClick={openNotifications}
             aria-label="Notifications"
-            className="relative rounded-lg p-2 text-ink-500 hover:bg-ink-100 hover:text-ink-700 transition-colors"
+            className="rounded-lg p-2 text-ink-500 hover:bg-ink-100 hover:text-ink-700 transition-colors"
           >
-            <Bell size={20} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-danger-500 text-xs font-bold text-white">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
+            <span className="relative inline-flex">
+              <Bell size={20} strokeWidth={1.75} />
+              {unreadCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-2 -top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-danger-500 px-1 text-[10px] font-semibold leading-none text-white shadow-sm ring-1 ring-danger-500/20"
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </span>
           </button>
 
           {showNotifications && (

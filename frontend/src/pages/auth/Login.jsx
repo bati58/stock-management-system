@@ -1,16 +1,8 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import {
-  Boxes,
-  LogIn,
-  ShieldCheck,
-  BarChart3,
-  PackageCheck,
-  Lock
-} from 'lucide-react'
+import { Boxes, LogIn, Mail, Lock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
-import Button from '../../components/ui/Button'
 
 const DEMO_ACCOUNTS = [
   'admin',
@@ -24,12 +16,6 @@ const DEMO_ACCOUNTS = [
   'security'
 ]
 
-const FEATURES = [
-  { icon: PackageCheck, label: 'Stock receiving & issuing' },
-  { icon: BarChart3, label: 'Real-time inventory reports' },
-  { icon: ShieldCheck, label: 'Role-based access control' }
-]
-
 export default function Login() {
   const { login, isAuthenticated } = useAuth()
   const { push } = useToast()
@@ -37,6 +23,7 @@ export default function Login() {
   const [form, setForm] = useState({ username: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showDemo, setShowDemo] = useState(false)
 
   if (isAuthenticated) return <Navigate to="/" replace />
 
@@ -58,141 +45,128 @@ export default function Login() {
   function fillDemo(username) {
     setForm({ username, password: 'demo1234' })
     setError('')
+    setShowDemo(false)
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Brand panel */}
-      <div className="relative hidden w-[46%] overflow-hidden bg-gradient-to-br from-brand-700 via-brand-600 to-brand-800 lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-white" />
-          <div className="absolute bottom-10 right-10 h-96 w-96 rounded-full bg-white" />
-        </div>
-
-        <div className="relative z-10 p-10 xl:p-14">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/20 backdrop-blur-sm">
-              <Boxes size={22} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-brand-100">Institutional Platform</p>
-              <p className="text-lg font-semibold text-white">Stock Management System</p>
+    <div className="flex min-h-screen flex-col bg-[#e9ecef]">
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-10">
+        {/* Logo & title */}
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-md ring-4 ring-white/80">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-700 text-white">
+              <Boxes size={32} strokeWidth={1.5} />
             </div>
           </div>
-
-          <div className="mt-16 max-w-md">
-            <h1 className="text-3xl font-bold leading-tight text-white xl:text-4xl">
-              Inventory control built for accuracy and accountability
-            </h1>
-            <p className="mt-4 text-base leading-relaxed text-brand-100">
-              Manage receiving, issuing, transfers, valuation, and approvals in one secure workspace aligned with institutional stock procedures.
-            </p>
-          </div>
-
-          <ul className="mt-10 space-y-4">
-            {FEATURES.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-3 text-brand-50">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 ring-1 ring-white/15">
-                  <Icon size={18} />
-                </span>
-                <span className="text-sm font-medium">{label}</span>
-              </li>
-            ))}
-          </ul>
+          <h1 className="text-2xl font-normal tracking-wide text-[#495057] sm:text-[26px]">
+            Stock Management System
+          </h1>
         </div>
 
-        <div className="relative z-10 border-t border-white/10 px-10 py-6 text-xs text-brand-200 xl:px-14">
-          Stock Management System · Version 1.0 · © 2026
-        </div>
-      </div>
+        {/* Login card */}
+        <div className="w-full max-w-[420px] rounded-sm bg-white px-8 py-7 shadow-[0_2px_10px_rgba(0,0,0,0.12)]">
+          <p className="mb-5 text-center text-[15px] text-[#6c757d]">For Staff Only</p>
 
-      {/* Sign-in panel */}
-      <div className="flex flex-1 flex-col items-center justify-center bg-gradient-to-b from-ink-50 to-white px-4 py-10 sm:px-8">
-        <div className="w-full max-w-md">
-          <div className="mb-8 text-center lg:text-left">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-white shadow-lg shadow-brand-600/25 lg:mx-0">
-              <Boxes size={24} />
-            </div>
-            <h2 className="text-2xl font-bold text-ink-900">Sign in</h2>
-            <p className="mt-1 text-sm text-ink-500">
-              Enter your credentials to access your role workspace
-            </p>
-          </div>
-
-          <form
-            onSubmit={handleSubmit}
-            className="rounded-2xl border border-ink-100 bg-white p-6 shadow-card sm:p-8"
-          >
-            <div className="space-y-5">
-              <div>
-                <label htmlFor="username" className="label">
-                  Username <span className="text-danger-500">*</span>
-                </label>
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div className="relative">
                 <input
                   id="username"
                   type="text"
                   required
                   autoComplete="username"
-                  placeholder="e.g. storekeeper"
+                  placeholder="Username"
                   value={form.username}
                   onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-                  className="input"
+                  className="w-full rounded border border-[#ced4da] bg-white py-2.5 pl-3 pr-10 text-sm text-[#495057] placeholder:text-[#adb5bd] focus:border-[#80bdff] focus:outline-none focus:ring-2 focus:ring-[#007bff]/25"
+                />
+                <Mail
+                  size={16}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#adb5bd]"
                 />
               </div>
 
-              <div>
-                <label htmlFor="password" className="label">
-                  Password <span className="text-danger-500">*</span>
-                </label>
+              <div className="relative">
                 <input
                   id="password"
                   type="password"
                   required
                   autoComplete="current-password"
-                  placeholder="Enter your password"
+                  placeholder="Password"
                   value={form.password}
                   onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                  className="input"
+                  className="w-full rounded border border-[#ced4da] bg-white py-2.5 pl-3 pr-10 text-sm text-[#495057] placeholder:text-[#adb5bd] focus:border-[#80bdff] focus:outline-none focus:ring-2 focus:ring-[#007bff]/25"
+                />
+                <Lock
+                  size={16}
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#adb5bd]"
                 />
               </div>
 
               {error && (
-                <div className="rounded-lg border border-danger-50 bg-danger-50 px-3 py-2.5 text-sm text-danger-700">
+                <div className="rounded border border-danger-50 bg-danger-50 px-3 py-2 text-sm text-danger-700">
                   {error}
                 </div>
               )}
 
-              <Button type="submit" className="w-full py-3" icon={LogIn} loading={loading}>
-                Sign in to dashboard
-              </Button>
-            </div>
-
-            <div className="mt-5 flex items-center justify-center gap-2 text-xs text-ink-400">
-              <Lock size={13} />
-              <span>Secured session · Role-based access enforced</span>
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex items-center gap-2 rounded bg-[#007bff] px-5 py-2 text-sm font-normal text-white transition-colors hover:bg-[#0069d9] focus:outline-none focus:ring-2 focus:ring-[#007bff]/50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? (
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : (
+                  <LogIn size={15} />
+                )}
+                Sign in
+              </button>
             </div>
           </form>
 
-          <div className="mt-6 rounded-2xl border border-ink-100 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Demo access</p>
-            <p className="mt-1 text-sm text-ink-600">
-              Use any demo username below with a password of 4+ characters.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {DEMO_ACCOUNTS.map((account) => (
-                <button
-                  key={account}
-                  type="button"
-                  onClick={() => fillDemo(account)}
-                  className="rounded-full border border-ink-200 bg-ink-50 px-3 py-1 text-xs font-medium text-ink-700 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
-                >
-                  {account}
-                </button>
-              ))}
-            </div>
+          <div className="mt-5 flex items-center justify-between">
+            <span className="cursor-default text-sm text-[#007bff]">Need help?</span>
+            <button
+              type="button"
+              onClick={() => setShowDemo((v) => !v)}
+              className="rounded bg-[#20c997] px-4 py-1.5 text-sm font-normal text-white transition-colors hover:bg-[#1baa80]"
+            >
+              Demo Access
+            </button>
           </div>
+
+          {showDemo && (
+            <div className="mt-4 border-t border-[#dee2e6] pt-4">
+              <p className="mb-2 text-xs text-[#6c757d]">
+                Select a demo account (password: demo1234)
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {DEMO_ACCOUNTS.map((account) => (
+                  <button
+                    key={account}
+                    type="button"
+                    onClick={() => fillDemo(account)}
+                    className="rounded border border-[#ced4da] bg-[#f8f9fa] px-2.5 py-0.5 text-xs text-[#495057] transition-colors hover:border-[#007bff] hover:bg-[#e7f1ff] hover:text-[#007bff]"
+                  >
+                    {account}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-[#dee2e6] px-6 py-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-between text-xs text-[#6c757d]">
+          <p>
+            Copyright &copy; 2026{' '}
+            <span className="text-[#007bff]">Stock Management System</span>. All rights reserved.
+          </p>
+          <p>Version 1.0</p>
+        </div>
+      </footer>
     </div>
   )
 }

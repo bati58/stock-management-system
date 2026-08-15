@@ -34,19 +34,19 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function login(username, password) {
-    // Demo authentication: any seeded username with password "sms1234" logs in.
-    // Replace this body with api.login({ username, password }) once the
-    // Express auth endpoint exists.
-    if (!password || password.length < 4) {
-      throw new Error('Password must be at least 4 characters.')
-    }
-
+    // Demo authentication: any seeded username with a 4+ character password
+    // unless the account has a saved password from Settings.
     const users = await userService.list()
     const matches = users.filter((u) => u.username && u.username.toLowerCase() === username.trim().toLowerCase())
     const match = [...matches].sort((a, b) => Number(Boolean(b.active)) - Number(Boolean(a.active)) || a.id - b.id)[0]
 
     if (!match) throw new Error('No account found for that username.')
     if (!match.active) throw new Error('This account has been deactivated.')
+    if (match.password) {
+      if (password !== match.password) throw new Error('Incorrect password.')
+    } else if (!password || password.length < 4) {
+      throw new Error('Password must be at least 4 characters.')
+    }
 
     localStorage.setItem(SESSION_KEY, JSON.stringify(match))
     setUser(match)

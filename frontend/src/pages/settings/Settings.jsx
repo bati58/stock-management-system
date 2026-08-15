@@ -1,36 +1,69 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
+import { userService } from '../../services'
 import PageHeader from '../../components/ui/PageHeader'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 
+const DEFAULT_SETTINGS = {
+    theme: 'light',
+    emailNotifications: true,
+    pushNotifications: true,
+    language: 'en',
+    dateFormat: 'DD/MM/YYYY',
+    timeFormat: '24h'
+}
+
+function prefsKey(userId) {
+    return `sms_user_prefs_${userId}`
+}
+
 export default function Settings() {
     const { user, updateUser, logout } = useAuth()
     const { push } = useToast()
 
     const [profileForm, setProfileForm] = useState({
-        name: user?.name || '',
-        email: user?.email || '',
-        phone: user?.phone || ''
+        name: '',
+        email: '',
+        phone: ''
     })
 
-    const [settings, setSettings] = useState({
-        theme: 'light',
-        emailNotifications: true,
-        pushNotifications: true,
-        language: 'en',
-        dateFormat: 'DD/MM/YYYY',
-        timeFormat: '24h'
-    })
+    const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+    const [savingProfile, setSavingProfile] = useState(false)
+    const [savingSettings, setSavingSettings] = useState(false)
+    const [changingPassword, setChangingPassword] = useState(false)
 
     const [passwordForm, setPasswordForm] = useState({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
     })
+
+    useEffect(() => {
+        if (!user) return
+        setProfileForm({
+            name: user.name || '',
+            email: user.email || '',
+            phone: user.phone || ''
+        })
+    }, [user])
+
+    useEffect(() => {
+        if (!user?.id) return
+        const saved = localStorage.getItem(prefsKey(user.id))
+        if (!saved) {
+            setSettings(DEFAULT_SETTINGS)
+            return
+        }
+        try {
+            setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(saved) })
+        } catch {
+            setSettings(DEFAULT_SETTINGS)
+        }
+    }, [user?.id])
 
     const handleProfileChange = (key, value) => {
         setProfileForm((prev) => ({ ...prev, [key]: value }))
@@ -43,25 +76,52 @@ export default function Settings() {
         }))
     }
 
-    const handleSaveProfile = () => {
+    async function handleSaveProfile() {
+        if (!user?.id) return
         if (!profileForm.name.trim()) {
             push('Full name is required', 'error')
             return
         }
 
-        updateUser({
-            name: profileForm.name.trim(),
-            email: profileForm.email.trim(),
-            phone: profileForm.phone.trim()
-        })
-        push('Account details updated successfully', 'success')
+        setSavingProfile(true)
+        try {
+            const updated = await userService.update(user.id, {
+                name: profileForm.name.trim(),
+                email: profileForm.email.trim(),
+                phone: profileForm.phone.trim()
+            })
+            if (!updated) {
+                push('Could not update profile. User record not found.', 'error')
+                return
+            }
+            updateUser(updated)
+            push('Account details updated successfully', 'success')
+        } catch {
+            push('Failed to update profile', 'error')
+        } finally {
+            setSavingProfile(false)
+        }
     }
 
-    const handleSaveSettings = () => {
-        push('Settings saved successfully', 'success')
+    function handleSaveSettings() {
+        if (!user?.id) return
+        setSavingSettings(true)
+        try {
+            localStorage.setItem(prefsKey(user.id), JSON.stringify(settings))
+            push('Settings saved successfully', 'success')
+        } catch {
+            push('Failed to save settings', 'error')
+        } finally {
+            setSavingSettings(false)
+        }
     }
 
-    const handlePasswordChange = () => {
+    async function handlePasswordChange() {
+        if (!user?.id) return
+        if (!passwordForm.currentPassword) {
+            push('Current password is required', 'error')
+            return
+        }
         if (passwordForm.newPassword !== passwordForm.confirmPassword) {
             push('Passwords do not match', 'error')
             return
@@ -70,12 +130,38 @@ export default function Settings() {
             push('Password must be at least 8 characters', 'error')
             return
         }
-        setPasswordForm({
-            currentPassword: '',
-            newPassword: '',
-            confirmPassword: ''
-        })
-        push('Password changed successfully', 'success')
+
+        const hasStoredPassword = Boolean(user.password)
+        if (hasStoredPassword && passwordForm.currentPassword !== user.password) {
+            push('Current password is incorrect', 'error')
+            return
+        }
+        if (!hasStoredPassword && passwordForm.currentPassword.length < 4) {
+            push('Current password is incorrect', 'error')
+            return
+        }
+
+        setChangingPassword(true)
+        try {
+            const updated = await userService.update(user.id, {
+                password: passwordForm.newPassword
+            })
+            if (!updated) {
+                push('Could not update password', 'error')
+                return
+            }
+            updateUser(updated)
+            setPasswordForm({
+                currentPassword: '',
+                newPassword: '',
+                confirmPassword: ''
+            })
+            push('Password changed successfully', 'success')
+        } catch {
+            push('Failed to change password', 'error')
+        } finally {
+            setChangingPassword(false)
+        }
     }
 
     return (
@@ -127,7 +213,7 @@ export default function Settings() {
                 </div>
 
                 <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <Button onClick={handleSaveProfile} variant="primary">
+                    <Button onClick={handleSaveProfile} variant="primary" loading={savingProfile}>
                         Save profile
                     </Button>
                     <Button onClick={logout} variant="secondary">
@@ -136,29 +222,6 @@ export default function Settings() {
                 </div>
             </Card>
 
-            {/* User Profile Section */}
-            <Card title="User Profile" className="mb-6">
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-ink-700 mb-1">Name</label>
-                        <Input type="text" value={user?.name} disabled />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-ink-700 mb-1">Email</label>
-                        <Input type="email" value={user?.email} disabled />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-ink-700 mb-1">Role</label>
-                        <Input type="text" value={user?.role} disabled />
-                    </div>
-                    <div className="rounded-lg bg-info-50 border border-info-50 p-3 text-sm text-info-700">
-                        <p className="font-medium">Read-only Information</p>
-                        <p className="text-xs mt-1">Your profile information is managed by system administrators.</p>
-                    </div>
-                </div>
-            </Card>
-
-            {/* Notification Preferences */}
             <Card title="Notifications" className="mb-6">
                 <div className="space-y-4">
                     <div className="flex items-center justify-between p-4 border border-ink-200 rounded-lg hover:bg-ink-50 transition-colors">
@@ -193,16 +256,22 @@ export default function Settings() {
                         </label>
                     </div>
                 </div>
+
+                <div className="mt-6">
+                    <Button onClick={handleSaveSettings} variant="primary" loading={savingSettings}>
+                        Save notification settings
+                    </Button>
+                </div>
             </Card>
 
-            {/* Display Preferences */}
             <Card title="Display Settings" className="mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-ink-700 mb-2">Theme</label>
                         <Select
                             value={settings.theme}
-                            onChange={(value) => handleSettingChange('theme', value)}
+                            onChange={(e) => handleSettingChange('theme', e.target.value)}
+                            placeholder=""
                             options={[
                                 { label: 'Light', value: 'light' },
                                 { label: 'Dark', value: 'dark' },
@@ -215,7 +284,8 @@ export default function Settings() {
                         <label className="block text-sm font-medium text-ink-700 mb-2">Language</label>
                         <Select
                             value={settings.language}
-                            onChange={(value) => handleSettingChange('language', value)}
+                            onChange={(e) => handleSettingChange('language', e.target.value)}
+                            placeholder=""
                             options={[
                                 { label: 'English', value: 'en' },
                                 { label: 'French', value: 'fr' },
@@ -228,7 +298,8 @@ export default function Settings() {
                         <label className="block text-sm font-medium text-ink-700 mb-2">Date Format</label>
                         <Select
                             value={settings.dateFormat}
-                            onChange={(value) => handleSettingChange('dateFormat', value)}
+                            onChange={(e) => handleSettingChange('dateFormat', e.target.value)}
+                            placeholder=""
                             options={[
                                 { label: 'DD/MM/YYYY', value: 'DD/MM/YYYY' },
                                 { label: 'MM/DD/YYYY', value: 'MM/DD/YYYY' },
@@ -241,7 +312,8 @@ export default function Settings() {
                         <label className="block text-sm font-medium text-ink-700 mb-2">Time Format</label>
                         <Select
                             value={settings.timeFormat}
-                            onChange={(value) => handleSettingChange('timeFormat', value)}
+                            onChange={(e) => handleSettingChange('timeFormat', e.target.value)}
+                            placeholder=""
                             options={[
                                 { label: '24-hour', value: '24h' },
                                 { label: '12-hour', value: '12h' }
@@ -251,13 +323,12 @@ export default function Settings() {
                 </div>
 
                 <div className="mt-6">
-                    <Button onClick={handleSaveSettings} variant="primary">
-                        Save Display Settings
+                    <Button onClick={handleSaveSettings} variant="primary" loading={savingSettings}>
+                        Save display settings
                     </Button>
                 </div>
             </Card>
 
-            {/* Security / Password */}
             <Card title="Security" className="mb-6">
                 <div className="space-y-4">
                     <div>
@@ -291,13 +362,12 @@ export default function Settings() {
                         />
                     </div>
 
-                    <Button onClick={handlePasswordChange} variant="primary">
+                    <Button onClick={handlePasswordChange} variant="primary" loading={changingPassword}>
                         Change Password
                     </Button>
                 </div>
             </Card>
 
-            {/* About Section */}
             <Card title="About" className="mb-6">
                 <div className="space-y-3">
                     <div className="flex justify-between">
