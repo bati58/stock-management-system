@@ -94,6 +94,12 @@ export const ASSET_STATUS = {
   DISPOSED: 'Disposed'
 }
 
+export const AUDIT_OUTCOME_COLOR = {
+  SUCCESS: 'bg-success-50 text-success-700',
+  FAILED: 'bg-danger-50 text-danger-700',
+  WARNING: 'bg-warning-50 text-warning-700'
+}
+
 export const STATUS_COLOR = {
   // Legacy
   [STATUS.DRAFT]: 'bg-ink-100 text-ink-500',

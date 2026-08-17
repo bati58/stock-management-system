@@ -42,6 +42,7 @@ export const ROLE_PERMISSIONS = {
         canAddUsers: true,
         canDeleteUsers: true,
         canViewAuditLog: true,
+        canExportAuditLog: true,
         canViewFifoValuation: true,
         sidebar: 'full'
     },
@@ -74,6 +75,7 @@ export const ROLE_PERMISSIONS = {
         canAddUsers: false,
         canDeleteUsers: false,
         canViewAuditLog: true,
+        canExportAuditLog: true,
         canViewFifoValuation: false,
         sidebar: 'limited'
     },
@@ -247,9 +249,11 @@ export function canPerformAction(userRole, action, entityType) {
         case 'deleteUser':
             return perms.canDeleteUsers
         case 'viewAuditLog':
-            return perms.canViewAuditLog
+            return Boolean(perms.canViewAuditLog)
+        case 'exportAuditLog':
+            return Boolean(perms.canExportAuditLog)
         case 'viewFifoValuation':
-            return perms.canViewFifoValuation
+            return Boolean(perms.canViewFifoValuation)
         default:
             return false
     }
