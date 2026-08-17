@@ -21,13 +21,19 @@ const EMPTY_FORM = {
   name: '',
   category: '',
   store: '',
+  section: '',
+  rack: '',
+  shelf: '',
   bin: '',
   unit: '',
   minLevel: '',
   maxLevel: '',
   reorderLevel: '',
   qtyOnHand: '',
-  unitPrice: ''
+  unitPrice: '',
+  expiryDate: '',
+  batchNo: '',
+  condition: ''
 }
 
 export default function ItemList() {
@@ -136,7 +142,7 @@ export default function ItemList() {
     { key: 'name', header: 'Item Name' },
     { key: 'category', header: 'Category' },
     { key: 'store', header: 'Store' },
-    { key: 'bin', header: 'Bin/Location' },
+    { key: 'location', header: 'Location', render: (r) => [r.section, r.rack, r.shelf, r.bin].filter(Boolean).join('-') || r.bin },
     {
       key: 'qtyOnHand',
       header: 'Qty on Hand',
@@ -148,6 +154,11 @@ export default function ItemList() {
               <AlertTriangle size={14} className="text-warning-500" />
             </span>
           )}
+          {r.expiryDate && new Date(r.expiryDate) < new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) && (
+            <span title={`Expiring on ${r.expiryDate}`}>
+              <AlertTriangle size={14} className="text-danger-500" />
+            </span>
+          )}
         </div>
       )
     },
@@ -156,44 +167,32 @@ export default function ItemList() {
       key: '__actions',
       header: '',
       className: 'text-right',
-      render: (row) => (
-        <div className="flex justify-end gap-1">
-          {canEdit ? (
-            <button
-              onClick={() => openEdit(row)}
-              className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600 transition-colors"
-              title="Edit"
-            >
-              <Pencil size={15} />
-            </button>
-          ) : (
-            <button
-              disabled
-              className="rounded-md p-1.5 text-ink-300 cursor-not-allowed"
-              title="No edit permission"
-            >
-              <Pencil size={15} />
-            </button>
-          )}
-          {canDelete ? (
-            <button
-              onClick={() => setDeleteTarget(row)}
-              className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700 transition-colors"
-              title="Delete"
-            >
-              <Trash2 size={15} />
-            </button>
-          ) : (
-            <button
-              disabled
-              className="rounded-md p-1.5 text-ink-300 cursor-not-allowed"
-              title="No delete permission"
-            >
-              <Trash2 size={15} />
-            </button>
-          )}
-        </div>
-      )
+      render: (row) => {
+        if (!canEdit && !canDelete) return null
+
+        return (
+          <div className="flex justify-end gap-1">
+            {canEdit && (
+              <button
+                onClick={() => openEdit(row)}
+                className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600 transition-colors"
+                title="Edit"
+              >
+                <Pencil size={15} />
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={() => setDeleteTarget(row)}
+                className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700 transition-colors"
+                title="Delete"
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
+          </div>
+        )
+      }
     }
   ]
 
@@ -202,23 +201,13 @@ export default function ItemList() {
       <PageHeader
         title="Items & Locations"
         subtitle="Maintain the item master, its bin location, and min/max/reorder levels."
-        actions={
-          canCreate ? (
-            <Button icon={Plus} onClick={openCreate}>
-              Add Item
-            </Button>
-          ) : (
-            <Button icon={Lock} variant="secondary" disabled>
-              Add Item
-            </Button>
-          )
-        }
+        actions={canCreate ? <Button icon={Plus} onClick={openCreate}>Add Item</Button> : null}
       />
 
       {!canCreate && !canEdit && !canDelete && (
-        <div className="mb-4 rounded-lg bg-warning-50 border border-warning-100 p-4">
-          <p className="text-sm text-warning-700">
-            <strong>View Only:</strong> Your role does not have permission to create, edit, or delete items.
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm text-amber-800">
+            <span className="font-semibold">Read-only access:</span> this role can view inventory records but cannot create, edit, or delete items.
           </p>
         </div>
       )}
@@ -270,13 +259,25 @@ export default function ItemList() {
             value={form.store}
             onChange={(e) => setForm((f) => ({ ...f, store: e.target.value }))}
           />
-          <Input label="Bin / Location" required placeholder="e.g. A-01" value={form.bin} onChange={(e) => setForm((f) => ({ ...f, bin: e.target.value }))} />
           <Select label="Unit of Issue" required options={UNITS} value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} />
+
+          <div className="sm:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-4 border-y border-ink-100 py-4 my-2">
+            <Input label="Section" placeholder="e.g. A" value={form.section} onChange={(e) => setForm((f) => ({ ...f, section: e.target.value }))} />
+            <Input label="Rack" placeholder="e.g. 12" value={form.rack} onChange={(e) => setForm((f) => ({ ...f, rack: e.target.value }))} />
+            <Input label="Shelf" placeholder="e.g. 3" value={form.shelf} onChange={(e) => setForm((f) => ({ ...f, shelf: e.target.value }))} />
+            <Input label="Bin" placeholder="e.g. 05" required value={form.bin} onChange={(e) => setForm((f) => ({ ...f, bin: e.target.value }))} />
+          </div>
+
           <Input label="Quantity on Hand" type="number" required value={form.qtyOnHand} onChange={(e) => setForm((f) => ({ ...f, qtyOnHand: e.target.value }))} />
           <Input label="Unit Price (Birr)" type="number" required value={form.unitPrice} onChange={(e) => setForm((f) => ({ ...f, unitPrice: e.target.value }))} />
           <Input label="Minimum Level" type="number" value={form.minLevel} onChange={(e) => setForm((f) => ({ ...f, minLevel: e.target.value }))} />
           <Input label="Reorder Level" type="number" value={form.reorderLevel} onChange={(e) => setForm((f) => ({ ...f, reorderLevel: e.target.value }))} />
           <Input label="Maximum Level" type="number" value={form.maxLevel} onChange={(e) => setForm((f) => ({ ...f, maxLevel: e.target.value }))} />
+          <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-ink-100 pt-4 mt-2">
+            <Input label="Expiry Date" type="date" value={form.expiryDate} onChange={(e) => setForm((f) => ({ ...f, expiryDate: e.target.value }))} />
+            <Input label="Batch Number" value={form.batchNo} onChange={(e) => setForm((f) => ({ ...f, batchNo: e.target.value }))} />
+            <Select label="Condition" options={['New', 'Good', 'Fair', 'Poor', 'Damaged']} value={form.condition} onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))} />
+          </div>
         </form>
       </Modal>
 

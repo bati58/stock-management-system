@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Eye, CheckCircle2, XCircle, Trash2 } from 'lucide-react'
+import { Plus, Eye, CheckCircle2, XCircle, Trash2, Edit } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Table from '../../components/ui/Table'
@@ -13,7 +13,7 @@ import { requisitionService, storeService, itemService } from '../../services'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
-import { STATUS, ROLES } from '../../utils/constants'
+import { REQUISITION_STATUS, ROLES } from '../../utils/constants'
 import {
   canPerformAction,
   canApproveRequisition,
@@ -32,6 +32,7 @@ export default function RequisitionList() {
   const [query, setQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [viewing, setViewing] = useState(null)
+  const [approveLines, setApproveLines] = useState([])
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [saving, setSaving] = useState(false)
 
@@ -79,6 +80,15 @@ export default function RequisitionList() {
   function updateLine(idx, patch) {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)))
   }
+  
+  function updateApproveLine(idx, patch) {
+    setApproveLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)))
+  }
+
+  function handleOpenView(row) {
+    setViewing(row)
+    setApproveLines(row.items.map(i => ({ ...i, qtyApproved: i.qtyApproved ?? i.qty })))
+  }
 
   async function handleCreate(e) {
     e.preventDefault()
@@ -90,7 +100,7 @@ export default function RequisitionList() {
         srRef,
         ...header,
         requestedBy: user?.name || 'Department Head',
-        status: STATUS.PENDING,
+        status: REQUISITION_STATUS.PENDING,
         items: lines.filter((l) => l.item && l.qty)
       })
       push(`Requisition ${srRef} submitted for approval.`, 'success')
@@ -103,19 +113,26 @@ export default function RequisitionList() {
     }
   }
 
-  async function decide(row, status) {
+  async function decide(status) {
     const allowed =
-      status === STATUS.APPROVED
-        ? canApproveRequisition(user, row)
-        : canRejectRequisition(user, row)
+      status === REQUISITION_STATUS.APPROVED || status === REQUISITION_STATUS.PARTIALLY_APPROVED
+        ? canApproveRequisition(user, viewing)
+        : canRejectRequisition(user, viewing)
 
     if (!allowed) {
       push('You do not have permission to action this requisition.', 'error')
       return
     }
+    
+    // Check if it's partially approved
+    let finalStatus = status
+    if (status === REQUISITION_STATUS.APPROVED) {
+      const isPartial = approveLines.some(l => Number(l.qtyApproved) < Number(l.qty) && Number(l.qtyApproved) >= 0)
+      if (isPartial) finalStatus = REQUISITION_STATUS.PARTIALLY_APPROVED
+    }
 
-    await requisitionService.update(row.id, { status })
-    push(status === STATUS.APPROVED ? `${row.srRef} approved. Storekeeper can now create the issue voucher.` : `${row.srRef} rejected.`, status === STATUS.APPROVED ? 'success' : 'info')
+    await requisitionService.update(viewing.id, { status: finalStatus, items: approveLines })
+    push(finalStatus === REQUISITION_STATUS.REJECTED ? `${viewing.srRef} rejected.` : `${viewing.srRef} approved. Storekeeper can now create the issue voucher.`, finalStatus === REQUISITION_STATUS.REJECTED ? 'info' : 'success')
     setViewing(null)
     await load()
   }
@@ -140,7 +157,7 @@ export default function RequisitionList() {
       className: 'text-right',
       render: (row) => (
         <div className="flex justify-end gap-1">
-          <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600">
+          <button onClick={() => handleOpenView(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600">
             <Eye size={15} />
           </button>
           {canDelete && (
@@ -225,18 +242,19 @@ export default function RequisitionList() {
         open={Boolean(viewing)}
         onClose={() => setViewing(null)}
         title={viewing?.srRef}
+        size="lg"
         footer={
-          viewing?.status === STATUS.PENDING &&
+          viewing?.status === REQUISITION_STATUS.PENDING &&
           (canApproveRequisition(user, viewing) || canRejectRequisition(user, viewing)) && (
             <>
               {canRejectRequisition(user, viewing) && (
-                <Button variant="danger" icon={XCircle} onClick={() => decide(viewing, STATUS.REJECTED)}>
+                <Button variant="danger" icon={XCircle} onClick={() => decide(REQUISITION_STATUS.REJECTED)}>
                   Reject
                 </Button>
               )}
               {canApproveRequisition(user, viewing) && (
-                <Button icon={CheckCircle2} onClick={() => decide(viewing, STATUS.APPROVED)}>
-                  Approve
+                <Button icon={CheckCircle2} onClick={() => decide(REQUISITION_STATUS.APPROVED)}>
+                  Approve (Full/Partial)
                 </Button>
               )}
             </>
@@ -245,28 +263,51 @@ export default function RequisitionList() {
       >
         {viewing && (
           <div className="space-y-4 text-sm">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Field label="Department" value={viewing.department} />
               <Field label="Store" value={viewing.store} />
               <Field label="Requested By" value={viewing.requestedBy} />
               <Field label="Status" value={<StatusBadge status={viewing.status} />} />
             </div>
-            <table className="w-full text-left text-sm">
-              <thead className="text-ink-500">
-                <tr>
-                  <th className="py-1">Item</th>
-                  <th className="py-1">Qty</th>
-                </tr>
-              </thead>
-              <tbody>
-                {viewing.items?.map((l, i) => (
-                  <tr key={i} className="border-t border-ink-100">
-                    <td className="py-1.5">{l.item}</td>
-                    <td className="py-1.5">{l.qty}</td>
+            <div>
+              <p className="mb-2 font-medium text-ink-700">Requested Items</p>
+              <table className="w-full text-left text-sm">
+                <thead className="text-ink-500 border-b border-ink-100">
+                  <tr>
+                    <th className="py-2">Item</th>
+                    <th className="py-2">Requested Qty</th>
+                    <th className="py-2">Approved Qty</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {approveLines.map((l, i) => (
+                    <tr key={i} className="border-b border-ink-50">
+                      <td className="py-2 font-medium">{l.item}</td>
+                      <td className="py-2">{l.qty}</td>
+                      <td className="py-2">
+                        {viewing.status === REQUISITION_STATUS.PENDING && canApproveRequisition(user, viewing) ? (
+                          <input 
+                            type="number" 
+                            className="w-20 rounded border border-ink-200 px-2 py-1 text-sm focus:border-brand-500 focus:outline-none"
+                            value={l.qtyApproved}
+                            max={l.qty}
+                            min={0}
+                            onChange={(e) => updateApproveLine(i, { qtyApproved: e.target.value })}
+                          />
+                        ) : (
+                          <span className="font-semibold text-brand-700">{l.qtyApproved}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {viewing.status === REQUISITION_STATUS.PENDING && canApproveRequisition(user, viewing) && (
+                <p className="mt-2 text-xs text-ink-500">
+                  You can adjust the Approved Qty to issue a partial approval.
+                </p>
+              )}
+            </div>
           </div>
         )}
       </Modal>
@@ -279,8 +320,8 @@ export default function RequisitionList() {
 function Field({ label, value }) {
   return (
     <div>
-      <p className="text-xs text-ink-400">{label}</p>
-      <p className="font-medium text-ink-800">{value ?? '-'}</p>
+      <p className="text-xs text-ink-500 mb-0.5">{label}</p>
+      <p className="font-medium text-ink-900">{value ?? '-'}</p>
     </div>
   )
 }

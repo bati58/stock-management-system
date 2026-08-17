@@ -16,7 +16,8 @@ import {
   Trash2,
   BarChart3,
   ShieldCheck,
-  Shield
+  Shield,
+  IdCard
 } from 'lucide-react'
 import { ROLES } from '../../utils/constants'
 
@@ -67,6 +68,12 @@ export const NAV_SECTIONS = [
         label: 'Technical Evaluation',
         icon: ClipboardCheck,
         roles: [ROLES.ADMIN, ROLES.TEC, ROLES.STORE_HEAD]
+      },
+      {
+        to: '/grn-documents',
+        label: 'GRN Documents (Model 19)',
+        icon: FileText,
+        roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.PAO]
       }
     ]
   },
@@ -102,6 +109,7 @@ export const NAV_SECTIONS = [
     label: 'Assets & Disposal',
     items: [
       { to: '/fixed-assets', label: 'Fixed Assets', icon: Landmark, roles: [ROLES.ADMIN, ROLES.PAO] },
+      { to: '/user-cards', label: 'User Material Cards', icon: IdCard, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER] },
       { to: '/disposal', label: 'Disposal Management', icon: Trash2, roles: [ROLES.ADMIN, ROLES.PAO] }
     ]
   },

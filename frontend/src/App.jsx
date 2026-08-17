@@ -9,12 +9,14 @@ import CategoryList from './pages/categories/CategoryList'
 import ItemList from './pages/items/ItemList'
 import GoodsReceiptList from './pages/goods-receipt/GoodsReceiptList'
 import Evaluation from './pages/goods-receipt/Evaluation'
+import GrnDocuments from './pages/goods-receipt/GrnDocuments'
 import StockCardList from './pages/stock-cards/StockCardList'
 import BinCardList from './pages/bin-cards/BinCardList'
 import StockTransfer from './pages/stock-transfer/StockTransfer'
 import RequisitionList from './pages/requisitions/RequisitionList'
 import IssueVoucherList from './pages/issue-vouchers/IssueVoucherList'
 import FixedAssetList from './pages/fixed-assets/FixedAssetList'
+import UserCardList from './pages/user-cards/UserCardList'
 import UserList from './pages/users/UserList'
 import MaterialReturnList from './pages/material-return/MaterialReturnList'
 import MaterialTransferList from './pages/material-transfer/MaterialTransferList'
@@ -40,6 +42,7 @@ export default function App() {
 
           <Route path="/goods-receipt" element={<GoodsReceiptList />} />
           <Route path="/goods-receipt/evaluation" element={<Evaluation />} />
+          <Route path="/grn-documents" element={<GrnDocuments />} />
 
           <Route path="/stock-cards" element={<StockCardList />} />
           <Route path="/bin-cards" element={<BinCardList />} />
@@ -52,6 +55,7 @@ export default function App() {
           <Route path="/material-transfer" element={<MaterialTransferList />} />
 
           <Route path="/fixed-assets" element={<FixedAssetList />} />
+          <Route path="/user-cards" element={<UserCardList />} />
           <Route path="/disposal" element={<DisposalList />} />
 
           <Route path="/users" element={<UserList />} />

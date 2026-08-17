@@ -1,4 +1,5 @@
 import CrudPage from '../../components/crud/CrudPage'
+import StatusBadge from '../../components/ui/StatusBadge'
 import { categoryService, storeService } from '../../services'
 import { useEffect, useState } from 'react'
 
@@ -23,13 +24,15 @@ export default function CategoryList() {
         { key: 'code', header: 'Account Code' },
         { key: 'name', header: 'Category Name' },
         { key: 'store', header: 'Belongs To Store' },
-        { key: 'description', header: 'Description' }
+        { key: 'description', header: 'Description' },
+        { key: 'active', header: 'Status', render: (row) => <StatusBadge status={row.active !== false ? 'Approved' : 'Cancelled'} /> }
       ]}
       fields={[
         { name: 'code', label: 'Account Code', required: true, placeholder: 'e.g. 4402' },
         { name: 'name', label: 'Category Name', required: true },
         { name: 'store', label: 'Belongs To Store', type: 'select', required: true, options: storeOptions },
-        { name: 'description', label: 'Description', type: 'textarea', fullWidth: true }
+        { name: 'description', label: 'Description', type: 'textarea', fullWidth: true },
+        { name: 'active', label: 'Active', type: 'checkbox' }
       ]}
     />
   )

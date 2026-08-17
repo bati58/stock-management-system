@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Eye, Trash2 } from 'lucide-react'
+import { Plus, Eye, Trash2, Send, FileText } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Table from '../../components/ui/Table'
@@ -10,10 +10,11 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { goodsReceiptService, storeService, itemService } from '../../services'
+import { workflowEngine } from '../../services/workflowEngine'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, formatCurrency } from '../../utils/formatters'
-import { STATUS } from '../../utils/constants'
+import { GRN_STATUS } from '../../utils/constants'
 
 const EMPTY_LINE = { item: '', qty: '', unitPrice: '' }
 
@@ -30,7 +31,7 @@ export default function GoodsReceiptList() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  const [header, setHeader] = useState({ supplier: '', poRef: '', store: '', receivedDate: '' })
+  const [header, setHeader] = useState({ supplier: '', poRef: '', store: '', receivedDate: '', type: 'Consumable', docRef: '', condition: 'New' })
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
 
   async function load() {
@@ -53,7 +54,7 @@ export default function GoodsReceiptList() {
   }, [rows, query])
 
   function openCreate() {
-    setHeader({ supplier: '', poRef: '', store: '', receivedDate: '' })
+    setHeader({ supplier: '', poRef: '', store: '', receivedDate: '', type: 'Consumable', docRef: '', condition: 'New' })
     setLines([{ ...EMPTY_LINE }])
     setModalOpen(true)
   }
@@ -72,18 +73,35 @@ export default function GoodsReceiptList() {
         grnRef,
         ...header,
         receivedBy: user?.name || 'Storekeeper',
-        status: STATUS.PENDING,
+        status: GRN_STATUS.SUBMITTED,
         items: lines.filter((l) => l.item && l.qty),
         evaluationNote: '',
         evaluatedBy: ''
       })
-      push(`Temporary receipt ${grnRef} created. Store Head can now notify the Technical Evaluation Committee.`, 'success')
+      push(`Temporary receipt ${grnRef} created. You can now notify the Technical Evaluation Committee.`, 'success')
       setModalOpen(false)
       await load()
     } catch (err) {
       push(err.message, 'error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleNotifyTEC(row) {
+    await goodsReceiptService.update(row.id, { status: GRN_STATUS.PENDING_EVAL })
+    push(`TEC notified for ${row.grnRef}`, 'success')
+    await load()
+  }
+
+  async function handleGenerateGRN(row) {
+    try {
+      await goodsReceiptService.update(row.id, { status: GRN_STATUS.GRN_GENERATED })
+      await workflowEngine.generateGRN(row.id, user)
+      push(`Official Model 19 GRN Generated for ${row.grnRef}. Stock updated.`, 'success')
+      await load()
+    } catch (e) {
+      push(e.message, 'error')
     }
   }
 
@@ -97,7 +115,7 @@ export default function GoodsReceiptList() {
   const columns = [
     { key: 'grnRef', header: 'GRN Ref' },
     { key: 'supplier', header: 'Supplier' },
-    { key: 'poRef', header: 'PO / Donation Ref' },
+    { key: 'poRef', header: 'PO / Ref' },
     { key: 'store', header: 'Store' },
     { key: 'receivedDate', header: 'Received', render: (r) => formatDate(r.receivedDate) },
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
@@ -106,11 +124,21 @@ export default function GoodsReceiptList() {
       header: '',
       className: 'text-right',
       render: (row) => (
-        <div className="flex justify-end gap-1">
-          <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600">
+        <div className="flex justify-end gap-1 items-center">
+          {row.status === GRN_STATUS.SUBMITTED && (
+            <button onClick={() => handleNotifyTEC(row)} className="rounded-md p-1.5 text-info-600 hover:bg-info-50" title="Notify TEC">
+              <Send size={15} />
+            </button>
+          )}
+          {row.status === GRN_STATUS.ACCEPTED && (
+            <button onClick={() => handleGenerateGRN(row)} className="rounded-md p-1.5 text-success-600 hover:bg-success-50" title="Generate GRN (Model 19)">
+              <FileText size={15} />
+            </button>
+          )}
+          <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600" title="View">
             <Eye size={15} />
           </button>
-          <button onClick={() => setDeleteTarget(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700">
+          <button onClick={() => setDeleteTarget(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700" title="Delete">
             <Trash2 size={15} />
           </button>
         </div>
@@ -155,11 +183,14 @@ export default function GoodsReceiptList() {
         }
       >
         <form onSubmit={handleCreate} className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Input label="Supplier / Donor" required value={header.supplier} onChange={(e) => setHeader((h) => ({ ...h, supplier: e.target.value }))} />
-            <Input label="Purchase Order / Donation Ref" required value={header.poRef} onChange={(e) => setHeader((h) => ({ ...h, poRef: e.target.value }))} />
+            <Input label="PO / Donation Ref" required value={header.poRef} onChange={(e) => setHeader((h) => ({ ...h, poRef: e.target.value }))} />
+            <Input label="Supporting Document Ref" placeholder="e.g. Waybill-123" value={header.docRef} onChange={(e) => setHeader((h) => ({ ...h, docRef: e.target.value }))} />
             <Select label="Receiving Store" required options={stores.map((s) => s.name)} value={header.store} onChange={(e) => setHeader((h) => ({ ...h, store: e.target.value }))} />
             <Input label="Received Date" type="date" required value={header.receivedDate} onChange={(e) => setHeader((h) => ({ ...h, receivedDate: e.target.value }))} />
+            <Select label="Material Type" required options={['Consumable', 'Fixed Asset']} value={header.type} onChange={(e) => setHeader((h) => ({ ...h, type: e.target.value }))} />
+            <Select label="Condition on Arrival" options={['New', 'Good', 'Damaged']} value={header.condition} onChange={(e) => setHeader((h) => ({ ...h, condition: e.target.value }))} />
           </div>
 
           <div>
@@ -171,7 +202,7 @@ export default function GoodsReceiptList() {
             </div>
             <div className="space-y-2">
               {lines.map((line, idx) => (
-                <div key={idx} className="grid grid-cols-1 gap-2 rounded-lg border border-ink-100 p-3 sm:grid-cols-3">
+                <div key={idx} className="grid grid-cols-1 gap-2 rounded-lg border border-ink-100 p-3 sm:grid-cols-3 bg-ink-50">
                   <Select
                     label="Item"
                     options={items.map((i) => i.name)}
@@ -194,7 +225,10 @@ export default function GoodsReceiptList() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Field label="Supplier" value={viewing.supplier} />
               <Field label="PO / Donation Ref" value={viewing.poRef} />
+              <Field label="Supporting Document" value={viewing.docRef} />
               <Field label="Store" value={viewing.store} />
+              <Field label="Material Type" value={viewing.type} />
+              <Field label="Condition" value={viewing.condition} />
               <Field label="Received Date" value={formatDate(viewing.receivedDate)} />
               <Field label="Received By" value={viewing.receivedBy} />
               <Field label="Status" value={<StatusBadge status={viewing.status} />} />
@@ -202,31 +236,40 @@ export default function GoodsReceiptList() {
             <div>
               <p className="mb-2 font-medium text-ink-700">Items</p>
               <table className="w-full text-left text-sm">
-                <thead className="text-ink-500">
+                <thead className="text-ink-500 border-b border-ink-100">
                   <tr>
-                    <th className="py-1">Item</th>
-                    <th className="py-1">Qty</th>
-                    <th className="py-1">Unit Price</th>
-                    <th className="py-1">Total</th>
+                    <th className="py-2">Item</th>
+                    <th className="py-2">Qty</th>
+                    <th className="py-2">Unit Price</th>
+                    <th className="py-2">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {viewing.items?.map((l, i) => (
-                    <tr key={i} className="border-t border-ink-100">
-                      <td className="py-1.5">{l.item}</td>
-                      <td className="py-1.5">{l.qty}</td>
-                      <td className="py-1.5">{formatCurrency(l.unitPrice)}</td>
-                      <td className="py-1.5">{formatCurrency(l.qty * l.unitPrice)}</td>
+                    <tr key={i} className="border-b border-ink-50">
+                      <td className="py-2">{l.item}</td>
+                      <td className="py-2">{l.qty}</td>
+                      <td className="py-2">{formatCurrency(l.unitPrice)}</td>
+                      <td className="py-2">{formatCurrency(l.qty * l.unitPrice)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             {viewing.evaluationNote && (
-              <div className="rounded-lg bg-ink-50 p-3">
-                <p className="text-xs font-medium text-ink-500">Technical Evaluation Note</p>
-                <p className="mt-1 text-ink-700">{viewing.evaluationNote}</p>
-                <p className="mt-1 text-xs text-ink-400">Evaluated by {viewing.evaluatedBy}</p>
+              <div className="rounded-lg bg-ink-50 p-4 border border-ink-100 mt-4">
+                <p className="text-xs font-semibold text-ink-500 uppercase tracking-wider mb-1">Technical Evaluation</p>
+                <p className="text-ink-800">{viewing.evaluationNote}</p>
+                <p className="mt-2 text-xs text-ink-500">Evaluated by {viewing.evaluatedBy}</p>
+              </div>
+            )}
+            {viewing.status === GRN_STATUS.GRN_GENERATED && (
+              <div className="rounded-lg bg-success-50 p-4 border border-success-100 mt-4 flex items-center gap-3">
+                <FileText className="text-success-600" />
+                <div>
+                  <p className="text-sm font-semibold text-success-800">Official Model 19 GRN Generated</p>
+                  <p className="text-xs text-success-700">Stock cards and bin cards have been updated.</p>
+                </div>
               </div>
             )}
           </div>
@@ -247,8 +290,8 @@ export default function GoodsReceiptList() {
 function Field({ label, value }) {
   return (
     <div>
-      <p className="text-xs text-ink-400">{label}</p>
-      <p className="font-medium text-ink-800">{value ?? '-'}</p>
+      <p className="text-xs text-ink-500 mb-0.5">{label}</p>
+      <p className="font-medium text-ink-900">{value ?? '-'}</p>
     </div>
   )
 }

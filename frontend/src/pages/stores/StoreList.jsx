@@ -15,6 +15,7 @@ export default function StoreList() {
         { key: 'code', header: 'Code' },
         { key: 'name', header: 'Store Name' },
         { key: 'type', header: 'Type' },
+        { key: 'department', header: 'Department' },
         { key: 'location', header: 'Location' },
         { key: 'headOfStore', header: 'Store Head' },
         {
@@ -31,10 +32,14 @@ export default function StoreList() {
           label: 'Store Type',
           type: 'select',
           required: true,
-          options: ['Main Store', 'Department Store', 'Cafe Store']
+          options: ['Main Store', 'Department Store', 'Cafe Store', 'Specialized/Laboratory']
         },
+        { name: 'department', label: 'Department/Org Unit', placeholder: 'e.g. Electrical Engineering' },
         { name: 'location', label: 'Physical Location', required: true },
-        { name: 'headOfStore', label: 'Store Head', required: true }
+        { name: 'contactInfo', label: 'Contact Info', placeholder: 'Phone or Email' },
+        { name: 'headOfStore', label: 'Store Head', required: true },
+        { name: 'description', label: 'Description', type: 'textarea', fullWidth: true },
+        { name: 'active', label: 'Active', type: 'checkbox' }
       ]}
     />
   )

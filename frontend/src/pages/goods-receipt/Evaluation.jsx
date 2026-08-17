@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, Search } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import Table from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
@@ -10,7 +10,7 @@ import { goodsReceiptService } from '../../services'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
-import { STATUS } from '../../utils/constants'
+import { GRN_STATUS } from '../../utils/constants'
 
 export default function Evaluation() {
   const { push } = useToast()
@@ -24,7 +24,7 @@ export default function Evaluation() {
   async function load() {
     setLoading(true)
     const grns = await goodsReceiptService.list()
-    setRows(grns.filter((g) => g.status === STATUS.PENDING || g.status === STATUS.UNDER_EVALUATION))
+    setRows(grns.filter((g) => g.status === GRN_STATUS.PENDING_EVAL || g.status === GRN_STATUS.UNDER_EVAL))
     setLoading(false)
   }
 
@@ -32,7 +32,11 @@ export default function Evaluation() {
     load()
   }, [])
 
-  function openReview(row) {
+  async function startReview(row) {
+    if (row.status === GRN_STATUS.PENDING_EVAL) {
+      await goodsReceiptService.update(row.id, { status: GRN_STATUS.UNDER_EVAL })
+      row.status = GRN_STATUS.UNDER_EVAL
+    }
     setTarget(row)
     setNote(row.evaluationNote || '')
   }
@@ -42,14 +46,14 @@ export default function Evaluation() {
     try {
       await goodsReceiptService.update(target.id, {
         status: decision,
-        evaluationNote: note || (decision === STATUS.APPROVED ? 'Inspected and accepted.' : 'Rejected - does not meet specification.'),
+        evaluationNote: note || (decision === GRN_STATUS.ACCEPTED ? 'Inspected and accepted.' : 'Rejected - does not meet specification.'),
         evaluatedBy: user?.name || 'Technical Evaluation Committee'
       })
       push(
-        decision === STATUS.APPROVED
-          ? 'Materials approved. Property registration officer notified to generate the GRN.'
+        decision === GRN_STATUS.ACCEPTED
+          ? 'Materials accepted. Store head notified to generate the official GRN (Model 19).'
           : 'Materials rejected. Store head notified to arrange return to supplier.',
-        decision === STATUS.APPROVED ? 'success' : 'info'
+        decision === GRN_STATUS.ACCEPTED ? 'success' : 'warning'
       )
       setTarget(null)
       await load()
@@ -64,6 +68,7 @@ export default function Evaluation() {
     { key: 'grnRef', header: 'GRN Ref' },
     { key: 'supplier', header: 'Supplier' },
     { key: 'store', header: 'Store' },
+    { key: 'type', header: 'Material Type' },
     { key: 'receivedDate', header: 'Received', render: (r) => formatDate(r.receivedDate) },
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     {
@@ -71,7 +76,7 @@ export default function Evaluation() {
       header: '',
       className: 'text-right',
       render: (row) => (
-        <Button variant="secondary" onClick={() => openReview(row)}>
+        <Button variant="secondary" onClick={() => startReview(row)} icon={Search}>
           Review
         </Button>
       )
@@ -101,45 +106,56 @@ export default function Evaluation() {
         title={target ? `Evaluate ${target.grnRef}` : ''}
         footer={
           <>
-            <Button variant="danger" icon={XCircle} loading={saving} onClick={() => decide(STATUS.REJECTED)}>
-              Reject
+            <Button variant="secondary" onClick={() => setTarget(null)}>
+              Cancel
             </Button>
-            <Button icon={CheckCircle2} loading={saving} onClick={() => decide(STATUS.APPROVED)}>
-              Approve
+            <Button variant="danger" icon={XCircle} loading={saving} onClick={() => decide(GRN_STATUS.REJECTED)}>
+              Reject (Return to Supplier)
+            </Button>
+            <Button icon={CheckCircle2} loading={saving} onClick={() => decide(GRN_STATUS.ACCEPTED)}>
+              Accept Materials
             </Button>
           </>
         }
       >
         {target && (
           <div className="space-y-4 text-sm">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div>
-                <p className="text-xs text-ink-400">Supplier</p>
-                <p className="font-medium text-ink-800">{target.supplier}</p>
+                <p className="text-xs text-ink-500 mb-0.5">Supplier</p>
+                <p className="font-medium text-ink-900">{target.supplier}</p>
               </div>
               <div>
-                <p className="text-xs text-ink-400">Store</p>
-                <p className="font-medium text-ink-800">{target.store}</p>
+                <p className="text-xs text-ink-500 mb-0.5">Store</p>
+                <p className="font-medium text-ink-900">{target.store}</p>
+              </div>
+              <div>
+                <p className="text-xs text-ink-500 mb-0.5">Condition on Arrival</p>
+                <p className="font-medium text-ink-900">{target.condition || 'N/A'}</p>
               </div>
             </div>
-            <table className="w-full text-left text-sm">
-              <thead className="text-ink-500">
-                <tr>
-                  <th className="py-1">Item</th>
-                  <th className="py-1">Qty</th>
-                </tr>
-              </thead>
-              <tbody>
-                {target.items?.map((l, i) => (
-                  <tr key={i} className="border-t border-ink-100">
-                    <td className="py-1.5">{l.item}</td>
-                    <td className="py-1.5">{l.qty}</td>
+            <div>
+              <p className="mb-2 font-medium text-ink-700">Items to Inspect</p>
+              <table className="w-full text-left text-sm">
+                <thead className="text-ink-500 border-b border-ink-100">
+                  <tr>
+                    <th className="py-2">Item</th>
+                    <th className="py-2">Qty</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {target.items?.map((l, i) => (
+                    <tr key={i} className="border-b border-ink-50">
+                      <td className="py-2">{l.item}</td>
+                      <td className="py-2">{l.qty}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <Textarea
-              label="Evaluation Note"
+              label="Evaluation Findings & Decision Note"
+              required
               placeholder="Record inspection findings, quality/quantity checks, decision rationale..."
               value={note}
               onChange={(e) => setNote(e.target.value)}

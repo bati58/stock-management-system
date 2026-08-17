@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Send, Eye, Printer } from 'lucide-react'
+import { Send, Eye, Printer, AlertTriangle } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Table from '../../components/ui/Table'
@@ -7,29 +7,33 @@ import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import Select from '../../components/ui/Select'
 import StatusBadge from '../../components/ui/StatusBadge'
-import { issueVoucherService, requisitionService } from '../../services'
+import { issueVoucherService, requisitionService, itemService } from '../../services'
+import { workflowEngine } from '../../services/workflowEngine'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, formatCurrency } from '../../utils/formatters'
-import { STATUS } from '../../utils/constants'
+import { SIV_STATUS, REQUISITION_STATUS } from '../../utils/constants'
 
 export default function IssueVoucherList() {
   const { push } = useToast()
   const { user } = useAuth()
   const [rows, setRows] = useState([])
   const [approvedReqs, setApprovedReqs] = useState([])
+  const [itemsCatalog, setItemsCatalog] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedSr, setSelectedSr] = useState('')
   const [viewing, setViewing] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [amendLines, setAmendLines] = useState([])
 
   async function load() {
     setLoading(true)
-    const [vouchers, reqs] = await Promise.all([issueVoucherService.list(), requisitionService.list()])
+    const [vouchers, reqs, allItems] = await Promise.all([issueVoucherService.list(), requisitionService.list(), itemService.list()])
     setRows(vouchers)
-    setApprovedReqs(reqs.filter((r) => r.status === STATUS.APPROVED))
+    setApprovedReqs(reqs.filter((r) => r.status === REQUISITION_STATUS.APPROVED || r.status === REQUISITION_STATUS.PARTIALLY_APPROVED))
+    setItemsCatalog(allItems)
     setLoading(false)
   }
 
@@ -37,11 +41,35 @@ export default function IssueVoucherList() {
     load()
   }, [])
 
+  useEffect(() => {
+    if (selectedSr) {
+      const req = approvedReqs.find((r) => r.srRef === selectedSr)
+      if (req) {
+        setAmendLines(req.items.map(i => {
+          const qtyApproved = Number(i.qtyApproved ?? i.qty)
+          const stockAvailable = Number(itemsCatalog.find(c => c.name === i.item && c.store === req.store)?.qtyOnHand || 0)
+          return {
+            item: i.item,
+            qtyApproved,
+            qtyIssued: Math.min(qtyApproved, stockAvailable),
+            stockAvailable
+          }
+        }))
+      }
+    } else {
+      setAmendLines([])
+    }
+  }, [selectedSr, approvedReqs, itemsCatalog])
+
   const filtered = useMemo(() => {
     if (!query.trim()) return rows
     const q = query.toLowerCase()
     return rows.filter((r) => `${r.sivRef} ${r.issuedTo} ${r.srRef}`.toLowerCase().includes(q))
   }, [rows, query])
+
+  function updateAmendLine(idx, val) {
+    setAmendLines(prev => prev.map((l, i) => i === idx ? { ...l, qtyIssued: val } : l))
+  }
 
   async function handleGenerate(e) {
     e.preventDefault()
@@ -52,17 +80,20 @@ export default function IssueVoucherList() {
       const count = rows.length + 1
       const sivRef = `SIV-2026-${String(9 + count).padStart(4, '0')}`
       const isInterStore = req.department.toLowerCase().includes('store')
-      await issueVoucherService.create({
+      
+      const newSiv = await issueVoucherService.create({
         sivRef,
         type: isInterStore ? 'ISIV' : 'SIV',
         srRef: req.srRef,
         issuedTo: req.department,
         issuedBy: user?.name || 'Storekeeper',
         date: new Date().toISOString().slice(0, 10),
-        status: STATUS.ISSUED,
-        items: req.items.map((l) => ({ item: l.item, qty: l.qty, unitPrice: 0 }))
+        status: SIV_STATUS.ISSUED,
+        items: amendLines.map((l) => ({ item: l.item, qty: l.qtyIssued, unitPrice: 0 })) // actual cost calculated later
       })
-      push(`${sivRef} generated (Model 22) and stock levels updated.`, 'success')
+
+      await workflowEngine.issueSIV(newSiv.id, user)
+      push(`Model 22 Issue Voucher ${sivRef} generated. Stock levels deducted.`, 'success')
       setModalOpen(false)
       setSelectedSr('')
       await load()
@@ -98,7 +129,7 @@ export default function IssueVoucherList() {
         title="Issue Vouchers (SIV / ISIV)"
         subtitle="Generate issue vouchers from approved requisitions and update stock automatically."
         actions={
-          <Button icon={Send} onClick={() => setModalOpen(true)} disabled={!approvedReqs.length}>
+          <Button icon={Send} onClick={() => setModalOpen(true)}>
             Generate Voucher
           </Button>
         }
@@ -114,14 +145,15 @@ export default function IssueVoucherList() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Generate Issue Voucher"
+        title="Generate Issue Voucher (Model 22)"
+        size="lg"
         footer={
           <>
             <Button variant="secondary" onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleGenerate} loading={saving} disabled={!selectedSr}>
-              Generate
+              Finalize & Issue
             </Button>
           </>
         }
@@ -130,17 +162,62 @@ export default function IssueVoucherList() {
           <Select
             label="Approved Requisition"
             required
-            options={approvedReqs.map((r) => ({ value: r.srRef, label: `${r.srRef} — ${r.department}` }))}
+            options={approvedReqs.map((r) => ({ value: r.srRef, label: `${r.srRef} — ${r.department} (${r.status})` }))}
             value={selectedSr}
             onChange={(e) => setSelectedSr(e.target.value)}
           />
           {!approvedReqs.length && (
             <p className="mt-2 text-xs text-ink-400">No approved requisitions are currently awaiting issue.</p>
           )}
+
+          {selectedSr && amendLines.length > 0 && (
+            <div className="mt-6 border-t border-ink-100 pt-4">
+              <p className="mb-2 font-medium text-ink-700">Amend Quantities & Verify Stock</p>
+              <table className="w-full text-left text-sm">
+                <thead className="text-ink-500 border-b border-ink-100">
+                  <tr>
+                    <th className="py-2">Item</th>
+                    <th className="py-2">Approved Qty</th>
+                    <th className="py-2">Stock Available</th>
+                    <th className="py-2">Qty to Issue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {amendLines.map((l, i) => (
+                    <tr key={i} className="border-b border-ink-50">
+                      <td className="py-2 font-medium">{l.item}</td>
+                      <td className="py-2">{l.qtyApproved}</td>
+                      <td className="py-2">
+                        <span className={l.stockAvailable < l.qtyApproved ? 'text-danger-600 font-semibold' : 'text-success-600'}>
+                          {l.stockAvailable}
+                        </span>
+                      </td>
+                      <td className="py-2">
+                        <input 
+                          type="number" 
+                          className={`w-24 rounded border px-2 py-1 text-sm focus:outline-none ${l.qtyIssued > l.stockAvailable ? 'border-danger-300 focus:border-danger-500 bg-danger-50' : 'border-ink-200 focus:border-brand-500'}`}
+                          value={l.qtyIssued}
+                          max={l.qtyApproved}
+                          min={0}
+                          onChange={(e) => updateAmendLine(i, e.target.value)}
+                        />
+                        {l.qtyIssued > l.stockAvailable && (
+                          <AlertTriangle size={14} className="inline ml-2 text-danger-500" title="Exceeds available stock" />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-2 text-xs text-ink-500">
+                You can amend the issued quantity based on current stock availability.
+              </p>
+            </div>
+          )}
         </form>
       </Modal>
 
-      <Modal open={Boolean(viewing)} onClose={() => setViewing(null)} title={viewing?.sivRef} footer={<Button variant="secondary" icon={Printer} onClick={() => window.print()}>Print</Button>}>
+      <Modal open={Boolean(viewing)} onClose={() => setViewing(null)} title={viewing?.sivRef} footer={<Button variant="secondary" icon={Printer} onClick={() => window.print()}>Print Model 22</Button>}>
         {viewing && (
           <div className="space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-3">
@@ -149,22 +226,25 @@ export default function IssueVoucherList() {
               <Field label="Issued To" value={viewing.issuedTo} />
               <Field label="Issued By" value={viewing.issuedBy} />
             </div>
-            <table className="w-full text-left text-sm">
-              <thead className="text-ink-500">
-                <tr>
-                  <th className="py-1">Item</th>
-                  <th className="py-1">Qty</th>
-                </tr>
-              </thead>
-              <tbody>
-                {viewing.items?.map((l, i) => (
-                  <tr key={i} className="border-t border-ink-100">
-                    <td className="py-1.5">{l.item}</td>
-                    <td className="py-1.5">{l.qty}</td>
+            <div>
+              <p className="mb-2 font-medium text-ink-700">Issued Items</p>
+              <table className="w-full text-left text-sm border border-ink-100 rounded">
+                <thead className="bg-ink-50 text-ink-600">
+                  <tr>
+                    <th className="p-2 font-medium">Item</th>
+                    <th className="p-2 font-medium">Qty</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-ink-100">
+                  {viewing.items?.map((l, i) => (
+                    <tr key={i}>
+                      <td className="p-2">{l.item}</td>
+                      <td className="p-2 font-medium">{l.qty}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </Modal>
@@ -175,8 +255,8 @@ export default function IssueVoucherList() {
 function Field({ label, value }) {
   return (
     <div>
-      <p className="text-xs text-ink-400">{label}</p>
-      <p className="font-medium text-ink-800">{value ?? '-'}</p>
+      <p className="text-xs text-ink-500 mb-0.5">{label}</p>
+      <p className="font-medium text-ink-900">{value ?? '-'}</p>
     </div>
   )
 }

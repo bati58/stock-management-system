@@ -163,44 +163,32 @@ export default function CrudPage({
       key: '__actions',
       header: '',
       className: 'text-right',
-      render: (row) => (
-        <div className="flex justify-end gap-1">
-          {canEdit ? (
-            <button
-              onClick={() => openEdit(row)}
-              className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600 transition-colors"
-              title="Edit"
-            >
-              <Pencil size={15} />
-            </button>
-          ) : (
-            <button
-              disabled
-              className="rounded-md p-1.5 text-ink-300 cursor-not-allowed"
-              title="No edit permission"
-            >
-              <Pencil size={15} />
-            </button>
-          )}
-          {canDelete ? (
-            <button
-              onClick={() => setDeleteTarget(row)}
-              className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700 transition-colors"
-              title="Delete"
-            >
-              <Trash2 size={15} />
-            </button>
-          ) : (
-            <button
-              disabled
-              className="rounded-md p-1.5 text-ink-300 cursor-not-allowed"
-              title="No delete permission"
-            >
-              <Trash2 size={15} />
-            </button>
-          )}
-        </div>
-      )
+      render: (row) => {
+        if (!canEdit && !canDelete) return null
+
+        return (
+          <div className="flex justify-end gap-1">
+            {canEdit && (
+              <button
+                onClick={() => openEdit(row)}
+                className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600 transition-colors"
+                title="Edit"
+              >
+                <Pencil size={15} />
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={() => setDeleteTarget(row)}
+                className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700 transition-colors"
+                title="Delete"
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
+          </div>
+        )
+      }
     }
   ]
 
@@ -212,12 +200,8 @@ export default function CrudPage({
         actions={
           <>
             {extraActions}
-            {canCreate ? (
+            {canCreate && (
               <Button icon={Plus} onClick={openCreate}>
-                {addLabel}
-              </Button>
-            ) : (
-              <Button icon={Lock} variant="secondary" disabled>
                 {addLabel}
               </Button>
             )}
@@ -226,9 +210,9 @@ export default function CrudPage({
       />
 
       {!canCreate && !canEdit && !canDelete && (
-        <div className="mb-6 rounded-lg bg-warning-50 border border-warning-100 p-4">
-          <p className="text-sm text-warning-700">
-            <strong>View Only:</strong> Your role does not have permission to create, edit, or delete records in this section.
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm text-amber-800">
+            <span className="font-semibold">Read-only access:</span> this role can view records but cannot create, edit, or delete them.
           </p>
         </div>
       )}
