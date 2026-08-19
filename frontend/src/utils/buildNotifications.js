@@ -26,7 +26,7 @@ export function buildNotifications(user, data) {
   const pendingGrns = grns.filter((g) => [STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(g.status))
   const pendingDisposals = disposals.filter((d) => [STATUS.PENDING, STATUS.APPROVED].includes(d.status))
   const pendingTransfers = transfers.filter((t) => ![STATUS.COMPLETED, STATUS.CANCELLED, STATUS.REJECTED].includes(t.status))
-  const pendingReturns = returns.filter((r) => [STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(r.status))
+  const pendingReturns = returns.filter((r) => [STATUS.SUBMITTED, STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(r.status))
   const approvedAwaitingIssue = reqs.filter((r) => r.status === STATUS.APPROVED)
   const pendingGateIn = grns.filter((g) => !g.gateVerified && [STATUS.APPROVED, STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(g.status))
   const pendingGateOut = [
@@ -127,6 +127,16 @@ export function buildNotifications(user, data) {
           r.date
         )
       })
+      pendingReturns.slice(0, 6).forEach((r) => {
+        push(
+          `eval-return-${r.id}`,
+          'Return Review Required',
+          `${r.srnRef} from ${r.department} needs store review`,
+          'info',
+          '/material-return',
+          r.date
+        )
+      })
       break
 
     case ROLES.STOCK_CLERK:
@@ -151,16 +161,6 @@ export function buildNotifications(user, data) {
           'info',
           '/goods-receipt/evaluation',
           g.receivedDate
-        )
-      })
-      pendingReturns.slice(0, 4).forEach((r) => {
-        push(
-          `eval-return-${r.id}`,
-          'Return Evaluation',
-          `${r.srnRef} from ${r.department} needs review`,
-          'info',
-          '/material-return',
-          r.date
         )
       })
       break

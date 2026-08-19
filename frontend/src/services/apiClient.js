@@ -48,6 +48,5 @@ export const api = {
   verifyGate: (resource, id) => request(`/gate-pass/${resourcePath(resource)}/${id}/verify`, { method: 'POST', body: JSON.stringify({}) }),
   remove: (resource, id) => request(`/${resourcePath(resource)}/${id}`, { method: 'DELETE' }),
   login: (credentials) => request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
-  changePassword: (credentials) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(credentials) }),
   me: () => request('/auth/me')
 }

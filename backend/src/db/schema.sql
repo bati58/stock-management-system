@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash  TEXT NOT NULL,
   role           TEXT NOT NULL,
   email          TEXT,
-  phone          TEXT,
   department     TEXT,
   active         BOOLEAN NOT NULL DEFAULT TRUE,
   created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -326,7 +325,6 @@ END $$;
 
 -- ---------- Existing-installation additions ----------
 ALTER TABLE users ADD COLUMN IF NOT EXISTS department TEXT;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE goods_receipts ADD COLUMN IF NOT EXISTS gate_verified BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE goods_receipts ADD COLUMN IF NOT EXISTS gate_verified_by TEXT;
 ALTER TABLE goods_receipts ADD COLUMN IF NOT EXISTS gate_verified_at TIMESTAMP;

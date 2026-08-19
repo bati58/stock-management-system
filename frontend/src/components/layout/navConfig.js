@@ -101,7 +101,7 @@ export const NAV_SECTIONS = [
   {
     label: 'Returns & Transfers',
     items: [
-      { to: '/material-return', label: 'Material Returns (SRN)', icon: Undo2, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.DEPT_HEAD] },
+      { to: '/material-return', label: 'Material Returns (SRN)', icon: Undo2, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.DEPT_HEAD] },
       { to: '/material-transfer', label: 'Material Transfers', icon: Repeat, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.DEPT_HEAD] }
     ]
   },

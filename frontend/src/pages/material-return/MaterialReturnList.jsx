@@ -14,7 +14,8 @@ import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
-import { RETURN_STATUS, ROLES } from '../../utils/constants'
+import { RETURN_STATUS, STATUS, ROLES } from '../../utils/constants'
+import { canPerformAction } from '../../utils/rolePermissions'
 
 const EMPTY_LINE = { item: '', qty: '', condition: 'Good', reason: 'Excess' }
 
@@ -36,6 +37,9 @@ export default function MaterialReturnList() {
 
   const isStorekeeper = user?.role === ROLES.STOREKEEPER || user?.role === ROLES.STORE_HEAD
   const canReview = isStorekeeper
+  const canCreate = canPerformAction(user?.role, 'create', 'materialReturns')
+  const canDelete = canPerformAction(user?.role, 'delete', 'materialReturns')
+  const canReviewRow = (row) => [RETURN_STATUS.SUBMITTED, STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(row.status) && canReview
 
   async function load() {
     setLoading(true)
@@ -148,7 +152,7 @@ export default function MaterialReturnList() {
           <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600">
             <Eye size={15} />
           </button>
-          {row.status === RETURN_STATUS.SUBMITTED && (
+          {row.status === RETURN_STATUS.SUBMITTED && canDelete && (
             <button onClick={() => setDeleteTarget(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700">
               <Trash2 size={15} />
             </button>
@@ -163,11 +167,7 @@ export default function MaterialReturnList() {
       <PageHeader
         title="Material Returns (SRN)"
         subtitle="Process unused, defective, or excess materials returned by departments."
-        actions={
-          <Button icon={Plus} onClick={openCreate}>
-            New Return Request
-          </Button>
-        }
+        actions={canCreate ? <Button icon={Plus} onClick={openCreate}>New Return Request</Button> : null}
       />
 
       <div className="card p-5">
@@ -226,7 +226,7 @@ export default function MaterialReturnList() {
         title={viewing?.srnRef}
         size="lg"
         footer={
-          viewing?.status === RETURN_STATUS.SUBMITTED && canReview ? (
+          viewing && canReviewRow(viewing) ? (
             <>
               <Button variant="danger" icon={XCircle} loading={saving} onClick={() => handleDecide(RETURN_STATUS.REJECTED)}>
                 Reject Return
@@ -270,7 +270,7 @@ export default function MaterialReturnList() {
                   ))}
                 </tbody>
               </table>
-              {viewing.status === RETURN_STATUS.SUBMITTED && canReview && (
+              {canReviewRow(viewing) && (
                 <div className="mt-4 p-3 bg-brand-50 border border-brand-100 rounded-lg text-brand-800">
                   <p className="font-medium text-sm mb-1">Storekeeper Review Required</p>
                   <p className="text-xs text-brand-600">

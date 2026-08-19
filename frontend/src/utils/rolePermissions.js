@@ -32,9 +32,9 @@ export const ROLE_PERMISSIONS = {
             '/audit-log',
             '/gate-pass'
         ],
-        canCreate: ['stores', 'categories', 'items', 'users', 'fixedAssets'],
-        canEdit: ['stores', 'categories', 'items', 'users', 'fixedAssets'],
-        canDelete: ['stores', 'categories', 'items', 'users'],
+        canCreate: ['stores', 'categories', 'items', 'users', 'fixedAssets', 'userCards'],
+        canEdit: ['stores', 'categories', 'items', 'users', 'fixedAssets', 'userCards'],
+        canDelete: ['stores', 'categories', 'items', 'users', 'userCards'],
         canApprove: ['goodsReceipts', 'requisitions', 'materialReturns', 'materialTransfers', 'disposals'],
         canReject: ['goodsReceipts', 'requisitions', 'materialReturns', 'materialTransfers', 'disposals'],
         canEvaluate: ['goodsReceipts'],
@@ -53,6 +53,9 @@ export const ROLE_PERMISSIONS = {
         canAccessPages: [
             '/',
             '/settings',
+            '/stores',
+            '/categories',
+            '/items',
             '/requisitions',
             '/material-transfer',
             '/fixed-assets',
@@ -117,7 +120,7 @@ export const ROLE_PERMISSIONS = {
     [ROLES.STOREKEEPER]: {
         name: 'Storekeeper',
         // SRS: receives and issues stock, updates inventory records (bin cards)
-        canAccessPages: ['/', '/settings', '/items', '/goods-receipt', '/grn-documents', '/stock-cards', '/bin-cards', '/issue-vouchers', '/stock-transfer', '/user-cards'],
+        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/goods-receipt', '/grn-documents', '/stock-cards', '/bin-cards', '/issue-vouchers', '/stock-transfer', '/material-return', '/user-cards'],
         canCreate: ['goodsReceipts', 'issueVouchers', 'stockTransfer', 'binCards', 'userCards'],
         canEdit: ['binCards', 'goodsReceipts', 'userCards'],
         canDelete: [],
@@ -135,7 +138,7 @@ export const ROLE_PERMISSIONS = {
     [ROLES.STOCK_CLERK]: {
         name: 'Stock Clerk',
         // SRS: maintains stock records, updates transactions, prepares reports
-        canAccessPages: ['/', '/settings', '/items', '/stock-cards', '/bin-cards', '/stock-transfer', '/reports'],
+        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/stock-cards', '/bin-cards', '/stock-transfer', '/reports'],
         canCreate: ['binCards', 'stockTransfer'],
         canEdit: ['binCards', 'stockTransfer'],
         canDelete: [],
@@ -152,7 +155,7 @@ export const ROLE_PERMISSIONS = {
 
     [ROLES.TEC]: {
         name: 'Technical Evaluation Committee',
-        canAccessPages: ['/', '/settings', '/goods-receipt', '/goods-receipt/evaluation', '/grn-documents', '/material-return', '/reports'],
+        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/goods-receipt', '/goods-receipt/evaluation', '/grn-documents', '/reports'],
         canCreate: [],
         canEdit: [],
         canDelete: [],
@@ -188,7 +191,7 @@ export const ROLE_PERMISSIONS = {
     [ROLES.ACCOUNTANT]: {
         name: 'Accountant',
         // SRS: views financial reports and manages inventory valuation (FIFO)
-        canAccessPages: ['/', '/settings', '/items', '/stock-cards', '/bin-cards', '/goods-receipt', '/grn-documents', '/issue-vouchers', '/material-return', '/material-transfer', '/reports', '/audit-log'],
+        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/stock-cards', '/bin-cards', '/goods-receipt', '/grn-documents', '/issue-vouchers', '/material-return', '/material-transfer', '/reports', '/audit-log'],
         canCreate: [],
         canEdit: [],
         canDelete: [],

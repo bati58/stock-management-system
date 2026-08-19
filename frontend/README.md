@@ -29,7 +29,7 @@ npm install
 npm run dev
 ```
 
-Vite will start a dev server (default `http://localhost:5174`) and open it
+Vite will start a dev server (default `http://localhost:5173`) and open it
 in your browser automatically.
 
 ### Demo login

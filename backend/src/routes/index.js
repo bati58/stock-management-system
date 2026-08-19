@@ -29,7 +29,6 @@ const userCardsController = require('../controllers/userCards.controller');
 // ---------------------------------------------------------------------------
 router.post('/auth/login', authController.login);
 router.get('/auth/me', requireAuth, authController.me);
-router.post('/auth/change-password', requireAuth, authController.changePassword);
 
 // Every route below requires a valid session.
 router.use(requireAuth);

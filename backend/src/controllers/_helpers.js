@@ -40,7 +40,6 @@ function mapUser(row) {
     username: row.username,
     role: row.role,
     email: row.email,
-    phone: row.phone,
     department: row.department,
     active: row.active
   };

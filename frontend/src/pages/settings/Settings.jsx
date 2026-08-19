@@ -3,7 +3,6 @@ import { Lock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { userService } from '../../services'
-import { api } from '../../services/apiClient'
 import PageHeader from '../../components/ui/PageHeader'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -150,9 +149,26 @@ export default function Settings() {
             return
         }
 
+        const hasStoredPassword = Boolean(user.password)
+        if (hasStoredPassword && passwordForm.currentPassword !== user.password) {
+            push('Current password is incorrect', 'error')
+            return
+        }
+        if (!hasStoredPassword && passwordForm.currentPassword.length < 4) {
+            push('Current password is incorrect', 'error')
+            return
+        }
+
         setChangingPassword(true)
         try {
-            await api.changePassword({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword })
+            const updated = await userService.update(user.id, {
+                password: passwordForm.newPassword
+            })
+            if (!updated) {
+                push('Could not update password', 'error')
+                return
+            }
+            updateUser(updated)
             setPasswordForm({
                 currentPassword: '',
                 newPassword: '',

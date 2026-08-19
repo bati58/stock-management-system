@@ -3,10 +3,12 @@
 // (logged, returned as a generic 500) — the frontend's apiClient.js reads
 // `message` off every non-2xx response body, so always include one.
 function errorHandler(err, req, res, next) { // eslint-disable-line no-unused-vars
-  const statusCode = err.isAppError ? err.statusCode : 500;
-  const message = err.isAppError ? err.message : 'Something went wrong on the server.';
+  const statusCode = Number.isInteger(err?.statusCode) ? err.statusCode : 500;
+  const message = typeof err?.message === 'string' && err.message.trim()
+    ? err.message
+    : 'Something went wrong on the server.';
 
-  if (!err.isAppError) {
+  if (!err || !err.isAppError) {
     console.error(err);
   }
 

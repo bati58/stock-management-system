@@ -11,19 +11,24 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const saved = localStorage.getItem(SESSION_KEY)
     const token = localStorage.getItem('sms_token')
+
     if (saved && token) {
-      try {
-        api.me().then((currentUser) => setUser(currentUser)).catch(() => {
+      api
+        .me()
+        .then((currentUser) => {
+          setUser(currentUser)
+        })
+        .catch(() => {
           localStorage.removeItem(SESSION_KEY)
           localStorage.removeItem('sms_token')
           setUser(null)
         })
-      } catch {
-        localStorage.removeItem(SESSION_KEY)
-        localStorage.removeItem('sms_token')
-        setUser(null)
-      }
+        .finally(() => {
+          setReady(true)
+        })
+      return
     }
+
     setReady(true)
   }, [])
 

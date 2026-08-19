@@ -30,16 +30,16 @@ const REPORT_READERS = [ADMIN, PAO, STORE_HEAD, STOCK_CLERK, TEC, DEPT_HEAD, ACC
 
 // Who can GET this resource. `null` = every authenticated role.
 const READ_PERMISSIONS = {
-  stores: REPORT_READERS,
-  categories: REPORT_READERS,
-  items: [...REPORT_READERS, STOREKEEPER],
+  stores: [...REPORT_READERS, STOREKEEPER, STOCK_CLERK],
+  categories: [...REPORT_READERS, STOREKEEPER, STOCK_CLERK],
+  items: [...REPORT_READERS, STOREKEEPER, STOCK_CLERK],
   'goods-receipts': [...REPORT_READERS, STOREKEEPER, SECURITY],
   'stock-transactions': REPORT_READERS.concat(STOREKEEPER),
   'bin-cards': [...REPORT_READERS, STOREKEEPER],
   'bin-transfers': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, STOCK_CLERK],
   requisitions: [...REPORT_READERS, STOREKEEPER],
   'issue-vouchers': [...REPORT_READERS, STOREKEEPER, SECURITY],
-  'material-returns': [...REPORT_READERS, STORE_HEAD],
+  'material-returns': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, STOCK_CLERK, DEPT_HEAD, ACCOUNTANT],
   'material-transfers': [...REPORT_READERS, SECURITY],
   'fixed-assets': REPORT_READERS,
   disposals: REPORT_READERS,
@@ -53,7 +53,7 @@ const READ_PERMISSIONS = {
 const ACTION_PERMISSIONS = {
   'goods-receipts': [ADMIN, STORE_HEAD, STOREKEEPER, TEC],
   requisitions: [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
-  'material-returns': [ADMIN, STORE_HEAD],
+  'material-returns': [ADMIN, STORE_HEAD, DEPT_HEAD],
   'material-transfers': [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
   disposals: [ADMIN, PAO, STORE_HEAD],
   'gate-pass': [ADMIN, SECURITY]

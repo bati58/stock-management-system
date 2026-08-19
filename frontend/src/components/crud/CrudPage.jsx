@@ -29,9 +29,7 @@ export default function CrudPage({
   emptyTitle = 'No records yet',
   emptyMessage = 'Create the first record to get started.',
   extraActions,
-  entityType,
-  allowEdit = true,
-  allowDelete = true
+  entityType // e.g., 'users', 'stores', 'categories' - used for permission checks
 }) {
   const { push } = useToast()
   const { user } = useAuth()
@@ -47,8 +45,8 @@ export default function CrudPage({
 
   // Permission checks
   const canCreate = entityType && canPerformAction(user?.role, 'create', entityType)
-  const canEdit = allowEdit && entityType && canPerformAction(user?.role, 'edit', entityType)
-  const canDelete = allowDelete && entityType && canPerformAction(user?.role, 'delete', entityType)
+  const canEdit = entityType && canPerformAction(user?.role, 'edit', entityType)
+  const canDelete = entityType && canPerformAction(user?.role, 'delete', entityType)
 
   async function load() {
     setLoading(true)
@@ -252,21 +250,21 @@ export default function CrudPage({
       >
         <form onSubmit={handleSave} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {fields.map((f) => {
-            const commonProps = {
-              key: f.name,
+            const { key: _ignoredKey, ...commonProps } = {
               label: f.label,
               required: f.required,
               className: f.fullWidth ? 'sm:col-span-2' : '',
               value: form[f.name] ?? '',
               onChange: (e) => setForm((prev) => ({ ...prev, [f.name]: e.target.value }))
             }
+
             if (f.type === 'select') {
-              return <Select {...commonProps} options={f.options} placeholder={f.placeholder} />
+              return <Select key={f.name} {...commonProps} options={f.options} placeholder={f.placeholder} />
             }
             if (f.type === 'textarea') {
-              return <Textarea {...commonProps} />
+              return <Textarea key={f.name} {...commonProps} />
             }
-            return <Input {...commonProps} type={f.type || 'text'} placeholder={f.placeholder} />
+            return <Input key={f.name} {...commonProps} type={f.type || 'text'} placeholder={f.placeholder} />
           })}
         </form>
       </Modal>
