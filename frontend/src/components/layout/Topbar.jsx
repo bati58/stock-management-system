@@ -1,5 +1,5 @@
 import { Menu, LogOut, ChevronDown, Bell, X, CheckCheck, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
@@ -35,10 +35,27 @@ export default function Topbar({ onMenuClick, title }) {
   } = useNotifications()
   const [open, setOpen] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
+  const notificationRef = useRef(null)
+  const profileRef = useRef(null)
+
+  useEffect(() => {
+    function closeMenus(event) {
+      if (!notificationRef.current?.contains(event.target)) {
+        setShowNotifications(false)
+      }
+      if (!profileRef.current?.contains(event.target)) {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', closeMenus)
+    return () => document.removeEventListener('pointerdown', closeMenus)
+  }, [])
 
   const readCount = notifications.filter((n) => n.read).length
 
   function openNotifications() {
+    setOpen(false)
     setShowNotifications((v) => {
       if (!v) refreshNotifications()
       return !v
@@ -66,7 +83,7 @@ export default function Topbar({ onMenuClick, title }) {
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="relative">
+        <div ref={notificationRef} className="relative">
           <button
             onClick={openNotifications}
             aria-label="Notifications"
@@ -87,7 +104,6 @@ export default function Topbar({ onMenuClick, title }) {
 
           {showNotifications && (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowNotifications(false)} />
               <div className="absolute right-0 z-20 mt-2 w-96 max-w-[calc(100vw-2rem)] rounded-xl border border-ink-100 bg-white shadow-lg overflow-hidden">
                 <div className="border-b border-ink-100 px-4 py-3 bg-gradient-to-r from-brand-50/60 to-white">
                   <div className="flex items-center justify-between gap-2">
@@ -189,9 +205,12 @@ export default function Topbar({ onMenuClick, title }) {
           )}
         </div>
 
-        <div className="relative">
+        <div ref={profileRef} className="relative">
           <button
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => {
+              setShowNotifications(false)
+              setOpen((v) => !v)
+            }}
             className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-ink-50 transition-colors active:bg-ink-100"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-xs font-bold text-white shadow-md">
@@ -205,7 +224,6 @@ export default function Topbar({ onMenuClick, title }) {
           </button>
           {open && (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
               <div className="absolute right-0 z-20 mt-2 w-48 rounded-lg border border-ink-100 bg-white shadow-lg overflow-hidden">
                 <div className="px-4 py-3 border-b border-ink-100 bg-gradient-to-r from-ink-50 to-white sm:hidden">
                   <p className="text-sm font-semibold text-ink-900">{user?.name}</p>
