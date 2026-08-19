@@ -36,6 +36,7 @@ export default function MaterialTransferList() {
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
 
   const canApprove = canPerformAction(user?.role, 'approve', 'materialTransfers')
+  const canCreate = canPerformAction(user?.role, 'create', 'materialTransfers')
   const isStorekeeper = user?.role === ROLES.STOREKEEPER || user?.role === ROLES.STORE_HEAD
 
   async function load() {
@@ -82,6 +83,11 @@ export default function MaterialTransferList() {
       push('Source and destination stores must be different.', 'error')
       return
     }
+    const line = lines[0]
+    if (!header.fromStore || !header.toStore || !header.date || !line.item || !line.qty || Number(line.qty) <= 0) {
+      push('Source store, destination store, date, item, and a positive quantity are required.', 'error')
+      return
+    }
     setSaving(true)
     try {
       const count = rows.length + 1
@@ -91,7 +97,8 @@ export default function MaterialTransferList() {
         ...header,
         requestedBy: user?.name || 'Storekeeper',
         status: TRANSFER_STATUS.PENDING_APPROVAL,
-        items: lines.filter((l) => l.item && l.qty)
+        item: line.item,
+        qty: Number(line.qty)
       })
       push(`Transfer request ${transferRef} submitted for PAO approval.`, 'success')
       setModalOpen(false)
@@ -168,9 +175,7 @@ export default function MaterialTransferList() {
         title="Store Transfers"
         subtitle="Request, approve, and execute material transfers between stores."
         actions={
-          <Button icon={Plus} onClick={openCreate}>
-            New Transfer Request
-          </Button>
+          canCreate ? <Button icon={Plus} onClick={openCreate}>New Transfer Request</Button> : null
         }
       />
 
@@ -206,9 +211,6 @@ export default function MaterialTransferList() {
           <div>
             <div className="mb-2 flex items-center justify-between">
               <p className="label !mb-0">Materials to Transfer</p>
-              <Button type="button" variant="secondary" icon={Plus} onClick={() => setLines((prev) => [...prev, { ...EMPTY_LINE }])}>
-                Add Line
-              </Button>
             </div>
             <div className="space-y-2">
               {lines.map((line, idx) => (

@@ -40,7 +40,7 @@ const READ_PERMISSIONS = {
   requisitions: [...REPORT_READERS, STOREKEEPER],
   'issue-vouchers': [...REPORT_READERS, STOREKEEPER, SECURITY],
   'material-returns': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, STOCK_CLERK, DEPT_HEAD, ACCOUNTANT],
-  'material-transfers': [...REPORT_READERS, SECURITY],
+  'material-transfers': [...REPORT_READERS, STOREKEEPER, SECURITY],
   'fixed-assets': REPORT_READERS,
   disposals: REPORT_READERS,
   users: [ADMIN],
@@ -53,8 +53,8 @@ const READ_PERMISSIONS = {
 const ACTION_PERMISSIONS = {
   'goods-receipts': [ADMIN, STORE_HEAD, STOREKEEPER, TEC],
   requisitions: [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
-  'material-returns': [ADMIN, STORE_HEAD, DEPT_HEAD],
-  'material-transfers': [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
+  'material-returns': [ADMIN, STORE_HEAD, STOREKEEPER],
+  'material-transfers': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, DEPT_HEAD],
   disposals: [ADMIN, PAO, STORE_HEAD],
   'gate-pass': [ADMIN, SECURITY]
 };
@@ -73,7 +73,7 @@ const WRITE_PERMISSIONS = {
   requisitions: [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
   'issue-vouchers': [ADMIN, STORE_HEAD, STOREKEEPER],
   'material-returns': [ADMIN, STORE_HEAD, DEPT_HEAD],
-  'material-transfers': [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
+  'material-transfers': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, DEPT_HEAD],
   'fixed-assets': [ADMIN, PAO, STORE_HEAD],
   disposals: [ADMIN, PAO, STORE_HEAD],
   users: [ADMIN],

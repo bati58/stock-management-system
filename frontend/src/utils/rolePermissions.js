@@ -120,8 +120,8 @@ export const ROLE_PERMISSIONS = {
     [ROLES.STOREKEEPER]: {
         name: 'Storekeeper',
         // SRS: receives and issues stock, updates inventory records (bin cards)
-        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/goods-receipt', '/grn-documents', '/stock-cards', '/bin-cards', '/issue-vouchers', '/stock-transfer', '/material-return', '/user-cards'],
-        canCreate: ['goodsReceipts', 'issueVouchers', 'stockTransfer', 'binCards', 'userCards'],
+        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/goods-receipt', '/grn-documents', '/stock-cards', '/bin-cards', '/issue-vouchers', '/stock-transfer', '/material-return', '/material-transfer', '/user-cards'],
+        canCreate: ['goodsReceipts', 'issueVouchers', 'stockTransfer', 'binCards', 'materialTransfers', 'userCards'],
         canEdit: ['binCards', 'goodsReceipts', 'userCards'],
         canDelete: [],
         canApprove: [],

@@ -149,6 +149,7 @@ router.delete('/fixed-assets/:id', requireRole('fixed-assets'), fixedAssetsContr
 router.get('/disposals', requireRole('disposals'), disposalsController.list);
 router.get('/disposals/:id', requireRole('disposals'), disposalsController.getOne);
 router.post('/disposals', requireRole('disposals'), disposalsController.create);
+router.put('/disposals/:id', requireRole('disposals'), disposalsController.update);
 router.post('/disposals/:id/approve', requireRole('disposals', 'action'), disposalsController.decide);
 router.delete('/disposals/:id', requireRole('disposals'), disposalsController.remove);
 

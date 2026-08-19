@@ -7,9 +7,10 @@ const { mapMaterialReturn, resolveItemId } = require('./_helpers');
 const stockService = require('../services/stockService');
 
 const SELECT = `
-  SELECT mr.*, i.name AS item_name
+  SELECT mr.*, i.name AS item_name, s.name AS store_name
   FROM material_returns mr
   LEFT JOIN items i ON i.id = mr.item_id
+  LEFT JOIN stores s ON s.id = i.store_id
 `;
 
 const list = asyncHandler(async (req, res) => {

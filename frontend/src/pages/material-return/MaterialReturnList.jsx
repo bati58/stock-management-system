@@ -35,8 +35,7 @@ export default function MaterialReturnList() {
   const [header, setHeader] = useState({ department: '', store: '', date: '' })
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
 
-  const isStorekeeper = user?.role === ROLES.STOREKEEPER || user?.role === ROLES.STORE_HEAD
-  const canReview = isStorekeeper
+  const canReview = canPerformAction(user?.role, 'approve', 'materialReturns')
   const canCreate = canPerformAction(user?.role, 'create', 'materialReturns')
   const canDelete = canPerformAction(user?.role, 'delete', 'materialReturns')
   const canReviewRow = (row) => [RETURN_STATUS.SUBMITTED, STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(row.status) && canReview
@@ -81,6 +80,11 @@ export default function MaterialReturnList() {
 
   async function handleCreate(e) {
     e.preventDefault()
+    const line = lines[0]
+    if (!header.department || !header.date || !line.item || !line.qty || Number(line.qty) <= 0) {
+      push('Returning department, date, item, and a positive quantity are required.', 'error')
+      return
+    }
     setSaving(true)
     try {
       const count = rows.length + 1
@@ -90,7 +94,10 @@ export default function MaterialReturnList() {
         ...header,
         returnedBy: user?.name || 'Department Head',
         status: RETURN_STATUS.SUBMITTED,
-        items: lines.filter((l) => l.item && l.qty)
+        item: line.item,
+        qty: Number(line.qty),
+        reason: line.reason,
+        condition: line.condition
       })
       push(`Store Return Note ${srnRef} submitted.`, 'success')
       setModalOpen(false)
@@ -202,9 +209,6 @@ export default function MaterialReturnList() {
           <div>
             <div className="mb-2 flex items-center justify-between">
               <p className="label !mb-0">Materials to Return</p>
-              <Button type="button" variant="secondary" icon={Plus} onClick={() => setLines((prev) => [...prev, { ...EMPTY_LINE }])}>
-                Add Line
-              </Button>
             </div>
             <div className="space-y-2">
               {lines.map((line, idx) => (
@@ -260,14 +264,12 @@ export default function MaterialReturnList() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-100">
-                  {viewing.items?.map((l, i) => (
-                    <tr key={i}>
-                      <td className="p-2">{l.item}</td>
-                      <td className="p-2">{l.qty}</td>
-                      <td className="p-2">{l.reason}</td>
-                      <td className="p-2">{l.condition}</td>
-                    </tr>
-                  ))}
+                  <tr>
+                    <td className="p-2">{viewing.item || '-'}</td>
+                    <td className="p-2">{viewing.qty ?? '-'}</td>
+                    <td className="p-2">{viewing.reason || '-'}</td>
+                    <td className="p-2">{viewing.condition || '-'}</td>
+                  </tr>
                 </tbody>
               </table>
               {canReviewRow(viewing) && (

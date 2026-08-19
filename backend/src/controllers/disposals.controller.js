@@ -50,6 +50,27 @@ const create = asyncHandler(async (req, res) => {
   res.status(201).json(result);
 });
 
+const update = asyncHandler(async (req, res) => {
+  const { item, store, qty, reason, dateFlagged } = req.body;
+  const itemId = item !== undefined ? await resolveItemId(item) : undefined;
+  const storeId = store !== undefined ? await resolveStoreId(store) : undefined;
+
+  const { rows } = await query(
+    `UPDATE disposals SET
+       item_id = COALESCE($1, item_id), store_id = COALESCE($2, store_id),
+       qty = COALESCE($3, qty), reason = COALESCE($4, reason),
+       date_flagged = COALESCE($5, date_flagged), updated_at = NOW()
+     WHERE id = $6 AND status IN ('Pending', 'Flagged', 'Requested', 'Pending Review')
+     RETURNING id`,
+    [itemId, storeId, qty, reason, dateFlagged, req.params.id]
+  );
+  if (!rows[0]) throw new AppError('Disposal request not found or is no longer editable.', 409);
+
+  await logAudit(query, { userName: req.user.name, action: `Updated disposal ${req.params.id}`, module: 'Disposal Management' });
+  const { rows: full } = await query(`${SELECT} WHERE d.id = $1`, [rows[0].id]);
+  res.json(mapDisposal(full[0]));
+});
+
 // POST /api/disposals/:id/approve — Backend-SRS §6.7 step 2
 const decide = asyncHandler(async (req, res) => {
   const { decision } = req.body;
@@ -70,4 +91,4 @@ const remove = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
-module.exports = { list, getOne, create, decide, remove };
+module.exports = { list, getOne, create, update, decide, remove };

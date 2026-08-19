@@ -189,6 +189,7 @@ function mapMaterialReturn(row) {
     id: row.id,
     srnRef: row.srn_ref,
     department: row.department,
+    store: row.store_name || null,
     item: row.item_name || null,
     qty: Number(row.qty),
     reason: row.reason,
