@@ -152,7 +152,7 @@ export default function MaterialTransferList() {
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     {
       key: '__actions',
-      header: '',
+      header: 'Actions',
       className: 'text-right',
       render: (row) => (
         <div className="flex justify-end gap-1 items-center">
@@ -248,7 +248,7 @@ export default function MaterialTransferList() {
             )}
             {viewing?.status === TRANSFER_STATUS.DISPATCHED && isStorekeeper && (
               <Button icon={PackageCheck} loading={saving} onClick={() => handleDecide(TRANSFER_STATUS.RECEIVED)}>
-                Receive Materials (Model 19)
+                Receive Materials
               </Button>
             )}
           </>
@@ -295,7 +295,7 @@ export default function MaterialTransferList() {
               {viewing.status === TRANSFER_STATUS.DISPATCHED && isStorekeeper && (
                 <div className="mt-4 p-3 bg-brand-50 border border-brand-100 rounded-lg text-brand-800">
                   <p className="font-medium text-sm mb-1">Destination Store Action Required</p>
-                  <p className="text-xs text-brand-600">Click Receive when materials physically arrive. This acts as your goods receipt (Model 19) and updates stock levels for both stores.</p>
+                  <p className="text-xs text-brand-600">Click Receive when materials physically arrive. This records the receipt and updates stock levels for both stores.</p>
                 </div>
               )}
             </div>

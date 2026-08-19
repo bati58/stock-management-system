@@ -117,7 +117,7 @@ export default function GatePassVerification() {
     },
     {
       key: '__actions',
-      header: '',
+      header: 'Actions',
       className: 'text-right',
       render: (row) =>
         !row.gateVerified ? (
@@ -147,7 +147,7 @@ export default function GatePassVerification() {
     },
     {
       key: '__actions',
-      header: '',
+      header: 'Actions',
       className: 'text-right',
       render: (row) =>
         !row.gateVerified ? (

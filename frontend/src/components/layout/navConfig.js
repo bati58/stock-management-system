@@ -59,7 +59,7 @@ export const NAV_SECTIONS = [
     items: [
       {
         to: '/goods-receipt',
-        label: 'Goods Receipt (GRN)',
+        label: 'Goods Receipt',
         icon: PackageCheck,
         roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER]
       },
@@ -71,7 +71,7 @@ export const NAV_SECTIONS = [
       },
       {
         to: '/grn-documents',
-        label: 'GRN Documents (Model 19)',
+        label: 'GRN Documents',
         icon: FileText,
         roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.PAO]
       }
@@ -101,7 +101,7 @@ export const NAV_SECTIONS = [
   {
     label: 'Returns & Transfers',
     items: [
-      { to: '/material-return', label: 'Material Returns (SRN)', icon: Undo2, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.DEPT_HEAD] },
+      { to: '/material-return', label: 'Material Returns', icon: Undo2, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.DEPT_HEAD] },
       { to: '/material-transfer', label: 'Material Transfers', icon: Repeat, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.DEPT_HEAD] }
     ]
   },

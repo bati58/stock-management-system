@@ -125,7 +125,7 @@ export default function GoodsReceiptList() {
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     {
       key: '__actions',
-      header: '',
+      header: 'Actions',
       className: 'text-right',
       render: (row) => (
         <div className="flex justify-end gap-1 items-center">
@@ -135,7 +135,7 @@ export default function GoodsReceiptList() {
             </button>
           )}
           {row.status === GRN_STATUS.ACCEPTED && (
-            <button onClick={() => handleGenerateGRN(row)} className="rounded-md p-1.5 text-success-600 hover:bg-success-50" title="Generate GRN (Model 19)">
+            <button onClick={() => handleGenerateGRN(row)} className="rounded-md p-1.5 text-success-600 hover:bg-success-50" title="Generate GRN">
               <FileText size={15} />
             </button>
           )}
@@ -153,7 +153,7 @@ export default function GoodsReceiptList() {
   return (
     <div>
       <PageHeader
-        title="Goods Receipt (GRN)"
+        title="Goods Receipt"
         subtitle="Record incoming materials, verify against the purchase or donation, and hand off to technical evaluation."
         actions={
           <Button icon={Plus} onClick={openCreate}>

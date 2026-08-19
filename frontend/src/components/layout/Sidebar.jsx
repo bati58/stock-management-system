@@ -33,12 +33,12 @@ export default function Sidebar({ open, onClose }) {
         <div className="fixed inset-0 z-30 bg-ink-900/50 lg:hidden" onClick={onClose} />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 transform flex-col border-r border-ink-200 bg-white transition-transform lg:static lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 transform flex-col border-r border-brand-100 bg-white/95 shadow-xl shadow-brand-900/5 backdrop-blur transition-transform lg:static lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
         <div className="flex items-center justify-between border-b border-ink-100 px-5 py-5 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-md shadow-brand-600/30">
               <Boxes size={18} />
             </div>
             <div>
@@ -80,7 +80,7 @@ export default function Sidebar({ open, onClose }) {
                         onClick={onClose}
                         className={({ isActive }) =>
                           `flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors ${isActive
-                            ? 'bg-brand-50 text-brand-700'
+                            ? 'bg-gradient-to-r from-brand-50 to-blue-100/70 text-brand-700 shadow-sm'
                             : 'text-ink-600 hover:bg-ink-50 hover:text-ink-900'
                           }`
                         }

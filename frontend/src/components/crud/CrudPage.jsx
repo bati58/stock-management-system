@@ -167,7 +167,7 @@ export default function CrudPage({
     ...columns,
     {
       key: '__actions',
-      header: '',
+      header: 'Actions',
       className: 'text-right',
       render: (row) => {
         if (!canEdit && !canDelete) return null

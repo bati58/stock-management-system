@@ -32,6 +32,57 @@ import { ROLES, STATUS } from '../../utils/constants'
 
 const MAX_APPROVAL_ROWS = 6
 
+const DASHBOARD_DATA_BY_ROLE = {
+  [ROLES.ADMIN]: {
+    items: itemService,
+    grns: goodsReceiptService,
+    reqs: requisitionService,
+    returns: materialReturnService,
+    transfers: materialTransferService,
+    disposals: disposalService,
+    transactions: stockTransactionService,
+    vouchers: issueVoucherService
+  },
+  [ROLES.PAO]: {
+    items: itemService,
+    reqs: requisitionService,
+    transfers: materialTransferService,
+    disposals: disposalService
+  },
+  [ROLES.STORE_HEAD]: {
+    items: itemService,
+    grns: goodsReceiptService,
+    reqs: requisitionService,
+    transactions: stockTransactionService
+  },
+  [ROLES.STOREKEEPER]: {
+    items: itemService,
+    grns: goodsReceiptService,
+    reqs: requisitionService,
+    transactions: stockTransactionService,
+    vouchers: issueVoucherService
+  },
+  [ROLES.STOCK_CLERK]: {
+    items: itemService,
+    transactions: stockTransactionService
+  },
+  [ROLES.TEC]: {
+    grns: goodsReceiptService
+  },
+  [ROLES.DEPT_HEAD]: {
+    reqs: requisitionService,
+    returns: materialReturnService
+  },
+  [ROLES.ACCOUNTANT]: {
+    items: itemService
+  },
+  [ROLES.SECURITY]: {
+    grns: goodsReceiptService,
+    transfers: materialTransferService,
+    vouchers: issueVoucherService
+  }
+}
+
 function sortNewestFirst(rows = []) {
   return [...rows].sort((a, b) => new Date(b.date || b.receivedDate || b.createdAt || 0) - new Date(a.date || a.receivedDate || a.createdAt || 0))
 }
@@ -101,29 +152,47 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      itemService.list(),
-      goodsReceiptService.list(),
-      requisitionService.list(),
-      materialReturnService.list(),
-      materialTransferService.list(),
-      disposalService.list(),
-      stockTransactionService.list(),
-      issueVoucherService.list()
-    ]).then(([i, g, r, ret, tr, d, t, v]) => {
-      setItems(i)
-      setGrns(g)
-      setReqs(r)
-      setReturns(ret)
-      setTransfers(tr)
-      setDisposals(d)
-      setTransactions(t)
-      setVouchers(v)
+    const dataSources = DASHBOARD_DATA_BY_ROLE[user?.role] || {}
+    const entries = Object.entries(dataSources)
+
+    setItems([])
+    setGrns([])
+    setReqs([])
+    setReturns([])
+    setTransfers([])
+    setDisposals([])
+    setTransactions([])
+    setVouchers([])
+
+    if (entries.length === 0) {
       setLoading(false)
-    }).catch(() => {
-      setLoading(false)
-    })
-  }, [])
+      return undefined
+    }
+
+    setLoading(true)
+    Promise.allSettled(entries.map(([, service]) => service.list()))
+      .then((results) => {
+        entries.forEach(([key], index) => {
+          const result = results[index]
+          if (result.status !== 'fulfilled') return
+
+          const setters = {
+            items: setItems,
+            grns: setGrns,
+            reqs: setReqs,
+            returns: setReturns,
+            transfers: setTransfers,
+            disposals: setDisposals,
+            transactions: setTransactions,
+            vouchers: setVouchers
+          }
+          setters[key](result.value)
+        })
+      })
+      .finally(() => setLoading(false))
+
+    return undefined
+  }, [user?.role])
 
   const userStore = getUserStoreName(user)
   const isStoreScoped = Boolean(userStore)

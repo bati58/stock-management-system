@@ -43,7 +43,7 @@ export default function StockCardList() {
     { key: 'unitPrice', header: 'Latest Unit Price', render: (r) => formatCurrency(r.unitPrice) },
     {
       key: '__actions',
-      header: '',
+      header: 'Actions',
       className: 'text-right',
       render: (row) => (
         <Button variant="secondary" icon={Eye} onClick={() => setViewing(row)}>
@@ -112,7 +112,7 @@ export default function StockCardList() {
               </table>
             </div>
             <p className="text-xs text-ink-400">
-              Valuation method: First-In-First-Out (FIFO), applied consistently across the stock ledger.
+              Valuation method: First-In-First-Out, applied consistently across the stock ledger.
             </p>
           </div>
         )}

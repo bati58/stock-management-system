@@ -109,7 +109,7 @@ export default function IssueVoucherList() {
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     {
       key: '__actions',
-      header: '',
+      header: 'Actions',
       className: 'text-right',
       render: (row) => (
         <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600">
@@ -122,7 +122,7 @@ export default function IssueVoucherList() {
   return (
     <div>
       <PageHeader
-        title="Issue Vouchers (SIV / ISIV)"
+        title="Issue Vouchers"
         subtitle="Generate issue vouchers from approved requisitions and update stock automatically."
         actions={canGenerate ? <Button icon={Send} onClick={() => setModalOpen(true)}>Generate Voucher</Button> : null}
       />

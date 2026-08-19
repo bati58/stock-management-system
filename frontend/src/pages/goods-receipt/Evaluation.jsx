@@ -56,7 +56,7 @@ export default function Evaluation() {
       })
       push(
         decision === GRN_STATUS.ACCEPTED
-          ? 'Materials accepted. Store head notified to generate the official GRN (Model 19).'
+          ? 'Materials accepted. Store head notified to generate the official receipt.'
           : 'Materials rejected. Store head notified to arrange return to supplier.',
         decision === GRN_STATUS.ACCEPTED ? 'success' : 'warning'
       )
@@ -78,7 +78,7 @@ export default function Evaluation() {
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     {
       key: '__actions',
-      header: '',
+      header: 'Actions',
       className: 'text-right',
       render: (row) => (
         <Button variant="secondary" onClick={() => startReview(row)} icon={Search}>

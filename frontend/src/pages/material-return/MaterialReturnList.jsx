@@ -152,7 +152,7 @@ export default function MaterialReturnList() {
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     {
       key: '__actions',
-      header: '',
+      header: 'Actions',
       className: 'text-right',
       render: (row) => (
         <div className="flex justify-end gap-1 items-center">
@@ -172,7 +172,7 @@ export default function MaterialReturnList() {
   return (
     <div>
       <PageHeader
-        title="Material Returns (SRN)"
+        title="Material Returns"
         subtitle="Process unused, defective, or excess materials returned by departments."
         actions={canCreate ? <Button icon={Plus} onClick={openCreate}>New Return Request</Button> : null}
       />

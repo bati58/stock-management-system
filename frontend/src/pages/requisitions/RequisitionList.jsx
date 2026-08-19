@@ -162,7 +162,7 @@ export default function RequisitionList() {
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     {
       key: '__actions',
-      header: '',
+      header: 'Actions',
       className: 'text-right',
       render: (row) => (
         <div className="flex justify-end gap-1">

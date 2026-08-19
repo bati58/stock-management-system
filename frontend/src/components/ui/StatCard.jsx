@@ -7,7 +7,7 @@ export default function StatCard({ label, value, icon: Icon, tone = 'brand', hin
     info: 'bg-info-50 text-info-500'
   }
   return (
-    <div className="card flex items-center gap-4 p-5">
+    <div className="card flex items-center gap-4 border-brand-100/70 p-5">
       <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${tones[tone]}`}>
         {Icon && <Icon size={22} />}
       </div>

@@ -170,7 +170,7 @@ export default function ItemList() {
     { key: 'unitPrice', header: 'Unit Price', render: (r) => formatCurrency(r.unitPrice) },
     {
       key: '__actions',
-      header: '',
+      header: 'Actions',
       className: 'text-right',
       render: (row) => {
         if (!canEdit && !canDelete) return null

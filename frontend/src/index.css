@@ -11,7 +11,7 @@
   }
 
   body {
-    @apply bg-gradient-to-b from-ink-50 to-white text-ink-700 antialiased;
+    @apply bg-gradient-to-br from-slate-100 via-white to-blue-50 text-ink-700 antialiased;
   }
 }
 
@@ -21,11 +21,11 @@
   }
 
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 hover:shadow-md hover:shadow-brand-600/30 focus:ring-brand-500 active:bg-brand-700;
+    @apply btn bg-gradient-to-r from-brand-600 to-brand-700 text-white shadow-sm shadow-brand-700/20 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand-600/30 focus:ring-brand-500 active:translate-y-0 active:bg-brand-700;
   }
 
   .btn-secondary {
-    @apply btn bg-white text-ink-700 border border-ink-200 hover:bg-ink-50 hover:border-ink-300 focus:ring-ink-300 active:bg-ink-100;
+    @apply btn border border-brand-200 bg-white text-brand-700 shadow-sm hover:-translate-y-0.5 hover:border-brand-300 hover:bg-brand-50 hover:shadow-md focus:ring-brand-300 active:translate-y-0 active:bg-brand-100;
   }
 
   .btn-danger {
@@ -33,11 +33,11 @@
   }
 
   .btn-ghost {
-    @apply btn text-ink-600 hover:bg-ink-100 hover:text-ink-900 focus:ring-ink-300 active:bg-ink-200;
+    @apply btn text-ink-600 hover:bg-brand-50 hover:text-brand-700 focus:ring-brand-300 active:bg-brand-100;
   }
 
   .input {
-    @apply w-full rounded-lg border border-ink-200 bg-white px-4 py-2.5 text-sm text-ink-800 placeholder:text-ink-400 transition-all focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent hover:border-ink-300;
+    @apply w-full rounded-lg border border-ink-200 bg-white/90 px-4 py-2.5 text-sm text-ink-800 placeholder:text-ink-400 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent hover:border-brand-300;
   }
 
   .label {
@@ -45,11 +45,11 @@
   }
 
   .card {
-    @apply rounded-xl border border-ink-100 bg-white shadow-sm hover:shadow-md transition-all duration-200;
+    @apply rounded-xl border border-white/80 bg-white/95 shadow-card backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold;
+    @apply inline-flex items-center gap-1 rounded-full border border-ink-200 px-3 py-1.5 text-xs font-semibold shadow-sm;
   }
 }
 

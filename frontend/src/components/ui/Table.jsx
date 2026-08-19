@@ -20,7 +20,7 @@ export default function Table({ columns, rows, loading, emptyTitle, emptyMessage
     <div>
       <div className="overflow-x-auto rounded-lg border border-ink-100">
         <table className="min-w-full divide-y divide-ink-100 text-sm">
-          <thead className="bg-gradient-to-r from-ink-50 to-white">
+          <thead className="bg-gradient-to-r from-brand-50 via-white to-info-50/40">
             <tr>
               {columns.map((col) => (
                 <th key={col.key} className={`whitespace-nowrap px-3 py-3 text-left font-semibold text-ink-700 sm:px-6 sm:py-4 ${col.className || ''}`}>
@@ -33,7 +33,7 @@ export default function Table({ columns, rows, loading, emptyTitle, emptyMessage
             {paged.map((row, idx) => (
               <tr
                 key={row[rowKey]}
-                className={`transition-colors ${idx % 2 === 0 ? 'hover:bg-brand-50/40' : 'bg-ink-50/30 hover:bg-brand-50/40'
+                className={`transition-colors ${idx % 2 === 0 ? 'hover:bg-brand-50/60' : 'bg-ink-50/30 hover:bg-brand-50/60'
                   }`}
               >
                 {columns.map((col) => (

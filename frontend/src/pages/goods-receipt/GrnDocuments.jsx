@@ -68,7 +68,7 @@ export default function GrnDocuments() {
         },
         {
             key: '__actions',
-            header: '',
+            header: 'Actions',
             className: 'text-right',
             render: (row) => (
                 <div className="flex justify-end gap-1">
@@ -94,7 +94,7 @@ export default function GrnDocuments() {
     return (
         <div>
             <PageHeader
-                title="GRN Documents (Model 19)"
+                title="GRN Documents"
                 subtitle="View, print, and download official Goods Received Notes that have been generated."
             />
 
@@ -277,7 +277,7 @@ function GrnPrintView({ grn }) {
 
             {/* Document Info */}
             <div className="mt-6 pt-4 border-t border-ink-200 text-xs text-ink-500 text-center">
-                <p>This is an officially generated Goods Received Note (Model 19).</p>
+                <p>This is an officially generated goods received note.</p>
                 <p>Document Reference: {grn.grnRef} | Generated: {new Date().toLocaleString()}</p>
             </div>
         </div>
