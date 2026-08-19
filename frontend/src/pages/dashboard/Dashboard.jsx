@@ -120,6 +120,8 @@ export default function Dashboard() {
       setTransactions(t)
       setVouchers(v)
       setLoading(false)
+    }).catch(() => {
+      setLoading(false)
     })
   }, [])
 

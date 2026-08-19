@@ -20,10 +20,15 @@ export default function GrnDocuments() {
 
     async function load() {
         setLoading(true)
-        const data = await goodsReceiptService.list()
-        // Only show GRNs that have been generated
-        setGrns(data.filter((g) => g.status === GRN_STATUS.GRN_GENERATED))
-        setLoading(false)
+        try {
+            const data = await goodsReceiptService.list()
+            // Only show GRNs that have been generated
+            setGrns(data.filter((g) => g.status === GRN_STATUS.GRN_GENERATED))
+        } catch (error) {
+            push(error.message || 'Could not load GRN documents.', 'error')
+        } finally {
+            setLoading(false)
+        }
     }
 
     useEffect(() => {

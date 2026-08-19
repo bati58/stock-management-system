@@ -10,6 +10,7 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { requisitionService, storeService, itemService } from '../../services'
+import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
@@ -46,11 +47,16 @@ export default function RequisitionList() {
 
   async function load() {
     setLoading(true)
-    const [reqs, storeList, itemList] = await Promise.all([requisitionService.list(), storeService.list(), itemService.list()])
-    setRows(reqs)
-    setStores(storeList)
-    setItems(itemList)
-    setLoading(false)
+    try {
+      const [reqs, storeList, itemList] = await Promise.all([requisitionService.list(), storeService.list(), itemService.list()])
+      setRows(reqs)
+      setStores(storeList)
+      setItems(itemList)
+    } catch (err) {
+      push(err.message || 'Could not load requisitions.', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -80,7 +86,7 @@ export default function RequisitionList() {
   function updateLine(idx, patch) {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)))
   }
-  
+
   function updateApproveLine(idx, patch) {
     setApproveLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)))
   }
@@ -123,7 +129,7 @@ export default function RequisitionList() {
       push('You do not have permission to action this requisition.', 'error')
       return
     }
-    
+
     // Check if it's partially approved
     let finalStatus = status
     if (status === REQUISITION_STATUS.APPROVED) {
@@ -131,7 +137,10 @@ export default function RequisitionList() {
       if (isPartial) finalStatus = REQUISITION_STATUS.PARTIALLY_APPROVED
     }
 
-    await requisitionService.update(viewing.id, { status: finalStatus, items: approveLines })
+    await api.action('requisitions', viewing.id, 'approve', {
+      decision: finalStatus,
+      items: approveLines
+    })
     push(finalStatus === REQUISITION_STATUS.REJECTED ? `${viewing.srRef} rejected.` : `${viewing.srRef} approved. Storekeeper can now create the issue voucher.`, finalStatus === REQUISITION_STATUS.REJECTED ? 'info' : 'success')
     setViewing(null)
     await load()
@@ -286,8 +295,8 @@ export default function RequisitionList() {
                       <td className="py-2">{l.qty}</td>
                       <td className="py-2">
                         {viewing.status === REQUISITION_STATUS.PENDING && canApproveRequisition(user, viewing) ? (
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             className="w-20 rounded border border-ink-200 px-2 py-1 text-sm focus:border-brand-500 focus:outline-none"
                             value={l.qtyApproved}
                             max={l.qty}

@@ -17,7 +17,7 @@ import {
   BarChart3,
   ShieldCheck,
   Shield,
-  IdCard
+  IdCard,
 } from 'lucide-react'
 import { ROLES } from '../../utils/constants'
 

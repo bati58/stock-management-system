@@ -57,15 +57,20 @@ export default function ItemList() {
 
   async function load() {
     setLoading(true)
-    const [itemsData, categoriesData, storesData] = await Promise.all([
-      itemService.list(),
-      categoryService.list(),
-      storeService.list()
-    ])
-    setItems(itemsData)
-    setCategories(categoriesData)
-    setStores(storesData)
-    setLoading(false)
+    try {
+      const [itemsData, categoriesData, storesData] = await Promise.all([
+        itemService.list(),
+        categoryService.list(),
+        storeService.list()
+      ])
+      setItems(itemsData)
+      setCategories(categoriesData)
+      setStores(storesData)
+    } catch (err) {
+      push(err.message || 'Could not load items.', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

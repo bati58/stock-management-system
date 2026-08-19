@@ -10,7 +10,7 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { materialReturnService, storeService, itemService } from '../../services'
-import { workflowEngine } from '../../services/workflowEngine'
+import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
@@ -39,11 +39,16 @@ export default function MaterialReturnList() {
 
   async function load() {
     setLoading(true)
-    const [returns, storeList, itemList] = await Promise.all([materialReturnService.list(), storeService.list(), itemService.list()])
-    setRows(returns)
-    setStores(storeList)
-    setItems(itemList)
-    setLoading(false)
+    try {
+      const [returns, storeList, itemList] = await Promise.all([materialReturnService.list(), storeService.list(), itemService.list()])
+      setRows(returns)
+      setStores(storeList)
+      setItems(itemList)
+    } catch (err) {
+      push(err.message || 'Could not load material returns.', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -101,15 +106,16 @@ export default function MaterialReturnList() {
 
     setSaving(true)
     try {
-      await materialReturnService.update(viewing.id, { status })
-      
+      await api.action('materialReturns', viewing.id, 'approve', {
+        decision: status === RETURN_STATUS.RETURNED_TO_STOCK ? 'Approved' : 'Rejected'
+      })
+
       if (status === RETURN_STATUS.RETURNED_TO_STOCK) {
-        await workflowEngine.approveReturn(viewing.id, user)
         push(`${viewing.srnRef} accepted. Materials returned to active stock.`, 'success')
       } else {
         push(`${viewing.srnRef} rejected.`, 'info')
       }
-      
+
       setViewing(null)
       await load()
     } catch (err) {

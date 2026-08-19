@@ -43,7 +43,7 @@ export default function Login() {
   }
 
   function fillDemo(username) {
-    setForm({ username, password: 'demo1234' })
+    setForm({ username, password: 'sms1234' })
     setError('')
     setShowDemo(false)
   }
@@ -138,7 +138,7 @@ export default function Login() {
           {showDemo && (
             <div className="mt-4 border-t border-[#dee2e6] pt-4">
               <p className="mb-2 text-xs text-[#6c757d]">
-                Select a demo account (password: demo1234)
+                Select a demo account (password: sms1234)
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {DEMO_ACCOUNTS.map((account) => (

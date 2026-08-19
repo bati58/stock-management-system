@@ -50,9 +50,15 @@ export default function CrudPage({
 
   async function load() {
     setLoading(true)
-    const data = await service.list()
-    setRows(data)
-    setLoading(false)
+    try {
+      const data = await service.list()
+      setRows(data)
+    } catch (err) {
+      push(err.message || 'Could not load records.', 'error')
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

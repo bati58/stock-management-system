@@ -10,7 +10,7 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { materialTransferService, storeService, itemService } from '../../services'
-import { workflowEngine } from '../../services/workflowEngine'
+import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
@@ -39,11 +39,16 @@ export default function MaterialTransferList() {
 
   async function load() {
     setLoading(true)
-    const [transfers, storeList, itemList] = await Promise.all([materialTransferService.list(), storeService.list(), itemService.list()])
-    setRows(transfers)
-    setStores(storeList)
-    setItems(itemList)
-    setLoading(false)
+    try {
+      const [transfers, storeList, itemList] = await Promise.all([materialTransferService.list(), storeService.list(), itemService.list()])
+      setRows(transfers)
+      setStores(storeList)
+      setItems(itemList)
+    } catch (err) {
+      push(err.message || 'Could not load material transfers.', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -100,21 +105,18 @@ export default function MaterialTransferList() {
   async function handleDecide(status) {
     setSaving(true)
     try {
-      await materialTransferService.update(viewing.id, { status })
-      
       if (status === TRANSFER_STATUS.APPROVED) {
-        push(`${viewing.transferRef} approved. Source store can now dispatch materials.`, 'success')
+        await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Approved' })
+        push(`${viewing.transferRef} approved and stock levels updated.`, 'success')
       } else if (status === TRANSFER_STATUS.DISPATCHED) {
-        push(`${viewing.transferRef} dispatched. Destination store can now receive materials.`, 'success')
+        push(`${viewing.transferRef} dispatched.`, 'success')
       } else if (status === TRANSFER_STATUS.RECEIVED) {
-        // Automatically deduct from source and add to destination
-        await workflowEngine.completeTransfer(viewing.id, user)
-        await materialTransferService.update(viewing.id, { status: TRANSFER_STATUS.COMPLETED })
-        push(`${viewing.transferRef} completed. Stock levels updated.`, 'success')
+        push(`${viewing.transferRef} has been received.`, 'success')
       } else {
+        await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Rejected' })
         push(`${viewing.transferRef} rejected.`, 'info')
       }
-      
+
       setViewing(null)
       await load()
     } catch (err) {

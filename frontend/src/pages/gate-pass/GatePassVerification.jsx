@@ -7,10 +7,11 @@ import Button from '../../components/ui/Button'
 import StatusBadge from '../../components/ui/StatusBadge'
 import SearchInput from '../../components/ui/SearchInput'
 import { goodsReceiptService, issueVoucherService, materialTransferService } from '../../services'
+import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
-import { STATUS } from '../../utils/constants'
+import { STATUS, GRN_STATUS } from '../../utils/constants'
 
 export default function GatePassVerification() {
   const { push } = useToast()
@@ -24,27 +25,28 @@ export default function GatePassVerification() {
 
   async function load() {
     setLoading(true)
-    const [g, v, t] = await Promise.all([
-      goodsReceiptService.list(),
-      issueVoucherService.list(),
-      materialTransferService.list()
-    ])
-    setGrns(g)
-    setVouchers(v)
-    setTransfers(t)
-    setLoading(false)
+    try {
+      const [g, v, t] = await Promise.all([
+        goodsReceiptService.list(),
+        issueVoucherService.list(),
+        materialTransferService.list()
+      ])
+      setGrns(g)
+      setVouchers(v)
+      setTransfers(t)
+    } catch (err) {
+      push(err.message || 'Could not load gate-pass records.', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
     load()
   }, [])
 
-  async function verifyRecord(service, row, label) {
-    await service.update(row.id, {
-      gateVerified: true,
-      gateVerifiedBy: user?.name || 'Security Officer',
-      gateVerifiedAt: new Date().toISOString()
-    })
+  async function verifyRecord(resource, row, label) {
+    await api.verifyGate(resource, row.id)
     push(`${label} verified at gate.`, 'success')
     await load()
   }
@@ -52,7 +54,7 @@ export default function GatePassVerification() {
   const incomingRows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return grns
-      .filter((g) => [STATUS.APPROVED, STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(g.status))
+      .filter((g) => [STATUS.PENDING, STATUS.UNDER_EVALUATION, GRN_STATUS.ACCEPTED, GRN_STATUS.GRN_GENERATED].includes(g.status))
       .filter((g) => !q || `${g.grnRef} ${g.supplier} ${g.store}`.toLowerCase().includes(q))
       .sort((a, b) => new Date(b.receivedDate || 0) - new Date(a.receivedDate || 0))
   }, [grns, query])
@@ -64,7 +66,7 @@ export default function GatePassVerification() {
       .map((v) => ({
         id: `siv-${v.id}`,
         serviceId: v.id,
-        service: issueVoucherService,
+        resource: 'issueVouchers',
         ref: v.sivRef,
         type: v.type || 'SIV',
         party: v.issuedTo,
@@ -79,7 +81,7 @@ export default function GatePassVerification() {
       .map((t) => ({
         id: `trf-${t.id}`,
         serviceId: t.id,
-        service: materialTransferService,
+        resource: 'materialTransfers',
         ref: t.transferRef,
         type: 'Transfer',
         party: `${t.fromStore} → ${t.toStore}`,
@@ -119,7 +121,7 @@ export default function GatePassVerification() {
       className: 'text-right',
       render: (row) =>
         !row.gateVerified ? (
-          <Button variant="secondary" icon={ShieldCheck} onClick={() => verifyRecord(goodsReceiptService, row, row.grnRef)}>
+          <Button variant="secondary" icon={ShieldCheck} onClick={() => verifyRecord('goodsReceipts', row, row.grnRef)}>
             Verify Entry
           </Button>
         ) : (
@@ -152,7 +154,7 @@ export default function GatePassVerification() {
           <Button
             variant="secondary"
             icon={ShieldCheck}
-            onClick={() => verifyRecord(row.service, { id: row.serviceId }, row.ref)}
+            onClick={() => verifyRecord(row.resource, { id: row.serviceId }, row.ref)}
           >
             Clear Exit
           </Button>

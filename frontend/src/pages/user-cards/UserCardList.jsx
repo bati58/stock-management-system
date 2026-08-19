@@ -1,348 +1,110 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, Lock, RotateCcw } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import PageHeader from '../../components/ui/PageHeader'
-import SearchInput from '../../components/ui/SearchInput'
-import Table from '../../components/ui/Table'
-import Modal from '../../components/ui/Modal'
-import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
-import Select from '../../components/ui/Select'
-import Badge from '../../components/ui/Badge'
+import Table from '../../components/ui/Table'
 import StatusBadge from '../../components/ui/StatusBadge'
-import { userCardService, userService, itemService } from '../../services'
+import { itemService, userCardService } from '../../services'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { canPerformAction } from '../../utils/rolePermissions'
-import { formatDate } from '../../utils/formatters'
 
-const EMPTY_FORM = {
-    user: '',
-    department: '',
-    item: '',
-    issueRef: '',
-    issueDate: '',
-    qty: '',
-    status: 'In Use',
-    returnedDate: '',
-    notes: ''
-}
+const EMPTY_FORM = { user: '', department: '', item: '', issueRef: '', issueDate: '', qty: 1, status: 'In Use', notes: '' }
 
 export default function UserCardList() {
     const { push } = useToast()
-    const { user: currentUser } = useAuth()
+    const { user } = useAuth()
     const [rows, setRows] = useState([])
-    const [users, setUsers] = useState([])
     const [items, setItems] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [query, setQuery] = useState('')
-    const [modalOpen, setModalOpen] = useState(false)
-    const [editing, setEditing] = useState(null)
     const [form, setForm] = useState(EMPTY_FORM)
-    const [saving, setSaving] = useState(false)
-    const [deleteTarget, setDeleteTarget] = useState(null)
-    const [viewing, setViewing] = useState(null)
-
-    // Permission checks
-    const canCreate = canPerformAction(currentUser?.role, 'create', 'userCards')
-    const canEdit = canPerformAction(currentUser?.role, 'edit', 'userCards')
-    const canDelete = canPerformAction(currentUser?.role, 'delete', 'userCards')
+    const [editing, setEditing] = useState(null)
+    const [loading, setLoading] = useState(true)
+    const canEdit = canPerformAction(user?.role, 'edit', 'userCards')
 
     async function load() {
         setLoading(true)
-        const [cardsData, usersData, itemsData] = await Promise.all([
-            userCardService.list(),
-            userService.list(),
-            itemService.list()
-        ])
-        setRows(cardsData)
-        setUsers(usersData)
-        setItems(itemsData)
-        setLoading(false)
-    }
-
-    useEffect(() => {
-        load()
-    }, [])
-
-    const filtered = useMemo(() => {
-        if (!query.trim()) return rows
-        const q = query.toLowerCase()
-        return rows.filter((r) =>
-            `${r.user} ${r.department} ${r.item} ${r.issueRef} ${r.status}`.toLowerCase().includes(q)
-        )
-    }, [rows, query])
-
-    function openCreate() {
-        if (!canCreate) {
-            push('You do not have permission to create user cards.', 'error')
-            return
-        }
-        setForm(EMPTY_FORM)
-        setEditing(null)
-        setModalOpen(true)
-    }
-
-    function openEdit(row) {
-        if (!canEdit) {
-            push('You do not have permission to edit user cards.', 'error')
-            return
-        }
-        setForm(row)
-        setEditing(row)
-        setModalOpen(true)
-    }
-
-    async function handleSave(e) {
-        e.preventDefault()
-        setSaving(true)
         try {
-            if (!form.user || !form.item || !form.issueRef || !form.issueDate) {
-                throw new Error('Please fill in all required fields.')
-            }
-
-            const payload = {
-                ...form,
-                qty: Number(form.qty) || 1
-            }
-
-            if (editing) {
-                await userCardService.update(editing.id, payload)
-                push('User card updated.', 'success')
-            } else {
-                await userCardService.create(payload)
-                push('User card created.', 'success')
-            }
-            setModalOpen(false)
-            await load()
-        } catch (err) {
-            push(err.message || 'Something went wrong.', 'error')
+            const [cards, catalog] = await Promise.all([userCardService.list(), itemService.list()])
+            setRows(cards)
+            setItems(catalog)
+        } catch (error) {
+            setRows([])
+            push(error.message || 'Could not load user material cards.', 'error')
         } finally {
-            setSaving(false)
+            setLoading(false)
         }
     }
 
-    async function handleDelete() {
-        if (!canDelete) {
-            push('You do not have permission to delete user cards.', 'error')
-            return
+    useEffect(() => { load() }, [])
+
+    async function save(event) {
+        event.preventDefault()
+        try {
+            const payload = { ...form, qty: Number(form.qty) }
+            if (editing) await userCardService.update(editing.id, payload)
+            else await userCardService.create(payload)
+            setEditing(null)
+            setForm(EMPTY_FORM)
+            await load()
+            push('User material card saved.', 'success')
+        } catch (error) {
+            push(error.message, 'error')
         }
-        await userCardService.remove(deleteTarget.id)
-        push('User card deleted.', 'success')
-        setDeleteTarget(null)
-        await load()
     }
 
-    async function handleReturn(row) {
-        if (!canEdit) {
-            push('You do not have permission to update user cards.', 'error')
-            return
+    async function remove(id) {
+        try {
+            await userCardService.remove(id)
+            await load()
+            push('User material card removed.', 'success')
+        } catch (error) {
+            push(error.message, 'error')
         }
-        await userCardService.update(row.id, {
-            status: 'Returned',
-            returnedDate: new Date().toISOString().split('T')[0]
-        })
-        push(`Material returned from ${row.user}.`, 'success')
-        await load()
     }
-
-    const columns = [
-        { key: 'user', header: 'User Name' },
-        { key: 'department', header: 'Department' },
-        { key: 'item', header: 'Item Issued' },
-        { key: 'qty', header: 'Qty', render: (r) => r.qty || 1 },
-        { key: 'issueRef', header: 'Issue Reference' },
-        { key: 'issueDate', header: 'Issue Date', render: (r) => formatDate(r.issueDate) },
-        {
-            key: 'status',
-            header: 'Status',
-            render: (r) => <StatusBadge status={r.status === 'Returned' ? 'Completed' : r.status} />
-        },
-        {
-            key: '__actions',
-            header: '',
-            className: 'text-right',
-            render: (row) => {
-                const actions = []
-
-                if (canEdit) {
-                    actions.push(
-                        <button
-                            key="edit"
-                            onClick={() => openEdit(row)}
-                            className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600 transition-colors"
-                            title="Edit"
-                        >
-                            <Pencil size={15} />
-                        </button>
-                    )
-                }
-
-                if (row.status === 'In Use' && canEdit) {
-                    actions.push(
-                        <button
-                            key="return"
-                            onClick={() => handleReturn(row)}
-                            className="rounded-md p-1.5 text-success-600 hover:bg-success-50 transition-colors"
-                            title="Mark as Returned"
-                        >
-                            <RotateCcw size={15} />
-                        </button>
-                    )
-                }
-
-                if (canDelete) {
-                    actions.push(
-                        <button
-                            key="delete"
-                            onClick={() => setDeleteTarget(row)}
-                            className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700 transition-colors"
-                            title="Delete"
-                        >
-                            <Trash2 size={15} />
-                        </button>
-                    )
-                }
-
-                return actions.length ? <div className="flex justify-end gap-1">{actions}</div> : null
-            }
-        }
-    ]
 
     return (
         <div>
-            <PageHeader
-                title="User Material Cards"
-                subtitle="Track materials issued to individual users, including issue date, quantity, and return history."
-                actions={canCreate ? <Button icon={Plus} onClick={openCreate}>Issue Material to User</Button> : null}
-            />
-
-            {!canCreate && !canEdit && !canDelete && (
-                <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                    <p className="text-sm text-amber-800">
-                        <span className="font-semibold">Read-only access:</span> this role can view user card history but cannot issue, edit, or delete material cards.
-                    </p>
-                </div>
+            <PageHeader title="User Material Cards" subtitle="Track material issued to individual users." />
+            {canEdit && (
+                <Card title={editing ? 'Edit card' : 'Issue material'} className="mb-6">
+                    <form onSubmit={save} className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                        <Input placeholder="User name" value={form.user} onChange={(e) => setForm({ ...form, user: e.target.value })} required />
+                        <Input placeholder="Department" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
+                        <select className="input" value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} required>
+                            <option value="">Select item</option>
+                            {items.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
+                        </select>
+                        <Input placeholder="Issue reference" value={form.issueRef} onChange={(e) => setForm({ ...form, issueRef: e.target.value })} required />
+                        <Input type="date" value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })} required />
+                        <Input type="number" min="1" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} required />
+                        <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                            {['In Use', 'Maintenance', 'Lost', 'Damaged', 'Returned'].map((status) => <option key={status}>{status}</option>)}
+                        </select>
+                        <div className="flex gap-2">
+                            <Button type="submit">Save</Button>
+                            {editing && <Button type="button" variant="secondary" onClick={() => { setEditing(null); setForm(EMPTY_FORM) }}>Cancel</Button>}
+                        </div>
+                    </form>
+                </Card>
             )}
-
-            <div className="card p-5">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                    <SearchInput
-                        value={query}
-                        onChange={setQuery}
-                        placeholder="Search user, department, item, issue ref..."
-                    />
-                    <Badge className="bg-ink-100 text-ink-600">{filtered.length} card(s)</Badge>
-                </div>
+            <Card>
                 <Table
-                    columns={columns}
-                    rows={filtered}
+                    columns={[
+                        { key: 'user', header: 'User' },
+                        { key: 'department', header: 'Department' },
+                        { key: 'item', header: 'Item' },
+                        { key: 'qty', header: 'Qty' },
+                        { key: 'issueRef', header: 'Issue Reference' },
+                        { key: 'status', header: 'Status', render: (row) => <StatusBadge status={row.status} /> },
+                        ...(canEdit ? [{ key: '__actions', header: '', render: (row) => <div className="flex gap-2"><Button variant="secondary" onClick={() => { setEditing(row); setForm(row) }}>Edit</Button><Button variant="danger" onClick={() => remove(row.id)}>Delete</Button></div> }] : [])
+                    ]}
+                    rows={rows}
                     loading={loading}
-                    emptyTitle="No user cards yet"
-                    emptyMessage="Issue materials to users to start tracking. Each issue creates a user card record."
+                    emptyTitle="No user material cards"
+                    emptyMessage="No issued materials have been recorded."
                 />
-            </div>
-
-            {/* Create/Edit Modal */}
-            <Modal
-                open={modalOpen}
-                onClose={() => setModalOpen(false)}
-                title={editing ? 'Edit User Card' : 'Issue Material to User'}
-                size="lg"
-                footer={
-                    <>
-                        <Button variant="secondary" onClick={() => setModalOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleSave} loading={saving}>
-                            Save
-                        </Button>
-                    </>
-                }
-            >
-                <form onSubmit={handleSave} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <Select
-                        label="User Name"
-                        required
-                        options={users.map((u) => u.name)}
-                        value={form.user}
-                        onChange={(e) => {
-                            const selectedUser = users.find((u) => u.name === e.target.value)
-                            setForm((f) => ({
-                                ...f,
-                                user: e.target.value,
-                                department: selectedUser?.department || ''
-                            }))
-                        }}
-                    />
-                    <Input
-                        label="Department"
-                        value={form.department}
-                        onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
-                        placeholder="Auto-filled from user"
-                    />
-                    <Select
-                        label="Item Issued"
-                        required
-                        options={items.map((i) => i.name)}
-                        value={form.item}
-                        onChange={(e) => setForm((f) => ({ ...f, item: e.target.value }))}
-                    />
-                    <Input
-                        label="Quantity"
-                        type="number"
-                        required
-                        value={form.qty}
-                        onChange={(e) => setForm((f) => ({ ...f, qty: e.target.value }))}
-                        placeholder="e.g. 1"
-                    />
-                    <Input
-                        label="Issue Reference (SIV/Voucher Ref)"
-                        required
-                        placeholder="e.g. SIV-2026-0009"
-                        value={form.issueRef}
-                        onChange={(e) => setForm((f) => ({ ...f, issueRef: e.target.value }))}
-                    />
-                    <Input
-                        label="Issue Date"
-                        type="date"
-                        required
-                        value={form.issueDate}
-                        onChange={(e) => setForm((f) => ({ ...f, issueDate: e.target.value }))}
-                    />
-                    <Select
-                        label="Current Status"
-                        options={['In Use', 'Maintenance', 'Lost', 'Damaged', 'Returned']}
-                        value={form.status}
-                        onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                    />
-                    {form.status === 'Returned' && (
-                        <Input
-                            label="Return Date"
-                            type="date"
-                            value={form.returnedDate}
-                            onChange={(e) => setForm((f) => ({ ...f, returnedDate: e.target.value }))}
-                        />
-                    )}
-                    <div className="sm:col-span-2">
-                        <Input
-                            label="Notes / Comments"
-                            placeholder="e.g., Condition upon return, issue remarks..."
-                            value={form.notes}
-                            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                        />
-                    </div>
-                </form>
-            </Modal>
-
-            {/* Delete Confirmation */}
-            <ConfirmDialog
-                open={Boolean(deleteTarget)}
-                message={`Delete user card for "${deleteTarget?.user} - ${deleteTarget?.item}"? This cannot be undone.`}
-                confirmLabel="Delete"
-                onConfirm={handleDelete}
-                onClose={() => setDeleteTarget(null)}
-            />
+            </Card>
         </div>
     )
 }

@@ -172,7 +172,9 @@ export default function Reports() {
         setUserCards(uc)
         setLoading(false)
       }
-    )
+    ).catch(() => {
+      setLoading(false)
+    })
   }, [])
 
   const reportOptions = useMemo(

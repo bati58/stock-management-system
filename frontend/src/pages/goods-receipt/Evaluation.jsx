@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button'
 import Textarea from '../../components/ui/Textarea'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { goodsReceiptService } from '../../services'
+import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
@@ -23,9 +24,14 @@ export default function Evaluation() {
 
   async function load() {
     setLoading(true)
-    const grns = await goodsReceiptService.list()
-    setRows(grns.filter((g) => g.status === GRN_STATUS.PENDING_EVAL || g.status === GRN_STATUS.UNDER_EVAL))
-    setLoading(false)
+    try {
+      const grns = await goodsReceiptService.list()
+      setRows(grns.filter((g) => g.status === GRN_STATUS.PENDING_EVAL || g.status === GRN_STATUS.UNDER_EVAL))
+    } catch (err) {
+      push(err.message || 'Could not load evaluations.', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -34,7 +40,7 @@ export default function Evaluation() {
 
   async function startReview(row) {
     if (row.status === GRN_STATUS.PENDING_EVAL) {
-      await goodsReceiptService.update(row.id, { status: GRN_STATUS.UNDER_EVAL })
+      await api.action('goodsReceipts', row.id, 'status', { status: GRN_STATUS.UNDER_EVAL })
       row.status = GRN_STATUS.UNDER_EVAL
     }
     setTarget(row)
@@ -44,10 +50,9 @@ export default function Evaluation() {
   async function decide(decision) {
     setSaving(true)
     try {
-      await goodsReceiptService.update(target.id, {
-        status: decision,
-        evaluationNote: note || (decision === GRN_STATUS.ACCEPTED ? 'Inspected and accepted.' : 'Rejected - does not meet specification.'),
-        evaluatedBy: user?.name || 'Technical Evaluation Committee'
+      await api.action('goodsReceipts', target.id, 'evaluate', {
+        decision: decision === GRN_STATUS.ACCEPTED ? 'Approved' : 'Rejected',
+        evaluationNote: note || (decision === GRN_STATUS.ACCEPTED ? 'Inspected and accepted.' : 'Rejected - does not meet specification.')
       })
       push(
         decision === GRN_STATUS.ACCEPTED

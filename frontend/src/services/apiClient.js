@@ -1,14 +1,24 @@
 // ---------------------------------------------------------------------------
-// Real backend client (not wired in yet).
-//
-// Once the backend team exposes the REST API described in the SRS, point
-// VITE_API_BASE_URL at it (see .env.example) and swap the bodies of the
-// functions in localDb.js for the calls below, OR change entityService.js
-// to call `api.list/get/create/update/remove` instead of `db.*`. Either
-// change is localized to those two files — no page needs to change.
+// HTTP client for the Express API.
 // ---------------------------------------------------------------------------
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'
+
+const RESOURCE_PATHS = {
+  goodsReceipts: 'goods-receipts',
+  stockTransactions: 'stock-transactions',
+  binCards: 'bin-cards',
+  binTransfers: 'bin-transfers',
+  issueVouchers: 'issue-vouchers',
+  materialReturns: 'material-returns',
+  materialTransfers: 'material-transfers',
+  fixedAssets: 'fixed-assets',
+  auditLogs: 'audit-logs'
+}
+
+function resourcePath(resource) {
+  return RESOURCE_PATHS[resource] || resource
+}
 
 async function request(path, options = {}) {
   const token = localStorage.getItem('sms_token')
@@ -29,10 +39,13 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  list: (resource) => request(`/${resource}`),
-  get: (resource, id) => request(`/${resource}/${id}`),
-  create: (resource, data) => request(`/${resource}`, { method: 'POST', body: JSON.stringify(data) }),
-  update: (resource, id, data) => request(`/${resource}/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  remove: (resource, id) => request(`/${resource}/${id}`, { method: 'DELETE' }),
-  login: (credentials) => request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) })
+  list: (resource) => request(`/${resourcePath(resource)}`),
+  get: (resource, id) => request(`/${resourcePath(resource)}/${id}`),
+  create: (resource, data) => request(`/${resourcePath(resource)}`, { method: 'POST', body: JSON.stringify(data) }),
+  update: (resource, id, data) => request(`/${resourcePath(resource)}/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  action: (resource, id, action, data) => request(`/${resourcePath(resource)}/${id}/${action}`, { method: 'POST', body: JSON.stringify(data) }),
+  verifyGate: (resource, id) => request(`/gate-pass/${resourcePath(resource)}/${id}/verify`, { method: 'POST', body: JSON.stringify({}) }),
+  remove: (resource, id) => request(`/${resourcePath(resource)}/${id}`, { method: 'DELETE' }),
+  login: (credentials) => request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
+  me: () => request('/auth/me')
 }

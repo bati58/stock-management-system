@@ -1,5 +1,6 @@
 import { createEntityService } from './entityService'
-import { logAuditEvent, exportAuditCsv, normalizeAuditRecord } from './auditService'
+import { exportAuditCsv, normalizeAuditRecord } from './auditService'
+import { api } from './apiClient'
 
 export const storeService = createEntityService('stores')
 export const categoryService = createEntityService('categories')
@@ -16,27 +17,21 @@ export const materialTransferService = createEntityService('materialTransfers')
 export const disposalService = createEntityService('disposals')
 export const binTransferService = createEntityService('binTransfers')
 export const userCardService = createEntityService('userCards')
-
-const normalizeStoredAuditRows = (rows = []) =>
-    [...rows].map((row) => normalizeAuditRecord(row)).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-
 export const auditService = {
-    list: async () => {
-        const rows = JSON.parse(localStorage.getItem('sms_v1_auditLogs') || '[]')
-        return normalizeStoredAuditRows(rows)
-    },
+    list: async () => (await api.list('auditLogs')).map((row) => normalizeAuditRecord(row)),
     get: async (id) => {
         const rows = await auditService.list()
         return rows.find((row) => String(row.id) === String(id)) || null
     },
-    create: async (record) => logAuditEvent(record),
+    create: async () => {
+        throw new Error('Audit records are created by backend transactions and cannot be created directly.')
+    },
     update: async () => {
         throw new Error('Audit records are immutable and cannot be edited.')
     },
     remove: async () => {
         throw new Error('Audit records cannot be deleted from the application.')
     },
-    log: logAuditEvent,
     exportCsv: exportAuditCsv
 }
 

@@ -215,7 +215,7 @@ export default function Settings() {
                         <Input
                             type="text"
                             value={profileForm.phone}
-                            placeholder="e.g. +254 700 000000"
+                            placeholder="e.g. +251 900 000000"
                             onChange={(e) => handleProfileChange('phone', e.target.value)}
                         />
                     </div>

@@ -8,7 +8,6 @@ import Button from '../../components/ui/Button'
 import Select from '../../components/ui/Select'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { issueVoucherService, requisitionService, itemService } from '../../services'
-import { workflowEngine } from '../../services/workflowEngine'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, formatCurrency } from '../../utils/formatters'
@@ -30,11 +29,16 @@ export default function IssueVoucherList() {
 
   async function load() {
     setLoading(true)
-    const [vouchers, reqs, allItems] = await Promise.all([issueVoucherService.list(), requisitionService.list(), itemService.list()])
-    setRows(vouchers)
-    setApprovedReqs(reqs.filter((r) => r.status === REQUISITION_STATUS.APPROVED || r.status === REQUISITION_STATUS.PARTIALLY_APPROVED))
-    setItemsCatalog(allItems)
-    setLoading(false)
+    try {
+      const [vouchers, reqs, allItems] = await Promise.all([issueVoucherService.list(), requisitionService.list(), itemService.list()])
+      setRows(vouchers)
+      setApprovedReqs(reqs.filter((r) => r.status === REQUISITION_STATUS.APPROVED || r.status === REQUISITION_STATUS.PARTIALLY_APPROVED))
+      setItemsCatalog(allItems)
+    } catch (err) {
+      push(err.message || 'Could not load issue vouchers.', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -80,19 +84,8 @@ export default function IssueVoucherList() {
       const count = rows.length + 1
       const sivRef = `SIV-2026-${String(9 + count).padStart(4, '0')}`
       const isInterStore = req.department.toLowerCase().includes('store')
-      
-      const newSiv = await issueVoucherService.create({
-        sivRef,
-        type: isInterStore ? 'ISIV' : 'SIV',
-        srRef: req.srRef,
-        issuedTo: req.department,
-        issuedBy: user?.name || 'Storekeeper',
-        date: new Date().toISOString().slice(0, 10),
-        status: SIV_STATUS.ISSUED,
-        items: amendLines.map((l) => ({ item: l.item, qty: l.qtyIssued, unitPrice: 0 })) // actual cost calculated later
-      })
 
-      await workflowEngine.issueSIV(newSiv.id, user)
+      await issueVoucherService.create({ srRef: req.srRef })
       push(`Model 22 Issue Voucher ${sivRef} generated. Stock levels deducted.`, 'success')
       setModalOpen(false)
       setSelectedSr('')
@@ -193,8 +186,8 @@ export default function IssueVoucherList() {
                         </span>
                       </td>
                       <td className="py-2">
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           className={`w-24 rounded border px-2 py-1 text-sm focus:outline-none ${l.qtyIssued > l.stockAvailable ? 'border-danger-300 focus:border-danger-500 bg-danger-50' : 'border-ink-200 focus:border-brand-500'}`}
                           value={l.qtyIssued}
                           max={l.qtyApproved}

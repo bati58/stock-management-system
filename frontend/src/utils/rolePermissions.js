@@ -56,6 +56,7 @@ export const ROLE_PERMISSIONS = {
             '/requisitions',
             '/material-transfer',
             '/fixed-assets',
+            '/user-cards',
             '/disposal',
             '/stock-transfer',
             '/stock-cards',
@@ -97,7 +98,6 @@ export const ROLE_PERMISSIONS = {
             '/issue-vouchers',
             '/material-return',
             '/material-transfer',
-            '/user-cards',
             '/reports'
         ],
         canCreate: ['goodsReceipts', 'requisitions', 'issueVouchers', 'materialReturns', 'materialTransfers', 'stockTransfer', 'userCards'],

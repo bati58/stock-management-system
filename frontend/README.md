@@ -34,10 +34,10 @@ in your browser automatically.
 
 ### Demo login
 
-Any seeded username below works with any password of 4+ characters:
+All seeded demo users below use the password `sms1234`:
 
 ```
-admin | pao | storehead | storekeeper | clerk | tec | depthead | accountant
+admin | pao | storehead | storekeeper | clerk | tec | depthead | accountant | security
 ```
 
 ### Other scripts

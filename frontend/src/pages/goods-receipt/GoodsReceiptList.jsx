@@ -10,7 +10,7 @@ import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { goodsReceiptService, storeService, itemService } from '../../services'
-import { workflowEngine } from '../../services/workflowEngine'
+import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, formatCurrency } from '../../utils/formatters'
@@ -36,11 +36,16 @@ export default function GoodsReceiptList() {
 
   async function load() {
     setLoading(true)
-    const [grns, storeList, itemList] = await Promise.all([goodsReceiptService.list(), storeService.list(), itemService.list()])
-    setRows(grns)
-    setStores(storeList)
-    setItems(itemList)
-    setLoading(false)
+    try {
+      const [grns, storeList, itemList] = await Promise.all([goodsReceiptService.list(), storeService.list(), itemService.list()])
+      setRows(grns)
+      setStores(storeList)
+      setItems(itemList)
+    } catch (err) {
+      push(err.message || 'Could not load goods receipts.', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -89,15 +94,14 @@ export default function GoodsReceiptList() {
   }
 
   async function handleNotifyTEC(row) {
-    await goodsReceiptService.update(row.id, { status: GRN_STATUS.PENDING_EVAL })
+    await api.action('goodsReceipts', row.id, 'status', { status: GRN_STATUS.PENDING_EVAL })
     push(`TEC notified for ${row.grnRef}`, 'success')
     await load()
   }
 
   async function handleGenerateGRN(row) {
     try {
-      await goodsReceiptService.update(row.id, { status: GRN_STATUS.GRN_GENERATED })
-      await workflowEngine.generateGRN(row.id, user)
+      await api.action('goodsReceipts', row.id, 'evaluate', { decision: 'Approved' })
       push(`Official Model 19 GRN Generated for ${row.grnRef}. Stock updated.`, 'success')
       await load()
     } catch (e) {
