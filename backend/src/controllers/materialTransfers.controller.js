@@ -57,7 +57,9 @@ const create = asyncHandler(async (req, res) => {
 // POST /api/material-transfers/:id/approve — Backend-SRS §6.4 step 2
 const decide = asyncHandler(async (req, res) => {
   const { decision } = req.body;
-  if (!['Approved', 'Rejected'].includes(decision)) throw new AppError('decision must be "Approved" or "Rejected".', 400);
+  if (!['Approved', 'Rejected', 'Dispatched', 'Received'].includes(decision)) {
+    throw new AppError('decision must be "Approved", "Rejected", "Dispatched", or "Received".', 400);
+  }
 
   await withTransaction((client) =>
     stockService.decideMaterialTransfer(client, { transferId: req.params.id, decision, actorName: req.user.name })

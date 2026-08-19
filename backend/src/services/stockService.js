@@ -334,11 +334,17 @@ async function decideMaterialTransfer(client, { transferId, decision, actorName 
   const { rows } = await client.query('SELECT * FROM material_transfers WHERE id = $1 FOR UPDATE', [transferId]);
   const transfer = rows[0];
   if (!transfer) throw new AppError('Material transfer not found.', 404);
-  if (!['Draft', 'Submitted', 'Pending', 'Pending Approval'].includes(transfer.status)) {
+  const validTransitions = {
+    Approved: ['Draft', 'Submitted', 'Pending', 'Pending Approval'],
+    Rejected: ['Draft', 'Submitted', 'Pending', 'Pending Approval'],
+    Dispatched: ['Approved'],
+    Received: ['Dispatched']
+  };
+  if (!validTransitions[decision]?.includes(transfer.status)) {
     throw new AppError(`This transfer is already ${transfer.status.toLowerCase()}.`, 409);
   }
 
-  if (decision === 'Approved') {
+  if (decision === 'Received') {
     const sourceItem = await getItemForUpdate(client, transfer.item_id);
     if (Number(sourceItem.qty_on_hand) < Number(transfer.qty)) {
       throw new AppError('Source store does not have enough stock for this transfer.', 400);
@@ -417,7 +423,8 @@ async function decideMaterialTransfer(client, { transferId, decision, actorName 
     });
   }
 
-  await client.query('UPDATE material_transfers SET status = $1, updated_at = NOW() WHERE id = $2', [decision === 'Approved' ? 'Completed' : decision, transferId]);
+  const nextStatus = decision === 'Received' ? 'Completed' : decision;
+  await client.query('UPDATE material_transfers SET status = $1, updated_at = NOW() WHERE id = $2', [nextStatus, transferId]);
   await logAudit(client, {
     userName: actorName,
     action: `${decision} transfer ${transfer.transfer_ref}`,

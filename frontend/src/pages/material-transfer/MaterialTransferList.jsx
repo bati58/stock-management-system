@@ -15,6 +15,7 @@ import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
 import { TRANSFER_STATUS, ROLES } from '../../utils/constants'
+import { canPerformAction } from '../../utils/rolePermissions'
 
 const EMPTY_LINE = { item: '', qty: '' }
 
@@ -34,7 +35,7 @@ export default function MaterialTransferList() {
   const [header, setHeader] = useState({ fromStore: '', toStore: '', date: '' })
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
 
-  const canApprove = user?.role === ROLES.PAO || user?.role === ROLES.ADMIN
+  const canApprove = canPerformAction(user?.role, 'approve', 'materialTransfers')
   const isStorekeeper = user?.role === ROLES.STOREKEEPER || user?.role === ROLES.STORE_HEAD
 
   async function load() {
@@ -107,11 +108,13 @@ export default function MaterialTransferList() {
     try {
       if (status === TRANSFER_STATUS.APPROVED) {
         await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Approved' })
-        push(`${viewing.transferRef} approved and stock levels updated.`, 'success')
+        push(`${viewing.transferRef} approved. Source store can now dispatch materials.`, 'success')
       } else if (status === TRANSFER_STATUS.DISPATCHED) {
+        await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Dispatched' })
         push(`${viewing.transferRef} dispatched.`, 'success')
       } else if (status === TRANSFER_STATUS.RECEIVED) {
-        push(`${viewing.transferRef} has been received.`, 'success')
+        await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Received' })
+        push(`${viewing.transferRef} completed and stock levels updated.`, 'success')
       } else {
         await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Rejected' })
         push(`${viewing.transferRef} rejected.`, 'info')

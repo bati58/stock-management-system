@@ -12,6 +12,7 @@ import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import { SIV_STATUS, REQUISITION_STATUS } from '../../utils/constants'
+import { canPerformAction } from '../../utils/rolePermissions'
 
 export default function IssueVoucherList() {
   const { push } = useToast()
@@ -26,11 +27,13 @@ export default function IssueVoucherList() {
   const [viewing, setViewing] = useState(null)
   const [saving, setSaving] = useState(false)
   const [amendLines, setAmendLines] = useState([])
+  const canGenerate = canPerformAction(user?.role, 'create', 'issueVouchers')
 
   async function load() {
     setLoading(true)
     try {
-      const [vouchers, reqs, allItems] = await Promise.all([issueVoucherService.list(), requisitionService.list(), itemService.list()])
+      const requests = [issueVoucherService.list(), canGenerate ? requisitionService.list() : Promise.resolve([]), canGenerate ? itemService.list() : Promise.resolve([])]
+      const [vouchers, reqs, allItems] = await Promise.all(requests)
       setRows(vouchers)
       setApprovedReqs(reqs.filter((r) => r.status === REQUISITION_STATUS.APPROVED || r.status === REQUISITION_STATUS.PARTIALLY_APPROVED))
       setItemsCatalog(allItems)
@@ -121,11 +124,7 @@ export default function IssueVoucherList() {
       <PageHeader
         title="Issue Vouchers (SIV / ISIV)"
         subtitle="Generate issue vouchers from approved requisitions and update stock automatically."
-        actions={
-          <Button icon={Send} onClick={() => setModalOpen(true)}>
-            Generate Voucher
-          </Button>
-        }
+        actions={canGenerate ? <Button icon={Send} onClick={() => setModalOpen(true)}>Generate Voucher</Button> : null}
       />
 
       <div className="card p-5">

@@ -82,7 +82,7 @@ export const NAV_SECTIONS = [
     items: [
       { to: '/stock-cards', label: 'Stock Cards', icon: Layers, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] },
       { to: '/bin-cards', label: 'Bin Cards', icon: Layers, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] },
-      { to: '/stock-transfer', label: 'Stock Transfer', icon: ArrowLeftRight, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] }
+      { to: '/stock-transfer', label: 'Stock Transfer', icon: ArrowLeftRight, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] }
     ]
   },
   {

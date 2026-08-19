@@ -33,7 +33,7 @@ router.get('/auth/me', requireAuth, authController.me);
 // Every route below requires a valid session.
 router.use(requireAuth);
 
-router.post('/gate-pass/:resource/:id/verify', requireRole('gate-pass'), gatePassController.verify);
+router.post('/gate-pass/:resource/:id/verify', requireRole('gate-pass', 'action'), gatePassController.verify);
 
 // ---------------------------------------------------------------------------
 // Users — Administrator only (Backend-SRS §4.1/§4.2)
@@ -84,8 +84,8 @@ router.delete('/items/:id', requireRole('items'), itemsController.remove);
 router.get('/goods-receipts', requireRole('goods-receipts'), goodsReceiptsController.list);
 router.get('/goods-receipts/:id', requireRole('goods-receipts'), goodsReceiptsController.getOne);
 router.post('/goods-receipts', requireRole('goods-receipts'), goodsReceiptsController.create);
-router.post('/goods-receipts/:id/evaluate', requireRole('goods-receipts'), goodsReceiptsController.evaluate);
-router.post('/goods-receipts/:id/status', requireRole('goods-receipts'), goodsReceiptsController.setStatus);
+router.post('/goods-receipts/:id/evaluate', requireRole('goods-receipts', 'action'), goodsReceiptsController.evaluate);
+router.post('/goods-receipts/:id/status', requireRole('goods-receipts', 'action'), goodsReceiptsController.setStatus);
 router.delete('/goods-receipts/:id', requireRole('goods-receipts'), goodsReceiptsController.remove);
 
 // ---------------------------------------------------------------------------
@@ -106,7 +106,7 @@ router.post('/bin-transfers', requireRole('bin-transfers'), binTransfersControll
 router.get('/requisitions', requireRole('requisitions'), requisitionsController.list);
 router.get('/requisitions/:id', requireRole('requisitions'), requisitionsController.getOne);
 router.post('/requisitions', requireRole('requisitions'), requisitionsController.create);
-router.post('/requisitions/:id/approve', requireRole('requisitions'), requisitionsController.decide);
+router.post('/requisitions/:id/approve', requireRole('requisitions', 'action'), requisitionsController.decide);
 router.delete('/requisitions/:id', requireRole('requisitions'), requisitionsController.remove);
 
 // ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ router.post('/issue-vouchers', requireRole('issue-vouchers'), issueVouchersContr
 router.get('/material-returns', requireRole('material-returns'), materialReturnsController.list);
 router.get('/material-returns/:id', requireRole('material-returns'), materialReturnsController.getOne);
 router.post('/material-returns', requireRole('material-returns'), materialReturnsController.create);
-router.post('/material-returns/:id/approve', requireRole('material-returns'), materialReturnsController.decide);
+router.post('/material-returns/:id/approve', requireRole('material-returns', 'action'), materialReturnsController.decide);
 router.delete('/material-returns/:id', requireRole('material-returns'), materialReturnsController.remove);
 
 // ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ router.delete('/material-returns/:id', requireRole('material-returns'), material
 router.get('/material-transfers', requireRole('material-transfers'), materialTransfersController.list);
 router.get('/material-transfers/:id', requireRole('material-transfers'), materialTransfersController.getOne);
 router.post('/material-transfers', requireRole('material-transfers'), materialTransfersController.create);
-router.post('/material-transfers/:id/approve', requireRole('material-transfers'), materialTransfersController.decide);
+router.post('/material-transfers/:id/approve', requireRole('material-transfers', 'action'), materialTransfersController.decide);
 router.delete('/material-transfers/:id', requireRole('material-transfers'), materialTransfersController.remove);
 
 // ---------------------------------------------------------------------------
@@ -149,7 +149,7 @@ router.delete('/fixed-assets/:id', requireRole('fixed-assets'), fixedAssetsContr
 router.get('/disposals', requireRole('disposals'), disposalsController.list);
 router.get('/disposals/:id', requireRole('disposals'), disposalsController.getOne);
 router.post('/disposals', requireRole('disposals'), disposalsController.create);
-router.post('/disposals/:id/approve', requireRole('disposals'), disposalsController.decide);
+router.post('/disposals/:id/approve', requireRole('disposals', 'action'), disposalsController.decide);
 router.delete('/disposals/:id', requireRole('disposals'), disposalsController.remove);
 
 // ---------------------------------------------------------------------------
