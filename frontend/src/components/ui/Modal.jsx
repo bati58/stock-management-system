@@ -22,7 +22,7 @@ export default function Modal({ open, onClose, title, children, footer, size = '
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink-900/50 p-4 pt-10 sm:pt-16">
       <div className={`w-full ${sizes[size]} rounded-xl bg-white shadow-2xl`}>
-        <div className="flex items-center justify-between border-b border-ink-100 px-6 py-5">
+        <div className="flex items-center justify-between gap-4 border-b border-ink-100 px-4 py-4 sm:px-6 sm:py-5">
           <h3 className="text-lg font-bold text-ink-900">{title}</h3>
           <button
             onClick={onClose}
@@ -31,9 +31,9 @@ export default function Modal({ open, onClose, title, children, footer, size = '
             <X size={20} />
           </button>
         </div>
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">{children}</div>
+        <div className="max-h-[70vh] overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">{children}</div>
         {footer && (
-          <div className="flex items-center justify-end gap-3 border-t border-ink-100 px-6 py-5 bg-ink-50">
+          <div className="flex flex-col-reverse items-stretch justify-end gap-3 border-t border-ink-100 bg-ink-50 px-4 py-4 sm:flex-row sm:items-center sm:px-6 sm:py-5">
             {footer}
           </div>
         )}

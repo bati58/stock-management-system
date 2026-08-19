@@ -23,7 +23,7 @@ export default function Table({ columns, rows, loading, emptyTitle, emptyMessage
           <thead className="bg-gradient-to-r from-ink-50 to-white">
             <tr>
               {columns.map((col) => (
-                <th key={col.key} className="whitespace-nowrap px-6 py-4 text-left font-semibold text-ink-700">
+                <th key={col.key} className={`whitespace-nowrap px-3 py-3 text-left font-semibold text-ink-700 sm:px-6 sm:py-4 ${col.className || ''}`}>
                   {col.header}
                 </th>
               ))}
@@ -37,7 +37,7 @@ export default function Table({ columns, rows, loading, emptyTitle, emptyMessage
                   }`}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={`whitespace-nowrap px-6 py-4 text-ink-700 ${col.className || ''}`}>
+                  <td key={col.key} className={`whitespace-nowrap px-3 py-3 text-ink-700 sm:px-6 sm:py-4 ${col.className || ''}`}>
                     {col.render ? col.render(row) : row[col.key]}
                   </td>
                 ))}

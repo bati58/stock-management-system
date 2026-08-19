@@ -177,8 +177,8 @@ export default function AuditLog() {
         </Card>
       </div>
 
-      <div className="card p-5">
-        <div className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
+      <div className="card p-4 sm:p-5">
+        <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
           <SearchInput value={query} onChange={setQuery} placeholder="Search user, action, module, ref..." />
           <Select label="Sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)} options={[{ value: 'newest', label: 'Newest first' }, { value: 'oldest', label: 'Oldest first' }, { value: 'user', label: 'User' }, { value: 'action', label: 'Action' }, { value: 'module', label: 'Module' }, { value: 'outcome', label: 'Outcome' }]} />
           <Select label="Role" value={filters.role} onChange={(e) => setFilters((prev) => ({ ...prev, role: e.target.value }))} options={roleOptions} />
@@ -243,7 +243,7 @@ export default function AuditLog() {
             {selectedRow.changes?.length ? (
               <div>
                 <p className="mb-2 text-xs uppercase text-ink-400">Changes</p>
-                <div className="overflow-hidden rounded-lg border border-ink-100">
+                <div className="overflow-x-auto rounded-lg border border-ink-100">
                   <table className="min-w-full text-sm">
                     <thead className="bg-ink-50">
                       <tr>
