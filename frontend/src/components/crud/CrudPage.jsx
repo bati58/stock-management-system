@@ -29,7 +29,9 @@ export default function CrudPage({
   emptyTitle = 'No records yet',
   emptyMessage = 'Create the first record to get started.',
   extraActions,
-  entityType // e.g., 'users', 'stores', 'categories' - used for permission checks
+  entityType,
+  allowEdit = true,
+  allowDelete = true
 }) {
   const { push } = useToast()
   const { user } = useAuth()
@@ -45,8 +47,8 @@ export default function CrudPage({
 
   // Permission checks
   const canCreate = entityType && canPerformAction(user?.role, 'create', entityType)
-  const canEdit = entityType && canPerformAction(user?.role, 'edit', entityType)
-  const canDelete = entityType && canPerformAction(user?.role, 'delete', entityType)
+  const canEdit = allowEdit && entityType && canPerformAction(user?.role, 'edit', entityType)
+  const canDelete = allowDelete && entityType && canPerformAction(user?.role, 'delete', entityType)
 
   async function load() {
     setLoading(true)

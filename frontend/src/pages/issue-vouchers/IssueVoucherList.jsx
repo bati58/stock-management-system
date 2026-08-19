@@ -84,12 +84,8 @@ export default function IssueVoucherList() {
     if (!req) return
     setSaving(true)
     try {
-      const count = rows.length + 1
-      const sivRef = `SIV-2026-${String(9 + count).padStart(4, '0')}`
-      const isInterStore = req.department.toLowerCase().includes('store')
-
-      await issueVoucherService.create({ srRef: req.srRef })
-      push(`Model 22 Issue Voucher ${sivRef} generated. Stock levels deducted.`, 'success')
+      const voucher = await issueVoucherService.create({ srRef: req.srRef })
+      push(`Model 22 Issue Voucher ${voucher.sivRef} generated. Stock levels deducted.`, 'success')
       setModalOpen(false)
       setSelectedSr('')
       await load()

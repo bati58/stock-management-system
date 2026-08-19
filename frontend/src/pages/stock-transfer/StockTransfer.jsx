@@ -35,6 +35,8 @@ export default function StockTransfer() {
         { name: 'date', label: 'Date', type: 'date', required: true },
         { name: 'transferredBy', label: 'Transferred By', required: true }
       ]}
+      allowEdit={false}
+      allowDelete={false}
     />
   )
 }

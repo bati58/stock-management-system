@@ -40,6 +40,7 @@ const login = asyncHandler(async (req, res) => {
       username: user.username,
       role: user.role,
       email: user.email,
+      phone: user.phone,
       department: user.department,
       active: user.active
     }
@@ -49,11 +50,25 @@ const login = asyncHandler(async (req, res) => {
 // GET /api/auth/me — convenience endpoint so the frontend can re-hydrate
 // the session on page load using only the stored token.
 const me = asyncHandler(async (req, res) => {
-  const { rows } = await query('SELECT id, name, username, role, email, department, active FROM users WHERE id = $1', [
+  const { rows } = await query('SELECT id, name, username, role, email, phone, department, active FROM users WHERE id = $1', [
     req.user.id
   ]);
   if (!rows[0]) throw new AppError('User not found.', 404);
   res.json(rows[0]);
 });
 
-module.exports = { login, me };
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword || newPassword.length < 8) {
+    throw new AppError('Current password and a new password of at least 8 characters are required.', 400);
+  }
+  const { rows } = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+  if (!rows[0] || !(await bcrypt.compare(currentPassword, rows[0].password_hash))) {
+    throw new AppError('Current password is incorrect.', 400);
+  }
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [passwordHash, req.user.id]);
+  res.json({ message: 'Password changed successfully.' });
+});
+
+module.exports = { login, me, changePassword };
