@@ -13,6 +13,7 @@ const RESOURCE_PATHS = {
   materialReturns: 'material-returns',
   materialTransfers: 'material-transfers',
   fixedAssets: 'fixed-assets',
+  userCards: 'user-cards',
   auditLogs: 'audit-logs'
 }
 
