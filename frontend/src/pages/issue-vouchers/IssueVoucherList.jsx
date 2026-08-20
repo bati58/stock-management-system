@@ -209,7 +209,16 @@ export default function IssueVoucherList() {
         </form>
       </Modal>
 
-      <Modal open={Boolean(viewing)} onClose={() => setViewing(null)} title={viewing?.sivRef} footer={<Button variant="secondary" icon={Printer} onClick={() => window.print()}>Print Model 22</Button>}>
+      <Modal
+        open={Boolean(viewing)}
+        onClose={() => setViewing(null)}
+        title={viewing?.sivRef}
+        footer={
+          <Button variant="secondary" icon={Printer} onClick={() => printIssueVoucher(viewing)}>
+            Print Model 22
+          </Button>
+        }
+      >
         {viewing && (
           <div className="space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-3">
@@ -242,6 +251,112 @@ export default function IssueVoucherList() {
       </Modal>
     </div>
   )
+}
+
+function printIssueVoucher(record) {
+  if (!record) return
+
+  const items = (record.items || []).map((item) => `
+    <tr>
+      <td>${item.item || '-'}</td>
+      <td>${item.qty ?? '-'}</td>
+      <td>${item.unitPrice ? formatCurrency(item.unitPrice) : '-'}</td>
+    </tr>
+  `).join('')
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${record.sivRef || 'Issue Voucher'}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 32px;
+            color: #111827;
+            background: #fff;
+          }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+          .title { font-size: 30px; font-weight: 700; margin: 0; }
+          .subtitle { font-size: 12px; color: #6b7280; margin-top: 4px; }
+          .ref { text-align: right; }
+          .ref-label { font-size: 12px; color: #6b7280; text-transform: uppercase; }
+          .ref-value { font-size: 24px; font-weight: 700; color: #1d4ed8; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 22px; }
+          .field { margin-bottom: 12px; }
+          .label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+          .value { font-size: 14px; font-weight: 600; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-size: 13px; }
+          th { background: #f3f4f6; }
+          .footer { margin-top: 30px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+          .signature { border-top: 1px solid #374151; padding-top: 8px; margin-top: 40px; font-size: 12px; }
+          @page { size: A4; margin: 18mm; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1 class="title">Issue Voucher</h1>
+            <div class="subtitle">Model 22 - Material Issue Register</div>
+          </div>
+          <div class="ref">
+            <div class="ref-label">Voucher Ref</div>
+            <div class="ref-value">${record.sivRef || '-'}</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div>
+            <div class="field"><div class="label">Type</div><div class="value">${record.type || 'SIV'}</div></div>
+            <div class="field"><div class="label">Issued To</div><div class="value">${record.issuedTo || '-'}</div></div>
+          </div>
+          <div>
+            <div class="field"><div class="label">From Requisition</div><div class="value">${record.srRef || '-'}</div></div>
+            <div class="field"><div class="label">Issued By</div><div class="value">${record.issuedBy || '-'}</div></div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Qty</th>
+              <th>Unit Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items || '<tr><td colspan="3">No items available</td></tr>'}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <div>
+            <div class="label">Date</div>
+            <div class="signature">${record.date ? new Date(record.date).toLocaleDateString() : '-'}</div>
+          </div>
+          <div>
+            <div class="label">Status</div>
+            <div class="signature">${record.status || 'Issued'}</div>
+          </div>
+          <div>
+            <div class="label">Authorized By</div>
+            <div class="signature">${record.issuedBy || 'System'}</div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  const win = window.open('', '_blank', 'width=900,height=1000')
+  if (!win) return
+  win.document.write(html)
+  win.document.close()
+  win.focus()
+  setTimeout(() => win.print(), 300)
 }
 
 function Field({ label, value }) {

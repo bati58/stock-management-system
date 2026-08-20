@@ -240,7 +240,7 @@ export default function MaterialReturnList() {
               </Button>
             </>
           ) : (
-            <Button variant="secondary" icon={Printer} onClick={() => window.print()}>Print SRN</Button>
+            <Button variant="secondary" icon={Printer} onClick={() => printReturnNote(viewing)}>Print SRN</Button>
           )
         }
       >
@@ -288,6 +288,87 @@ export default function MaterialReturnList() {
       <ConfirmDialog open={Boolean(deleteTarget)} message={`Delete return request "${deleteTarget?.srnRef}"?`} confirmLabel="Delete" onConfirm={handleDelete} onClose={() => setDeleteTarget(null)} />
     </div>
   )
+}
+
+function printReturnNote(record) {
+  if (!record) return
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${record.srnRef || 'SRN'}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; margin: 0; padding: 32px; color: #111827; background: #fff; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 26px; }
+          .title { font-size: 30px; font-weight: 700; margin: 0; }
+          .subtitle { font-size: 12px; color: #6b7280; margin-top: 4px; }
+          .ref { text-align: right; }
+          .ref-label { font-size: 11px; color: #6b7280; text-transform: uppercase; }
+          .ref-value { font-size: 24px; font-weight: 700; color: #1d4ed8; }
+          .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 24px; }
+          .label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
+          .value { font-size: 14px; font-weight: 600; }
+          table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+          th, td { border: 1px solid #d1d5db; padding: 10px 12px; text-align: left; font-size: 13px; }
+          th { background: #f3f4f6; }
+          .sign { margin-top: 32px; border-top: 1px solid #374151; padding-top: 8px; font-size: 12px; }
+          @page { size: A4; margin: 18mm; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1 class="title">Store Return Note</h1>
+            <div class="subtitle">Material Return / SRN</div>
+          </div>
+          <div class="ref">
+            <div class="ref-label">SRN Ref</div>
+            <div class="ref-value">${record.srnRef || '-'}</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div><div class="label">Department</div><div class="value">${record.department || '-'}</div></div>
+          <div><div class="label">Store</div><div class="value">${record.store || '-'}</div></div>
+          <div><div class="label">Returned By</div><div class="value">${record.returnedBy || '-'}</div></div>
+          <div><div class="label">Status</div><div class="value">${record.status || '-'}</div></div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Qty</th>
+              <th>Reason</th>
+              <th>Condition</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${record.item || '-'}</td>
+              <td>${record.qty ?? '-'}</td>
+              <td>${record.reason || '-'}</td>
+              <td>${record.condition || '-'}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="sign">
+          <div>Prepared on: ${record.date ? new Date(record.date).toLocaleDateString() : '-'}</div>
+        </div>
+      </body>
+    </html>
+  `
+
+  const win = window.open('', '_blank', 'width=900,height=1000')
+  if (!win) return
+  win.document.write(html)
+  win.document.close()
+  win.focus()
+  setTimeout(() => win.print(), 300)
 }
 
 function Field({ label, value }) {

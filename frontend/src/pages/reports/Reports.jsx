@@ -215,6 +215,58 @@ export default function Reports() {
     return true
   }
 
+  const handlePrintReport = () => {
+    const rowsToPrint = currentRows || []
+    const header = (columns || []).map((c) => c.header).join(' | ')
+    const body = rowsToPrint.length
+      ? rowsToPrint.map((row) => (columns || []).map((c) => {
+        const value = c.render ? c.render(row) : row[c.key]
+        const text = typeof value === 'string' || typeof value === 'number' ? String(value) : '—'
+        return text.replace(/\s+/g, ' ').trim()
+      }).join(' | ')).join('<br>')
+      : 'No records match the current filters.'
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>${reportTitle || 'Report'}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 32px; color: #111827; background: #fff; }
+            h1 { font-size: 28px; margin: 0 0 12px; }
+            .meta { font-size: 12px; color: #6b7280; margin-bottom: 18px; }
+            .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+            .table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+            th, td { border: 1px solid #d1d5db; padding: 8px 10px; font-size: 12px; text-align: left; }
+            th { background: #f3f4f6; }
+            .muted { color: #6b7280; }
+            @page { size: A4; margin: 18mm; }
+          </style>
+        </head>
+        <body>
+          <div class="header-row">
+            <div>
+              <h1>${reportTitle || 'Report'}</h1>
+              <div class="meta">Generated: ${new Date().toLocaleString()}</div>
+            </div>
+          </div>
+          <div class="meta">Store: ${filters.store === 'all' ? 'All Stores' : filters.store} | Category: ${filters.category === 'all' ? 'All Categories' : filters.category}</div>
+          <div class="meta">Filter: ${query || 'All records'} | Date: ${filters.startDate || '-'} to ${filters.endDate || '-'}</div>
+          <div style="margin-top: 18px; font-weight: 600;">${header}</div>
+          <div style="margin-top: 12px; line-height: 1.8;">${body}</div>
+        </body>
+      </html>
+    `
+
+    const win = window.open('', '_blank', 'width=1000,height=900')
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    setTimeout(() => win.print(), 300)
+  }
+
   const exportCsv = (columns, rows) => {
     const header = columns.map((c) => c.header).join(',')
     const body = rows
@@ -637,7 +689,7 @@ export default function Reports() {
             <input type="date" className="input" value={filters.endDate} onChange={(e) => setFilters((p) => ({ ...p, endDate: e.target.value }))} />
           </div>
           <div className="flex items-end gap-2">
-            <Button variant="secondary" onClick={() => window.print()} icon={Printer}>
+            <Button variant="secondary" onClick={handlePrintReport} icon={Printer}>
               Print
             </Button>
           </div>
