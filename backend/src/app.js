@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
@@ -12,6 +13,7 @@ const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5174,http:/
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {

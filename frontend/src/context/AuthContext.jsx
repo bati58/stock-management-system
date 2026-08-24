@@ -13,8 +13,12 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('sms_token')
 
     if (saved && token) {
+      // Add a timeout so a dead backend doesn't cause a permanent blank screen
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5000)
+
       api
-        .me()
+        .me({ signal: controller.signal })
         .then((currentUser) => {
           setUser(currentUser)
         })
@@ -24,9 +28,12 @@ export function AuthProvider({ children }) {
           setUser(null)
         })
         .finally(() => {
+          clearTimeout(timeout)
           setReady(true)
         })
-      return
+      return () => {
+        clearTimeout(timeout)
+      }
     }
 
     setReady(true)

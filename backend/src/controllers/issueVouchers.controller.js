@@ -42,7 +42,7 @@ const create = asyncHandler(async (req, res) => {
   if (!srRef) throw new AppError('srRef (the approved requisition reference) is required.', 400);
 
   const result = await withTransaction(async (client) => {
-    const { id } = await stockService.createIssueVoucherFromRequisition(client, {
+    const { id } = await stockService.createPreliminaryIssueVoucher(client, {
       srRef,
       issuedBy: req.user.name,
       actorName: req.user.name
@@ -53,4 +53,19 @@ const create = asyncHandler(async (req, res) => {
   res.status(201).json(result);
 });
 
-module.exports = { list, getOne, create };
+const approve = asyncHandler(async (req, res) => {
+  await withTransaction((client) => stockService.approveIssueVoucher(client, { voucherId: req.params.id, actorName: req.user.name }));
+  res.json(await fetchWithLines(req.params.id));
+});
+
+const post = asyncHandler(async (req, res) => {
+  await withTransaction((client) => stockService.postIssueVoucher(client, { voucherId: req.params.id, actorName: req.user.name }));
+  res.json(await fetchWithLines(req.params.id));
+});
+
+const amend = asyncHandler(async (req, res) => {
+  await withTransaction((client) => stockService.amendIssueVoucher(client, { voucherId: req.params.id, items: req.body.items, reason: req.body.reason, actorName: req.user.name }));
+  res.json(await fetchWithLines(req.params.id));
+});
+
+module.exports = { list, getOne, create, approve, amend, post };

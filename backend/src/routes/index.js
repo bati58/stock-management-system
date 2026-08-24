@@ -23,15 +23,36 @@ const auditLogsController = require('../controllers/auditLogs.controller');
 const reportsController = require('../controllers/reports.controller');
 const gatePassController = require('../controllers/gatePass.controller');
 const userCardsController = require('../controllers/userCards.controller');
+const locationsController = require('../controllers/locations.controller');
+const suppliersController = require('../controllers/suppliers.controller');
+const departmentsController = require('../controllers/departments.controller');
+const stockTakingController = require('../controllers/stockTaking.controller');
+const businessRulesController = require('../controllers/businessRules.controller');
+const notificationsController = require('../controllers/notifications.controller');
 
 // ---------------------------------------------------------------------------
 // Auth (no requireAuth on login; requireAuth only on /me)
 // ---------------------------------------------------------------------------
 router.post('/auth/login', authController.login);
+router.post('/auth/refresh', authController.refreshToken);
 router.get('/auth/me', requireAuth, authController.me);
+router.put('/auth/password', requireAuth, authController.changePassword);
 
 // Every route below requires a valid session.
 router.use(requireAuth);
+
+router.get('/locations', requireRole('locations'), locationsController.list);
+router.get('/locations/:id', requireRole('locations'), locationsController.getOne);
+router.post('/locations', requireRole('locations'), locationsController.create);
+router.put('/locations/:id', requireRole('locations'), locationsController.update);
+router.get('/suppliers', requireRole('suppliers'), suppliersController.list);
+router.get('/suppliers/:id', requireRole('suppliers'), suppliersController.getOne);
+router.post('/suppliers', requireRole('suppliers'), suppliersController.create);
+router.put('/suppliers/:id', requireRole('suppliers'), suppliersController.update);
+router.get('/departments', requireRole('departments'), departmentsController.list);
+router.get('/departments/:id', requireRole('departments'), departmentsController.getOne);
+router.post('/departments', requireRole('departments'), departmentsController.create);
+router.put('/departments/:id', requireRole('departments'), departmentsController.update);
 
 router.post('/gate-pass/:resource/:id/verify', requireRole('gate-pass', 'action'), gatePassController.verify);
 
@@ -84,7 +105,9 @@ router.delete('/items/:id', requireRole('items'), itemsController.remove);
 router.get('/goods-receipts', requireRole('goods-receipts'), goodsReceiptsController.list);
 router.get('/goods-receipts/:id', requireRole('goods-receipts'), goodsReceiptsController.getOne);
 router.post('/goods-receipts', requireRole('goods-receipts'), goodsReceiptsController.create);
+router.post('/goods-receipts/:id/submit', requireRole('goods-receipts'), goodsReceiptsController.setStatus);
 router.post('/goods-receipts/:id/evaluate', requireRole('goods-receipts', 'action'), goodsReceiptsController.evaluate);
+router.post('/goods-receipts/:id/generate-grn', requireRole('goods-receipts', 'action'), goodsReceiptsController.generateGrn);
 router.post('/goods-receipts/:id/status', requireRole('goods-receipts', 'action'), goodsReceiptsController.setStatus);
 router.delete('/goods-receipts/:id', requireRole('goods-receipts'), goodsReceiptsController.remove);
 
@@ -93,6 +116,14 @@ router.delete('/goods-receipts/:id', requireRole('goods-receipts'), goodsReceipt
 // ---------------------------------------------------------------------------
 router.get('/stock-transactions', requireRole('stock-transactions'), stockTransactionsController.list);
 router.get('/bin-cards', requireRole('bin-cards'), binCardsController.list);
+router.get('/bin-cards/:id/movements', requireRole('bin-cards'), binCardsController.movements);
+router.get('/stock-taking', requireRole('stock-taking'), stockTakingController.list);
+router.get('/stock-taking/:id', requireRole('stock-taking'), stockTakingController.getOne);
+router.post('/stock-taking', requireRole('stock-taking'), stockTakingController.create);
+router.post('/stock-taking/:id/submit', requireRole('stock-taking'), stockTakingController.submit);
+router.post('/stock-taking/:id/approve', requireRole('stock-taking', 'action'), stockTakingController.approve);
+router.post('/stock-taking/:id/post', requireRole('stock-taking-post', 'action'), stockTakingController.post);
+router.get('/reconciliation', requireRole('reconciliation'), stockTakingController.reconciliation);
 
 // ---------------------------------------------------------------------------
 // Bin Transfers — immediate effect, no approval step
@@ -106,6 +137,7 @@ router.post('/bin-transfers', requireRole('bin-transfers'), binTransfersControll
 router.get('/requisitions', requireRole('requisitions'), requisitionsController.list);
 router.get('/requisitions/:id', requireRole('requisitions'), requisitionsController.getOne);
 router.post('/requisitions', requireRole('requisitions'), requisitionsController.create);
+router.post('/requisitions/:id/submit', requireRole('requisitions'), requisitionsController.submit);
 router.post('/requisitions/:id/approve', requireRole('requisitions', 'action'), requisitionsController.decide);
 router.delete('/requisitions/:id', requireRole('requisitions'), requisitionsController.remove);
 
@@ -115,6 +147,9 @@ router.delete('/requisitions/:id', requireRole('requisitions'), requisitionsCont
 router.get('/issue-vouchers', requireRole('issue-vouchers'), issueVouchersController.list);
 router.get('/issue-vouchers/:id', requireRole('issue-vouchers'), issueVouchersController.getOne);
 router.post('/issue-vouchers', requireRole('issue-vouchers'), issueVouchersController.create);
+router.post('/issue-vouchers/:id/approve', requireRole('issue-vouchers', 'action'), issueVouchersController.approve);
+router.post('/issue-vouchers/:id/amend', requireRole('issue-vouchers', 'action'), issueVouchersController.amend);
+router.post('/issue-vouchers/:id/post', requireRole('issue-voucher-post', 'action'), issueVouchersController.post);
 
 // ---------------------------------------------------------------------------
 // Material Returns (+ approve action)
@@ -122,6 +157,7 @@ router.post('/issue-vouchers', requireRole('issue-vouchers'), issueVouchersContr
 router.get('/material-returns', requireRole('material-returns'), materialReturnsController.list);
 router.get('/material-returns/:id', requireRole('material-returns'), materialReturnsController.getOne);
 router.post('/material-returns', requireRole('material-returns'), materialReturnsController.create);
+router.post('/material-returns/:id/submit', requireRole('material-returns'), materialReturnsController.submit);
 router.post('/material-returns/:id/approve', requireRole('material-returns', 'action'), materialReturnsController.decide);
 router.delete('/material-returns/:id', requireRole('material-returns'), materialReturnsController.remove);
 
@@ -151,6 +187,7 @@ router.get('/disposals/:id', requireRole('disposals'), disposalsController.getOn
 router.post('/disposals', requireRole('disposals'), disposalsController.create);
 router.put('/disposals/:id', requireRole('disposals'), disposalsController.update);
 router.post('/disposals/:id/approve', requireRole('disposals', 'action'), disposalsController.decide);
+router.post('/disposals/:id/execute', requireRole('disposals', 'action'), disposalsController.execute);
 router.delete('/disposals/:id', requireRole('disposals'), disposalsController.remove);
 
 // ---------------------------------------------------------------------------
@@ -166,9 +203,28 @@ router.get('/reports/low-stock', requireRole('reports'), reportsController.lowSt
 router.get('/reports/stock-movement', requireRole('reports'), reportsController.stockMovement);
 router.get('/reports/grn-status', requireRole('reports'), reportsController.grnStatus);
 router.get('/reports/requisition-status', requireRole('reports'), reportsController.requisitionStatus);
+router.get('/reports/issue-status', requireRole('reports'), reportsController.issueStatus);
+router.get('/reports/return-status', requireRole('reports'), reportsController.returnStatus);
+router.get('/reports/transfer-status', requireRole('reports'), reportsController.transferStatus);
+router.get('/reports/asset-summary', requireRole('reports'), reportsController.assetSummary);
+router.get('/reports/disposal-status', requireRole('reports'), reportsController.disposalStatus);
+router.get('/reports/fifo-valuation', requireRole('reports'), reportsController.fifoValuation);
 // dashboard-summary is intentionally open to every authenticated role (no
 // requireRole) since every role's dashboard needs it — the controller
 // itself scopes the numbers per role.
 router.get('/reports/dashboard-summary', reportsController.dashboardSummary);
+router.get('/reports/export-csv', requireRole('reports'), reportsController.exportCsv);
+
+// ---------------------------------------------------------------------------
+// Business Rules Configuration — Admin only
+// ---------------------------------------------------------------------------
+router.get('/business-rules', requireRole('business-rules'), businessRulesController.list);
+router.get('/business-rules/category/:category', requireRole('business-rules'), businessRulesController.listByCategory);
+router.get('/business-rules/rule/:ruleName', businessRulesController.getRule);
+router.put('/business-rules/rule/:ruleName', requireRole('business-rules', 'action'), businessRulesController.updateRule);
+router.get('/business-rules/categories', businessRulesController.getCategories);
+router.get('/business-rules/all', businessRulesController.getAllRulesAsObject);
+router.get('/notifications', notificationsController.list);
+router.post('/notifications/:id/read', notificationsController.markRead);
 
 module.exports = router;

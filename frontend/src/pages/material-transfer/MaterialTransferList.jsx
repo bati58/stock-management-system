@@ -32,7 +32,7 @@ export default function MaterialTransferList() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  const [header, setHeader] = useState({ fromStore: '', toStore: '', date: '' })
+  const [header, setHeader] = useState({ fromStore: '', toStore: '', date: '', destinationBin: '' })
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
 
   const canApprove = canPerformAction(user?.role, 'approve', 'materialTransfers')
@@ -67,7 +67,8 @@ export default function MaterialTransferList() {
     setHeader({
       fromStore: '',
       toStore: '',
-      date: new Date().toISOString().slice(0, 10)
+      date: new Date().toISOString().slice(0, 10),
+      destinationBin: ''
     })
     setLines([{ ...EMPTY_LINE }])
     setModalOpen(true)
@@ -98,7 +99,8 @@ export default function MaterialTransferList() {
         requestedBy: user?.name || 'Storekeeper',
         status: TRANSFER_STATUS.PENDING_APPROVAL,
         item: line.item,
-        qty: Number(line.qty)
+        qty: Number(line.qty),
+        destinationBin: header.destinationBin
       })
       push(`Transfer request ${transferRef} submitted for PAO approval.`, 'success')
       setModalOpen(false)
@@ -207,6 +209,7 @@ export default function MaterialTransferList() {
             <Select label="Source Store" required options={stores.map((s) => s.name)} value={header.fromStore} onChange={(e) => setHeader((h) => ({ ...h, fromStore: e.target.value }))} />
             <Select label="Destination Store" required options={stores.map((s) => s.name)} value={header.toStore} onChange={(e) => setHeader((h) => ({ ...h, toStore: e.target.value }))} />
             <Input label="Date" type="date" required value={header.date} onChange={(e) => setHeader((h) => ({ ...h, date: e.target.value }))} />
+            <Input label="Destination Bin" placeholder="e.g. E03-02-04" value={header.destinationBin} onChange={(e) => setHeader((h) => ({ ...h, destinationBin: e.target.value }))} />
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -272,12 +275,10 @@ export default function MaterialTransferList() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-100">
-                  {viewing.items?.map((l, i) => (
-                    <tr key={i}>
-                      <td className="p-2">{l.item}</td>
-                      <td className="p-2">{l.qty}</td>
-                    </tr>
-                  ))}
+                  <tr>
+                    <td className="p-2">{viewing.item}</td>
+                    <td className="p-2">{viewing.qty}</td>
+                  </tr>
                 </tbody>
               </table>
               {viewing.status === TRANSFER_STATUS.PENDING_APPROVAL && canApprove && (

@@ -10,7 +10,8 @@ import {
   PackageCheck,
   Send,
   ShieldCheck,
-  TrendingUp
+  TrendingUp,
+  Trash2
 } from 'lucide-react'
 import StatCard from '../../components/ui/StatCard'
 import Card from '../../components/ui/Card'
@@ -25,7 +26,8 @@ import {
   materialTransferService,
   requisitionService,
   issueVoucherService,
-  stockTransactionService
+  stockTransactionService,
+  reportService
 } from '../../services'
 import { formatCurrency, formatDate, formatNumber } from '../../utils/formatters'
 import { ROLES, STATUS } from '../../utils/constants'
@@ -149,6 +151,7 @@ export default function Dashboard() {
   const [disposals, setDisposals] = useState([])
   const [transactions, setTransactions] = useState([])
   const [vouchers, setVouchers] = useState([])
+  const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -163,15 +166,19 @@ export default function Dashboard() {
     setDisposals([])
     setTransactions([])
     setVouchers([])
+    setSummary(null)
 
-    if (entries.length === 0) {
-      setLoading(false)
-      return undefined
-    }
+    const promises = entries.map(([, service]) => service.list())
+    promises.push(reportService.dashboardSummary())
 
     setLoading(true)
-    Promise.allSettled(entries.map(([, service]) => service.list()))
+    Promise.allSettled(promises)
       .then((results) => {
+        const summaryResult = results.pop()
+        if (summaryResult.status === 'fulfilled') {
+          setSummary(summaryResult.value)
+        }
+
         entries.forEach(([key], index) => {
           const result = results[index]
           if (result.status !== 'fulfilled') return
@@ -363,10 +370,10 @@ export default function Dashboard() {
   const renderAdmin = () => (
     <>
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Inventory Value" value={loading ? '—' : formatCurrency(totalValue)} icon={Boxes} tone="brand" />
-        <StatCard label="Items at Reorder Level" value={loading ? '—' : lowStock.length} icon={AlertTriangle} tone="warning" hint="Needs replenishment" />
-        <StatCard label="Pending Goods Receipts" value={loading ? '—' : pendingGrns.length} icon={PackageCheck} tone="info" hint="Awaiting evaluation" />
-        <StatCard label="Pending Requisitions" value={loading ? '—' : pendingReqs.length} icon={FileText} tone="success" hint="Awaiting PAO approval" />
+        <StatCard label="Total Inventory Value" value={!summary ? '—' : formatCurrency(summary.totalInventoryValue || 0)} icon={Boxes} tone="brand" />
+        <StatCard label="Items at Reorder Level" value={!summary ? '—' : summary.itemsAtReorderLevel || 0} icon={AlertTriangle} tone="warning" hint="Needs replenishment" />
+        <StatCard label="Pending Goods Receipts" value={!summary ? '—' : summary.pendingGoodsReceipts || 0} icon={PackageCheck} tone="info" hint="Awaiting evaluation" />
+        <StatCard label="Pending Requisitions" value={!summary ? '—' : summary.pendingRequisitions || 0} icon={FileText} tone="success" hint="Awaiting PAO approval" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -452,11 +459,11 @@ export default function Dashboard() {
 
   const renderPao = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {renderStatCardLink('/requisitions', 'Pending Requisitions', pendingReqs.length, FileText, 'warning', 'Needs review')}
-        {renderStatCardLink('/material-transfer', 'Pending Material Transfers', pendingTransfers.length, PackageCheck, 'info', 'Awaiting approval')}
-        {renderStatCardLink('/disposal', 'Pending Disposal Requests', pendingDisposals.length, AlertTriangle, 'danger', 'Requires action')}
-        <StatCard label="Total Inventory Value" value={loading ? '—' : formatCurrency(totalValue)} icon={Boxes} tone="brand" />
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {renderStatCardLink('/requisitions', 'Pending Requisitions', !summary ? '—' : summary.pendingRequisitions || 0, FileText, 'brand', 'Awaiting your approval')}
+        {renderStatCardLink('/material-transfer', 'Pending Transfers', !summary ? '—' : summary.pendingTransfers || 0, ArrowRight, 'warning', 'Awaiting review')}
+        {renderStatCardLink('/disposal', 'Pending Disposals', !summary ? '—' : summary.pendingDisposals || 0, Trash2, 'danger', 'Items flagged')}
+        <StatCard label="Value at Reorder Risk" value={loading ? '—' : formatCurrency(valueAtReorderRisk)} icon={AlertTriangle} tone="info" hint="Total cost of low stock" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

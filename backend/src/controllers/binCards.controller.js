@@ -14,4 +14,17 @@ const list = asyncHandler(async (req, res) => {
   res.json(rows.map(mapBinCard));
 });
 
-module.exports = { list };
+const movements = asyncHandler(async (req, res) => {
+  const { rows } = await query(`
+    SELECT bcm.*, i.name AS item_name, s.name AS store_name, bc.bin
+    FROM bin_card_movements bcm
+    JOIN bin_cards bc ON bc.id = bcm.bin_card_id
+    JOIN items i ON i.id = bcm.item_id
+    JOIN stores s ON s.id = bcm.store_id
+    WHERE bcm.bin_card_id = $1
+    ORDER BY bcm.movement_date DESC, bcm.id DESC
+  `, [req.params.id]);
+  res.json(rows);
+});
+
+module.exports = { list, movements };

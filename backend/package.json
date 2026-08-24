@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
+    "test": "node --test test/workflow.test.js",
     "db:schema": "node src/db/runSql.js src/db/schema.sql",
     "db:seed": "node src/db/runSql.js src/db/seed.sql",
     "db:reset": "npm run db:schema && npm run db:seed"
@@ -16,6 +17,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.12.0",
     "zod": "^3.23.8"

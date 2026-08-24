@@ -32,7 +32,7 @@ export default function MaterialReturnList() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  const [header, setHeader] = useState({ department: '', store: '', date: '' })
+  const [header, setHeader] = useState({ department: '', store: '', date: '', originalIssueRef: '' })
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
 
   const canReview = canPerformAction(user?.role, 'approve', 'materialReturns')
@@ -97,7 +97,8 @@ export default function MaterialReturnList() {
         item: line.item,
         qty: Number(line.qty),
         reason: line.reason,
-        condition: line.condition
+        condition: line.condition,
+        originalIssueRef: header.originalIssueRef
       })
       push(`Store Return Note ${srnRef} submitted.`, 'success')
       setModalOpen(false)
@@ -118,7 +119,10 @@ export default function MaterialReturnList() {
     setSaving(true)
     try {
       await api.action('materialReturns', viewing.id, 'approve', {
-        decision: status === RETURN_STATUS.RETURNED_TO_STOCK ? 'Approved' : 'Rejected'
+        decision: status === RETURN_STATUS.RETURNED_TO_STOCK ? 'Approved' : 'Rejected',
+        qtyApproved: status === RETURN_STATUS.RETURNED_TO_STOCK ? (viewing.qtyApprovedInput ?? viewing.qty) : 0,
+        findings: viewing.findingsInput,
+        recommendation: viewing.recommendationInput
       })
 
       if (status === RETURN_STATUS.RETURNED_TO_STOCK) {
@@ -205,6 +209,7 @@ export default function MaterialReturnList() {
             <Input label="Returning Department" required value={header.department} onChange={(e) => setHeader((h) => ({ ...h, department: e.target.value }))} />
             <Select label="Returning To Store" required options={stores.map((s) => s.name)} value={header.store} onChange={(e) => setHeader((h) => ({ ...h, store: e.target.value }))} />
             <Input label="Date" type="date" required value={header.date} onChange={(e) => setHeader((h) => ({ ...h, date: e.target.value }))} />
+            <Input label="Original SIV Reference" placeholder="e.g. SIV-2026-0001" value={header.originalIssueRef} onChange={(e) => setHeader((h) => ({ ...h, originalIssueRef: e.target.value }))} />
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -278,6 +283,11 @@ export default function MaterialReturnList() {
                   <p className="text-xs text-brand-600">
                     Verify the physical items. If you choose "Accept to Stock", the items will be added back to the inventory and the bin card will be updated.
                   </p>
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Input label="Approved Quantity" type="number" min="0" max={viewing.qty} value={viewing.qtyApprovedInput ?? viewing.qty} onChange={(e) => setViewing((current) => ({ ...current, qtyApprovedInput: e.target.value }))} />
+                    <Input label="Evaluation Recommendation" placeholder="Return to stock, repair, or disposal" value={viewing.recommendationInput || ''} onChange={(e) => setViewing((current) => ({ ...current, recommendationInput: e.target.value }))} />
+                  </div>
+                  <Input label="Inspection Findings" className="mt-3" value={viewing.findingsInput || ''} onChange={(e) => setViewing((current) => ({ ...current, findingsInput: e.target.value }))} />
                 </div>
               )}
             </div>

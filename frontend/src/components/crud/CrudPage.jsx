@@ -255,7 +255,7 @@ export default function CrudPage({
               required: f.required,
               className: f.fullWidth ? 'sm:col-span-2' : '',
               value: form[f.name] ?? '',
-              onChange: (e) => setForm((prev) => ({ ...prev, [f.name]: e.target.value }))
+              onChange: (e) => setForm((prev) => ({ ...prev, [f.name]: f.type === 'checkbox' ? e.target.checked : e.target.value }))
             }
 
             if (f.type === 'select') {

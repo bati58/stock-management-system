@@ -14,6 +14,9 @@ export const ROLE_PERMISSIONS = {
             '/stores',
             '/categories',
             '/items',
+            '/locations',
+            '/suppliers',
+            '/departments',
             '/goods-receipt',
             '/goods-receipt/evaluation',
             '/grn-documents',
@@ -30,10 +33,9 @@ export const ROLE_PERMISSIONS = {
             '/users',
             '/reports',
             '/audit-log',
-            '/gate-pass'
-        ],
-        canCreate: ['stores', 'categories', 'items', 'users', 'fixedAssets', 'userCards'],
-        canEdit: ['stores', 'categories', 'items', 'users', 'fixedAssets', 'userCards'],
+            '/gate-pass', '/stock-taking', '/reconciliation', '/settings/business-rules'],
+        canCreate: ['stores', 'categories', 'items', 'users', 'fixedAssets', 'userCards', 'suppliers', 'departments'],
+        canEdit: ['stores', 'categories', 'items', 'users', 'fixedAssets', 'userCards', 'suppliers', 'departments'],
         canDelete: ['stores', 'categories', 'items', 'users', 'userCards'],
         canApprove: ['goodsReceipts', 'requisitions', 'materialReturns', 'materialTransfers', 'disposals'],
         canReject: ['goodsReceipts', 'requisitions', 'materialReturns', 'materialTransfers', 'disposals'],
@@ -56,6 +58,9 @@ export const ROLE_PERMISSIONS = {
             '/stores',
             '/categories',
             '/items',
+            '/locations',
+            '/suppliers',
+            '/departments',
             '/requisitions',
             '/material-transfer',
             '/fixed-assets',
@@ -67,10 +72,12 @@ export const ROLE_PERMISSIONS = {
             '/goods-receipt',
             '/grn-documents',
             '/reports',
-            '/audit-log'
+            '/audit-log',
+            '/stock-taking',
+            '/reconciliation'
         ],
-        canCreate: ['disposals', 'stockTransfer', 'stores', 'categories'],
-        canEdit: ['disposals', 'stockTransfer', 'stores', 'categories'],
+        canCreate: ['disposals', 'stockTransfer', 'stores', 'categories', 'suppliers', 'departments'],
+        canEdit: ['disposals', 'stockTransfer', 'stores', 'categories', 'suppliers', 'departments'],
         canDelete: [],
         canApprove: ['requisitions', 'disposals', 'stockTransfer', 'materialTransfers'],
         canReject: ['requisitions', 'disposals', 'stockTransfer', 'materialTransfers'],
@@ -91,6 +98,9 @@ export const ROLE_PERMISSIONS = {
             '/settings',
             '/stores',
             '/items',
+            '/locations',
+            '/suppliers',
+            '/departments',
             '/goods-receipt',
             '/goods-receipt/evaluation',
             '/grn-documents',
@@ -101,7 +111,11 @@ export const ROLE_PERMISSIONS = {
             '/issue-vouchers',
             '/material-return',
             '/material-transfer',
-            '/reports'
+            '/reports',
+            '/categories',
+            '/stock-taking',
+            '/reconciliation',
+            '/user-cards'
         ],
         canCreate: ['stores', 'categories', 'goodsReceipts', 'requisitions', 'issueVouchers', 'materialReturns', 'materialTransfers', 'stockTransfer', 'userCards'],
         canEdit: ['stores', 'categories', 'goodsReceipts', 'requisitions', 'issueVouchers', 'materialReturns', 'materialTransfers', 'stockTransfer', 'userCards'],
@@ -120,7 +134,7 @@ export const ROLE_PERMISSIONS = {
     [ROLES.STOREKEEPER]: {
         name: 'Storekeeper',
         // SRS: receives and issues stock, updates inventory records (bin cards)
-        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/goods-receipt', '/grn-documents', '/stock-cards', '/bin-cards', '/issue-vouchers', '/stock-transfer', '/material-return', '/material-transfer', '/user-cards'],
+        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/locations', '/goods-receipt', '/grn-documents', '/stock-cards', '/bin-cards', '/issue-vouchers', '/stock-transfer', '/material-return', '/material-transfer', '/user-cards', '/suppliers', '/stock-taking'],
         canCreate: ['goodsReceipts', 'issueVouchers', 'stockTransfer', 'binCards', 'materialTransfers', 'userCards'],
         canEdit: ['binCards', 'goodsReceipts', 'userCards'],
         canDelete: [],
@@ -138,7 +152,7 @@ export const ROLE_PERMISSIONS = {
     [ROLES.STOCK_CLERK]: {
         name: 'Stock Clerk',
         // SRS: maintains stock records, updates transactions, prepares reports
-        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/stock-cards', '/bin-cards', '/stock-transfer', '/reports'],
+        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/locations', '/stock-cards', '/bin-cards', '/stock-transfer', '/reports', '/stock-taking', '/reconciliation', '/suppliers'],
         canCreate: ['binCards', 'stockTransfer'],
         canEdit: ['binCards', 'stockTransfer'],
         canDelete: [],
@@ -155,7 +169,7 @@ export const ROLE_PERMISSIONS = {
 
     [ROLES.TEC]: {
         name: 'Technical Evaluation Committee',
-        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/goods-receipt', '/goods-receipt/evaluation', '/grn-documents', '/reports'],
+        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/locations', '/goods-receipt', '/goods-receipt/evaluation', '/grn-documents', '/reports'],
         canCreate: [],
         canEdit: [],
         canDelete: [],
@@ -191,7 +205,7 @@ export const ROLE_PERMISSIONS = {
     [ROLES.ACCOUNTANT]: {
         name: 'Accountant',
         // SRS: views financial reports and manages inventory valuation (FIFO)
-        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/stock-cards', '/bin-cards', '/goods-receipt', '/grn-documents', '/issue-vouchers', '/material-return', '/material-transfer', '/reports', '/audit-log'],
+        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/stock-cards', '/bin-cards', '/goods-receipt', '/grn-documents', '/issue-vouchers', '/material-return', '/material-transfer', '/reports', '/audit-log', '/suppliers', '/reconciliation'],
         canCreate: [],
         canEdit: [],
         canDelete: [],
@@ -268,7 +282,14 @@ export function canPerformAction(userRole, action, entityType) {
 export function canAccessPage(userRole, pagePath) {
     const perms = ROLE_PERMISSIONS[userRole]
     if (!perms) return false
-    return perms.canAccessPages.includes(pagePath)
+    // Exact match
+    if (perms.canAccessPages.includes(pagePath)) return true
+    // Sub-path match: /goods-receipt/evaluation matches /goods-receipt
+    // Also handles detail routes like /stock-cards/123
+    return perms.canAccessPages.some((allowed) => {
+        if (allowed === '/') return false // don't match root to everything
+        return pagePath.startsWith(allowed + '/') || pagePath === allowed
+    })
 }
 
 /**
@@ -313,3 +334,5 @@ export function canRejectRequisition(user, requisition) {
     }
     return true
 }
+
+

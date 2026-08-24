@@ -33,6 +33,11 @@ const READ_PERMISSIONS = {
   stores: [...REPORT_READERS, STOREKEEPER, STOCK_CLERK],
   categories: [...REPORT_READERS, STOREKEEPER, STOCK_CLERK],
   items: [...REPORT_READERS, STOREKEEPER, STOCK_CLERK],
+  locations: [...REPORT_READERS, STOREKEEPER, STOCK_CLERK],
+  suppliers: [...REPORT_READERS, STOREKEEPER],
+  departments: [...REPORT_READERS, STOREKEEPER],
+  'stock-taking': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, STOCK_CLERK],
+  reconciliation: [ADMIN, PAO, STORE_HEAD, STOCK_CLERK, ACCOUNTANT],
   'goods-receipts': [...REPORT_READERS, STOREKEEPER, SECURITY],
   'stock-transactions': REPORT_READERS.concat(STOREKEEPER),
   'bin-cards': [...REPORT_READERS, STOREKEEPER],
@@ -55,9 +60,15 @@ const ACTION_PERMISSIONS = {
   requisitions: [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
   'material-returns': [ADMIN, STORE_HEAD, STOREKEEPER],
   'material-transfers': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, DEPT_HEAD],
+  'issue-vouchers': [ADMIN, STORE_HEAD],
   disposals: [ADMIN, PAO, STORE_HEAD],
   'gate-pass': [ADMIN, SECURITY]
 };
+ACTION_PERMISSIONS['issue-voucher-post'] = [ADMIN, STORE_HEAD, STOREKEEPER];
+ACTION_PERMISSIONS['stock-taking'] = [ADMIN, PAO, STORE_HEAD];
+ACTION_PERMISSIONS['stock-taking-post'] = [ADMIN, PAO, STORE_HEAD, STOCK_CLERK];
+
+ACTION_PERMISSIONS['business-rules'] = [ADMIN];
 
 // Who can POST/PUT/DELETE this resource. If a resource has no entry here,
 // every role in READ_PERMISSIONS for it may also write. If a resource's
@@ -67,6 +78,11 @@ const WRITE_PERMISSIONS = {
   stores: [ADMIN, PAO, STORE_HEAD],
   categories: [ADMIN, PAO, STORE_HEAD], // Stock Clerk: read-only
   items: [ADMIN, STORE_HEAD, STOREKEEPER], // PAO, Stock Clerk: read-only
+  locations: [ADMIN, STORE_HEAD, STOREKEEPER],
+  suppliers: [ADMIN, PAO],
+  departments: [ADMIN, PAO],
+  'stock-taking': [ADMIN, STORE_HEAD, STOREKEEPER, STOCK_CLERK],
+  reconciliation: [],
   'goods-receipts': [ADMIN, STORE_HEAD, STOREKEEPER], // TEC writes only via the /evaluate action route
   'stock-transactions': [], // system-generated only
   'bin-cards': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, STOCK_CLERK],
@@ -80,8 +96,12 @@ const WRITE_PERMISSIONS = {
   'audit-logs': [], // system-generated only
   reports: [],
   'gate-pass': [ADMIN, SECURITY],
-  'user-cards': [ADMIN, STORE_HEAD, STOREKEEPER]
+  'user-cards': [ADMIN, STORE_HEAD, STOREKEEPER],
+  'business-rules': [ADMIN]
 };
+
+// Business Rules configuration permissions
+READ_PERMISSIONS['business-rules'] = [ADMIN];
 
 function canRead(resource, role) {
   const allowed = READ_PERMISSIONS[resource];

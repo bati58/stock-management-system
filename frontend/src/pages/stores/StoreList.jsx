@@ -1,8 +1,17 @@
+import { useEffect, useState } from 'react'
 import CrudPage from '../../components/crud/CrudPage'
 import StatusBadge from '../../components/ui/StatusBadge'
-import { storeService } from '../../services'
+import { storeService, userService } from '../../services'
 
 export default function StoreList() {
+  const [userOptions, setUserOptions] = useState([])
+
+  useEffect(() => {
+    userService.list().then(users => {
+      setUserOptions(users.map(u => ({ label: `${u.name} (${u.username})`, value: u.name })))
+    }).catch(console.error)
+  }, [])
+
   return (
     <CrudPage
       title="Stores"
@@ -18,10 +27,12 @@ export default function StoreList() {
         { key: 'department', header: 'Department' },
         { key: 'location', header: 'Location' },
         { key: 'headOfStore', header: 'Store Head' },
+        { key: 'contactInfo', header: 'Contact' },
+        { key: 'description', header: 'Description' },
         {
           key: 'active',
           header: 'Status',
-          render: (row) => <StatusBadge status={row.active ? 'Approved' : 'Cancelled'} />
+          render: (row) => <StatusBadge status={row.active ? 'Active' : 'Inactive'} />
         }
       ]}
       fields={[
@@ -37,7 +48,7 @@ export default function StoreList() {
         { name: 'department', label: 'Department/Org Unit', placeholder: 'e.g. Electrical Engineering' },
         { name: 'location', label: 'Physical Location', required: true },
         { name: 'contactInfo', label: 'Contact Info', placeholder: 'Phone or Email' },
-        { name: 'headOfStore', label: 'Store Head', required: true },
+        { name: 'headOfStore', label: 'Store Head', type: 'select', options: userOptions, required: true, placeholder: 'Select a user...' },
         { name: 'description', label: 'Description', type: 'textarea', fullWidth: true },
         { name: 'active', label: 'Active', type: 'checkbox' }
       ]}

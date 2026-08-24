@@ -1,0 +1,51 @@
+const { query } = require('../config/db');
+const asyncHandler = require('../utils/asyncHandler');
+const AppError = require('../utils/AppError');
+const { logAudit } = require('../utils/audit');
+
+const mapSupplier = (row) => ({
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    contact: row.contact,
+    address: row.address,
+    active: row.active
+});
+
+const list = asyncHandler(async (req, res) => {
+    const { rows } = await query('SELECT * FROM suppliers ORDER BY name');
+    res.json(rows.map(mapSupplier));
+});
+
+const getOne = asyncHandler(async (req, res) => {
+    const { rows } = await query('SELECT * FROM suppliers WHERE id = $1', [req.params.id]);
+    if (!rows[0]) throw new AppError('Supplier not found.', 404);
+    res.json(mapSupplier(rows[0]));
+});
+
+const create = asyncHandler(async (req, res) => {
+    const { code, name, contact, address } = req.body;
+    if (!code || !name) throw new AppError('code and name are required.', 400);
+    const { rows } = await query(
+        `INSERT INTO suppliers (code, name, contact, address) VALUES ($1, $2, $3, $4) RETURNING *`,
+        [code, name, contact || null, address || null]
+    );
+    await logAudit(query, { userId: req.user.id, userName: req.user.name, userRole: req.user.role, action: `Created supplier ${name}`, module: 'Suppliers', entityType: 'supplier', entityId: rows[0].id });
+    res.status(201).json(mapSupplier(rows[0]));
+});
+
+const update = asyncHandler(async (req, res) => {
+    const { code, name, contact, address, active } = req.body;
+    const { rows } = await query(
+        `UPDATE suppliers SET code = COALESCE($1, code), name = COALESCE($2, name),
+       contact = COALESCE($3, contact), address = COALESCE($4, address),
+       active = COALESCE($5, active), updated_at = NOW()
+     WHERE id = $6 RETURNING *`,
+        [code, name, contact, address, active, req.params.id]
+    );
+    if (!rows[0]) throw new AppError('Supplier not found.', 404);
+    await logAudit(query, { userId: req.user.id, userName: req.user.name, userRole: req.user.role, action: `Updated supplier ${rows[0].name}`, module: 'Suppliers', entityType: 'supplier', entityId: rows[0].id });
+    res.json(mapSupplier(rows[0]));
+});
+
+module.exports = { list, getOne, create, update };

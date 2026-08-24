@@ -3,8 +3,10 @@ const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../utils/AppError');
 const { nextRef } = require('../utils/refGenerator');
 const { logAudit } = require('../utils/audit');
-const { mapGoodsReceipt, resolveStoreId, resolveItemId } = require('./_helpers');
+const { mapGoodsReceipt, resolveStoreId, resolveItemId, resolveSupplierId } = require('./_helpers');
 const stockService = require('../services/stockService');
+const { assertTransition } = require('../utils/workflow');
+const { notify } = require('../utils/notify');
 
 const SELECT = `
   SELECT g.*, s.name AS store_name
@@ -50,12 +52,13 @@ const create = asyncHandler(async (req, res) => {
 
   const result = await withTransaction(async (client) => {
     const storeId = await resolveStoreId(store, client);
+    const supplierId = await resolveSupplierId(supplier, client);
     const grnRef = await nextRef(client, 'GRN');
 
     const { rows } = await client.query(
-      `INSERT INTO goods_receipts (grn_ref, supplier, po_ref, received_date, received_by, store_id, status)
-       VALUES ($1,$2,$3,$4,$5,$6,'Pending') RETURNING id`,
-      [grnRef, supplier, poRef || null, receivedDate, receivedBy || req.user.name, storeId]
+      `INSERT INTO goods_receipts (grn_ref, supplier, supplier_id, po_ref, received_date, received_by, store_id, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,'Pending') RETURNING id`,
+      [grnRef, supplier, supplierId, poRef || null, receivedDate, receivedBy || req.user.name, storeId]
     );
     const grnId = rows[0].id;
 
@@ -78,49 +81,75 @@ const create = asyncHandler(async (req, res) => {
 
 // POST /api/goods-receipts/:id/evaluate — Backend-SRS §6.1 steps 2-4
 const evaluate = asyncHandler(async (req, res) => {
-  const { decision, evaluationNote } = req.body;
-  if (!['Approved', 'Rejected'].includes(decision)) {
-    throw new AppError('decision must be "Approved" or "Rejected".', 400);
+  const { decision, evaluationNote, findings, condition, evidence, items } = req.body;
+  if (!['Approved', 'Rejected', 'Partially Approved'].includes(decision)) {
+    throw new AppError('decision must be "Approved", "Partially Approved", or "Rejected".', 400);
   }
 
   await withTransaction(async (client) => {
-    if (decision === 'Approved') {
-      await stockService.approveGoodsReceipt(client, {
-        grnId: req.params.id,
-        evaluationNote,
-        evaluatedBy: req.user.name,
-        actorName: req.user.name
-      });
-    } else {
-      await stockService.rejectGoodsReceipt(client, {
-        grnId: req.params.id,
-        evaluationNote,
-        evaluatedBy: req.user.name,
-        actorName: req.user.name
-      });
-    }
+    await stockService.recordGoodsReceiptEvaluation(client, {
+      grnId: req.params.id,
+      decision,
+      evaluationNote,
+      findings,
+      condition,
+      evidence,
+      items,
+      evaluatedBy: req.user.name,
+      actorName: req.user.name
+    });
   });
 
   const grn = await fetchWithLines(req.params.id);
   res.json(grn);
 });
 
+const generateGrn = asyncHandler(async (req, res) => {
+  await withTransaction(async (client) => {
+    await stockService.generateGrnAndPost(client, {
+      grnId: req.params.id,
+      generatedBy: req.user.name,
+      actorName: req.user.name
+    });
+  });
+  res.json(await fetchWithLines(req.params.id));
+});
+
 const setStatus = asyncHandler(async (req, res) => {
   const allowed = ['Draft', 'Submitted', 'Pending', 'Pending Evaluation', 'Under Evaluation'];
   if (!allowed.includes(req.body.status)) throw new AppError('Invalid goods receipt workflow status.', 400);
+  const { rows: currentRows } = await query('SELECT status FROM goods_receipts WHERE id = $1', [req.params.id]);
+  if (!currentRows[0]) throw new AppError('Goods receipt not found.', 404);
+  assertTransition('goodsReceipt', currentRows[0].status, req.body.status);
   const { rows } = await query(
-    `UPDATE goods_receipts SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id`,
+    `UPDATE goods_receipts SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, grn_ref`,
     [req.body.status, req.params.id]
   );
   if (!rows[0]) throw new AppError('Goods receipt not found.', 404);
+
+  if (req.body.status === 'Submitted') {
+    await notify(query, {
+      role: 'Technical Evaluation Committee',
+      title: 'Goods Receipt Submitted',
+      message: `Goods receipt ${rows[0].grn_ref} has been submitted for evaluation.`,
+      type: 'info',
+      route: `/goods-receipts/${req.params.id}`,
+      entityType: 'goods_receipt',
+      entityId: req.params.id
+    });
+  }
+
   res.json(await fetchWithLines(req.params.id));
 });
 
 const remove = asyncHandler(async (req, res) => {
+  const { rows: check } = await query('SELECT status FROM goods_receipts WHERE id = $1', [req.params.id]);
+  if (!check[0]) throw new AppError('Goods receipt not found.', 404);
+  if (!['Draft', 'Pending', 'Pending Evaluation'].includes(check[0].status)) throw new AppError('Cannot delete a goods receipt that has already been processed.', 400);
+
   const { rows } = await query('DELETE FROM goods_receipts WHERE id = $1 RETURNING grn_ref', [req.params.id]);
-  if (!rows[0]) throw new AppError('Goods receipt not found.', 404);
   await logAudit(query, { userName: req.user.name, action: `Deleted ${rows[0].grn_ref}`, module: 'Goods Receipt' });
   res.status(204).send();
 });
 
-module.exports = { list, getOne, create, evaluate, setStatus, remove };
+module.exports = { list, getOne, create, evaluate, generateGrn, setStatus, remove };

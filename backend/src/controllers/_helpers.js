@@ -16,6 +16,13 @@ async function resolveStoreId(storeName, client = { query }) {
   return rows[0].id;
 }
 
+async function resolveSupplierId(supplierName, client = { query }) {
+  if (!supplierName) return null;
+  const { rows } = await client.query('SELECT id FROM suppliers WHERE name = $1 OR code = $1', [supplierName]);
+  if (!rows[0]) throw new AppError(`Unknown supplier: "${supplierName}".`, 400);
+  return rows[0].id;
+}
+
 async function resolveCategoryId(categoryName, client = { query }) {
   if (!categoryName) return null;
   const { rows } = await client.query('SELECT id FROM categories WHERE name = $1', [categoryName]);
@@ -27,6 +34,13 @@ async function resolveItemId(itemName, client = { query }) {
   if (!itemName) return null;
   const { rows } = await client.query('SELECT id FROM items WHERE name = $1', [itemName]);
   if (!rows[0]) throw new AppError(`Unknown item: "${itemName}".`, 400);
+  return rows[0].id;
+}
+
+async function resolveLocationId(locationId, storeId, client = { query }) {
+  if (!locationId) return null;
+  const { rows } = await client.query('SELECT id FROM locations WHERE id = $1 AND store_id = $2', [locationId, storeId]);
+  if (!rows[0]) throw new AppError('Location does not belong to the selected store.', 400);
   return rows[0].id;
 }
 
@@ -53,6 +67,8 @@ function mapStore(row) {
     type: row.type,
     location: row.location,
     headOfStore: row.head_of_store,
+    description: row.description,
+    contactInfo: row.contact_info,
     active: row.active
   };
 }
@@ -63,7 +79,8 @@ function mapCategory(row) {
     code: row.code,
     name: row.name,
     store: row.store_name || null,
-    description: row.description
+    description: row.description,
+    active: row.active
   };
 }
 
@@ -74,13 +91,32 @@ function mapItem(row) {
     name: row.name,
     category: row.category_name || null,
     store: row.store_name || null,
+    locationId: row.location_id || null,
+    location: row.location_name || null,
     bin: row.bin,
     unit: row.unit,
     minLevel: Number(row.min_level),
     maxLevel: Number(row.max_level),
     reorderLevel: Number(row.reorder_level),
     qtyOnHand: Number(row.qty_on_hand),
-    unitPrice: Number(row.unit_price)
+    unitPrice: Number(row.unit_price),
+    expiryDate: row.expiry_date ? row.expiry_date.toISOString().split('T')[0] : null,
+    batchNo: row.batch_no || null,
+    condition: row.item_condition || null
+  };
+}
+
+function mapLocation(row) {
+  return {
+    id: row.id,
+    storeId: row.store_id,
+    store: row.store_name || null,
+    parentId: row.parent_id,
+    parent: row.parent_name || null,
+    type: row.type,
+    code: row.code,
+    name: row.name,
+    active: row.active
   };
 }
 
@@ -113,7 +149,13 @@ function mapStockTransaction(row) {
     qtyIn: Number(row.qty_in),
     qtyOut: Number(row.qty_out),
     unitPrice: Number(row.unit_price),
-    balance: Number(row.balance)
+    balance: Number(row.balance),
+    actorName: row.actor_name || null,
+    store: row.store_name || null,
+    bin: row.bin || null,
+    reason: row.reason || null,
+    sourceType: row.source_type || null,
+    sourceId: row.source_id || null
   };
 }
 
@@ -140,7 +182,7 @@ function mapBinTransfer(row) {
   };
 }
 
-function mapRequisition(row, items = []) {
+function mapRequisition(row, items = [], approvals = []) {
   return {
     id: row.id,
     srRef: row.sr_ref,
@@ -149,7 +191,8 @@ function mapRequisition(row, items = []) {
     date: row.date,
     store: row.store_name || null,
     status: row.status,
-    items: items.map((i) => ({ item: i.item_name, qty: Number(i.qty), qtyApproved: i.qty_approved == null ? Number(i.qty) : Number(i.qty_approved) }))
+    items: items.map((i) => ({ item: i.item_name, qty: Number(i.qty), qtyApproved: i.qty_approved == null ? Number(i.qty) : Number(i.qty_approved) })),
+    approvals: approvals.map((a) => ({ decision: a.decision, comments: a.comments, approvedBy: a.approved_by, approvedAt: a.approved_at }))
   };
 }
 
@@ -192,7 +235,14 @@ function mapMaterialReturn(row) {
     store: row.store_name || null,
     item: row.item_name || null,
     qty: Number(row.qty),
+    qtyApproved: row.qty_approved == null ? null : Number(row.qty_approved),
     reason: row.reason,
+    condition: row.condition,
+    originalIssueRef: row.original_issue_ref,
+    evaluatedBy: row.evaluated_by,
+    evaluatedAt: row.evaluated_at,
+    evaluationFindings: row.evaluation_findings,
+    evaluationRecommendation: row.evaluation_recommendation,
     date: row.date,
     status: row.status
   };
@@ -208,6 +258,12 @@ function mapMaterialTransfer(row) {
     qty: Number(row.qty),
     date: row.date,
     status: row.status,
+    destinationBin: row.destination_bin || null,
+    dispatchedBy: row.dispatched_by || null,
+    dispatchedAt: row.dispatched_at || null,
+    receivedBy: row.received_by || null,
+    receivedAt: row.received_at || null,
+    transferUnitPrice: row.transfer_unit_price == null ? null : Number(row.transfer_unit_price),
     gateVerified: row.gate_verified,
     gateVerifiedBy: row.gate_verified_by,
     gateVerifiedAt: row.gate_verified_at
@@ -250,12 +306,15 @@ function mapAuditLog(row) {
 
 module.exports = {
   resolveStoreId,
+  resolveSupplierId,
   resolveCategoryId,
   resolveItemId,
+  resolveLocationId,
   mapUser,
   mapStore,
   mapCategory,
   mapItem,
+  mapLocation,
   mapGoodsReceipt,
   mapStockTransaction,
   mapBinCard,

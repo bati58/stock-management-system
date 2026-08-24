@@ -101,7 +101,7 @@ export default function GoodsReceiptList() {
 
   async function handleGenerateGRN(row) {
     try {
-      await api.action('goodsReceipts', row.id, 'evaluate', { decision: 'Approved' })
+      await api.action('goodsReceipts', row.id, 'generate-grn', {})
       push(`Official Model 19 GRN Generated for ${row.grnRef}. Stock updated.`, 'success')
       await load()
     } catch (e) {
@@ -134,7 +134,7 @@ export default function GoodsReceiptList() {
               <Send size={15} />
             </button>
           )}
-          {row.status === GRN_STATUS.ACCEPTED && (
+          {(row.status === GRN_STATUS.ACCEPTED || row.status === GRN_STATUS.PARTIALLY_ACCEPTED) && (
             <button onClick={() => handleGenerateGRN(row)} className="rounded-md p-1.5 text-success-600 hover:bg-success-50" title="Generate GRN">
               <FileText size={15} />
             </button>

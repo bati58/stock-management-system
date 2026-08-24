@@ -84,11 +84,23 @@ const decide = asyncHandler(async (req, res) => {
   res.json(mapDisposal(rows[0]));
 });
 
+const execute = asyncHandler(async (req, res) => {
+  await withTransaction((client) =>
+    stockService.executeDisposal(client, { disposalId: req.params.id, actorName: req.user.name })
+  );
+
+  const { rows } = await query(`${SELECT} WHERE d.id = $1`, [req.params.id]);
+  res.json(mapDisposal(rows[0]));
+});
+
 const remove = asyncHandler(async (req, res) => {
+  const { rows: check } = await query('SELECT status FROM disposals WHERE id = $1', [req.params.id]);
+  if (!check[0]) throw new AppError('Disposal request not found.', 404);
+  if (!['Pending', 'Flagged', 'Requested', 'Pending Review'].includes(check[0].status)) throw new AppError('Cannot delete a disposal request that has already been processed.', 400);
+
   const { rows } = await query('DELETE FROM disposals WHERE id = $1 RETURNING disposal_ref', [req.params.id]);
-  if (!rows[0]) throw new AppError('Disposal request not found.', 404);
   await logAudit(query, { userName: req.user.name, action: `Deleted disposal ${rows[0].disposal_ref}`, module: 'Disposal Management' });
   res.status(204).send();
 });
 
-module.exports = { list, getOne, create, update, decide, remove };
+module.exports = { list, getOne, create, update, decide, execute, remove };

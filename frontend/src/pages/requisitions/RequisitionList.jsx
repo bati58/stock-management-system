@@ -317,6 +317,23 @@ export default function RequisitionList() {
                 </p>
               )}
             </div>
+            {viewing.approvals?.length > 0 && (
+              <div className="border-t border-ink-100 pt-4">
+                <p className="mb-2 font-medium text-ink-700">Approval History</p>
+                <div className="space-y-2">
+                  {viewing.approvals.map((approval, index) => (
+                    <div key={`${approval.approvedAt}-${index}`} className="rounded-lg border border-ink-100 bg-ink-50 px-3 py-2 text-xs">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-semibold text-ink-800">{approval.decision}</span>
+                        <span className="text-ink-500">{formatDate(approval.approvedAt)}</span>
+                      </div>
+                      <p className="mt-1 text-ink-600">By {approval.approvedBy || 'Unknown'}</p>
+                      {approval.comments && <p className="mt-1 text-ink-600">{approval.comments}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>

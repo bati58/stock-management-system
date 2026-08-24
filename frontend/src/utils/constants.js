@@ -25,7 +25,9 @@ export const STATUS = {
   REJECTED: 'Rejected',
   ISSUED: 'Issued',
   COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled'
+  CANCELLED: 'Cancelled',
+  ACTIVE: 'Active',
+  INACTIVE: 'Inactive'
 }
 
 // Detailed workflow statuses per module
@@ -35,6 +37,7 @@ export const GRN_STATUS = {
   PENDING_EVAL: 'Pending Evaluation',
   UNDER_EVAL: 'Under Evaluation',
   ACCEPTED: 'Accepted',
+  PARTIALLY_ACCEPTED: 'Partially Accepted',
   REJECTED: 'Rejected',
   GRN_GENERATED: 'GRN Generated'
 }
@@ -48,9 +51,11 @@ export const REQUISITION_STATUS = {
 }
 
 export const SIV_STATUS = {
-  DRAFT: 'Draft',
-  ISSUED: 'Issued',
-  COMPLETED: 'Completed'
+  PRELIMINARY: 'Preliminary',
+  PENDING_APPROVAL: 'Pending Approval',
+  APPROVED: 'Approved',
+  POSTED: 'Posted',
+  REJECTED: 'Rejected'
 }
 
 export const TRANSFER_STATUS = {
@@ -110,11 +115,17 @@ export const STATUS_COLOR = {
   [STATUS.ISSUED]: 'bg-info-50 text-info-700',
   [STATUS.COMPLETED]: 'bg-success-50 text-success-700',
   [STATUS.CANCELLED]: 'bg-ink-200 text-ink-600',
+  [STATUS.ACTIVE]: 'bg-success-50 text-success-700',
+  [STATUS.INACTIVE]: 'bg-ink-200 text-ink-600',
+  [SIV_STATUS.PRELIMINARY]: 'bg-ink-100 text-ink-600',
+  [SIV_STATUS.PENDING_APPROVAL]: 'bg-warning-50 text-warning-700',
+  [SIV_STATUS.POSTED]: 'bg-success-50 text-success-700',
 
   // GRN
   [GRN_STATUS.SUBMITTED]: 'bg-warning-50 text-warning-700',
   [GRN_STATUS.PENDING_EVAL]: 'bg-warning-50 text-warning-700',
   [GRN_STATUS.ACCEPTED]: 'bg-success-50 text-success-700',
+  [GRN_STATUS.PARTIALLY_ACCEPTED]: 'bg-info-50 text-info-700',
   [GRN_STATUS.GRN_GENERATED]: 'bg-success-50 text-success-700',
 
   // Requisition

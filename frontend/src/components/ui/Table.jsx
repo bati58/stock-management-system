@@ -5,7 +5,7 @@ import Pagination from './Pagination'
 
 // Generic, config-driven data table.
 // columns: [{ key, header, render?(row), className? }]
-export default function Table({ columns, rows, loading, emptyTitle, emptyMessage, pageSize = 8, rowKey = 'id' }) {
+export default function Table({ columns, rows = [], loading, emptyTitle, emptyMessage, pageSize = 8, rowKey = 'id' }) {
   const [page, setPage] = useState(1)
 
   const paged = useMemo(() => {

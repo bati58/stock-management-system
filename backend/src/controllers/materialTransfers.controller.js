@@ -27,7 +27,7 @@ const getOne = asyncHandler(async (req, res) => {
 
 // POST /api/material-transfers — Backend-SRS §6.4 step 1 (Pending, no stock change)
 const create = asyncHandler(async (req, res) => {
-  const { fromStore, toStore, item, qty, date } = req.body;
+  const { fromStore, toStore, item, qty, date, destinationBin } = req.body;
   if (!fromStore || !toStore || !item || !qty) {
     throw new AppError('fromStore, toStore, item, and qty are required.', 400);
   }
@@ -37,12 +37,15 @@ const create = asyncHandler(async (req, res) => {
     const toStoreId = await resolveStoreId(toStore, client);
     const itemId = await resolveItemId(item, client);
     if (!itemId) throw new AppError(`Unknown item: "${item}".`, 400);
+    const { rows: sourceItems } = await client.query('SELECT id FROM items WHERE id = $1 AND store_id = $2', [itemId, fromStoreId]);
+    if (!sourceItems[0]) throw new AppError('The selected item does not belong to the source store.', 400);
+    if (fromStoreId === toStoreId) throw new AppError('Source and destination stores must be different.', 400);
     const transferRef = await nextRef(client, 'TRF');
 
     const { rows } = await client.query(
-      `INSERT INTO material_transfers (transfer_ref, from_store_id, to_store_id, item_id, qty, date, status)
-       VALUES ($1,$2,$3,$4,$5,COALESCE($6, CURRENT_DATE),'Pending') RETURNING id`,
-      [transferRef, fromStoreId, toStoreId, itemId, qty, date || null]
+      `INSERT INTO material_transfers (transfer_ref, from_store_id, to_store_id, item_id, qty, date, status, destination_bin)
+       VALUES ($1,$2,$3,$4,$5,COALESCE($6, CURRENT_DATE),'Pending',$7) RETURNING id`,
+      [transferRef, fromStoreId, toStoreId, itemId, qty, date || null, destinationBin || null]
     );
 
     await logAudit(client, { userName: req.user.name, action: `Created transfer ${transferRef}`, module: 'Material Transfer' });
@@ -70,8 +73,11 @@ const decide = asyncHandler(async (req, res) => {
 });
 
 const remove = asyncHandler(async (req, res) => {
+  const { rows: check } = await query('SELECT status FROM material_transfers WHERE id = $1', [req.params.id]);
+  if (!check[0]) throw new AppError('Material transfer not found.', 404);
+  if (!['Draft', 'Submitted', 'Pending Approval'].includes(check[0].status)) throw new AppError('Cannot delete a material transfer that has already been processed.', 400);
+
   const { rows } = await query('DELETE FROM material_transfers WHERE id = $1 RETURNING transfer_ref', [req.params.id]);
-  if (!rows[0]) throw new AppError('Material transfer not found.', 404);
   await logAudit(query, { userName: req.user.name, action: `Deleted transfer ${rows[0].transfer_ref}`, module: 'Material Transfer' });
   res.status(204).send();
 });

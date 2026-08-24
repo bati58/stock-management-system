@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button'
 import Select from '../../components/ui/Select'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { issueVoucherService, requisitionService, itemService } from '../../services'
+import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, formatCurrency } from '../../utils/formatters'
@@ -28,6 +29,7 @@ export default function IssueVoucherList() {
   const [saving, setSaving] = useState(false)
   const [amendLines, setAmendLines] = useState([])
   const canGenerate = canPerformAction(user?.role, 'create', 'issueVouchers')
+  const canApprove = canPerformAction(user?.role, 'approve', 'issueVouchers')
 
   async function load() {
     setLoading(true)
@@ -89,7 +91,7 @@ export default function IssueVoucherList() {
       const isInterStore = req.department.toLowerCase().includes('store')
 
       await issueVoucherService.create({ srRef: req.srRef })
-      push(`Model 22 Issue Voucher ${sivRef} generated. Stock levels deducted.`, 'success')
+      push(`Preliminary Model 22 Issue Voucher ${sivRef} created. Stock remains unchanged until posting.`, 'success')
       setModalOpen(false)
       setSelectedSr('')
       await load()
@@ -97,6 +99,26 @@ export default function IssueVoucherList() {
       push(err.message, 'error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleApprove(row) {
+    try {
+      await api.action('issueVouchers', row.id, 'approve', {})
+      push(`${row.sivRef} approved and ready for posting.`, 'success')
+      await load()
+    } catch (err) {
+      push(err.message, 'error')
+    }
+  }
+
+  async function handlePost(row) {
+    try {
+      await api.action('issueVouchers', row.id, 'post', {})
+      push(`${row.sivRef} posted. Stock levels updated.`, 'success')
+      await load()
+    } catch (err) {
+      push(err.message, 'error')
     }
   }
 
@@ -112,9 +134,13 @@ export default function IssueVoucherList() {
       header: 'Actions',
       className: 'text-right',
       render: (row) => (
-        <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600">
-          <Eye size={15} />
-        </button>
+        <div className="flex justify-end gap-1">
+          {canApprove && row.status === SIV_STATUS.PRELIMINARY && <Button variant="secondary" onClick={() => handleApprove(row)}>Approve</Button>}
+          {canGenerate && row.status === SIV_STATUS.APPROVED && <Button onClick={() => handlePost(row)}>Post</Button>}
+          <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600">
+            <Eye size={15} />
+          </button>
+        </div>
       )
     }
   ]
@@ -145,7 +171,7 @@ export default function IssueVoucherList() {
               Cancel
             </Button>
             <Button onClick={handleGenerate} loading={saving} disabled={!selectedSr}>
-              Finalize & Issue
+              Create Preliminary Voucher
             </Button>
           </>
         }

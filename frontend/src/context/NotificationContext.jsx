@@ -8,6 +8,7 @@ import {
   materialReturnService,
   materialTransferService,
   requisitionService
+  , notificationService
 } from '../services'
 import { buildNotifications } from '../utils/buildNotifications'
 
@@ -57,14 +58,15 @@ export function NotificationProvider({ children }) {
     if (!user) return
     setLoading(true)
     try {
-      const [items, grns, reqs, returns, transfers, disposals, vouchers] = await Promise.all([
+      const [items, grns, reqs, returns, transfers, disposals, vouchers, persisted] = await Promise.all([
         itemService.list(),
         goodsReceiptService.list(),
         requisitionService.list(),
         materialReturnService.list(),
         materialTransferService.list(),
         disposalService.list(),
-        issueVoucherService.list()
+        issueVoucherService.list(),
+        notificationService.list().catch(() => [])
       ])
 
       const built = buildNotifications(user, { items, grns, reqs, returns, transfers, disposals, vouchers })
@@ -73,8 +75,11 @@ export function NotificationProvider({ children }) {
 
       setDismissedIds(dismissed)
       setReadIds(read)
+      const combined = [...persisted, ...built].filter((notification, index, all) =>
+        all.findIndex((candidate) => String(candidate.id) === String(notification.id)) === index
+      )
       setNotifications(
-        built
+        combined
           .filter((n) => !dismissed.includes(n.id))
           .map((n) => ({ ...n, read: read.includes(n.id) }))
       )
@@ -98,6 +103,7 @@ export function NotificationProvider({ children }) {
         saveIds(readKey(userId), next)
         return next
       })
+      if (Number.isInteger(Number(id))) notificationService.markRead(id).catch(() => { })
       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
     },
     [userId]

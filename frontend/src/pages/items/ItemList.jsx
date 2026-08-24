@@ -9,7 +9,7 @@ import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import Badge from '../../components/ui/Badge'
-import { itemService, categoryService, storeService } from '../../services'
+import { itemService, categoryService, storeService, businessRulesService } from '../../services'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { canPerformAction } from '../../utils/rolePermissions'
@@ -49,6 +49,7 @@ export default function ItemList() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [shelfLifeWarningDays, setShelfLifeWarningDays] = useState(90)
 
   // Permission checks
   const canCreate = canPerformAction(user?.role, 'create', 'items')
@@ -66,6 +67,12 @@ export default function ItemList() {
       setItems(itemsData)
       setCategories(categoriesData)
       setStores(storesData)
+      try {
+        const rule = await businessRulesService.getRule('SHELF_LIFE_WARNING_DAYS')
+        if (Number.isFinite(Number(rule.value)) && Number(rule.value) >= 0) setShelfLifeWarningDays(Number(rule.value))
+      } catch {
+        // Keep the default when rules are unavailable to non-admin sessions.
+      }
     } catch (err) {
       push(err.message || 'Could not load items.', 'error')
     } finally {
@@ -159,7 +166,7 @@ export default function ItemList() {
               <AlertTriangle size={14} className="text-warning-500" />
             </span>
           )}
-          {r.expiryDate && new Date(r.expiryDate) < new Date(Date.now() + 90 * 24 * 60 * 60 * 1000) && (
+          {r.expiryDate && new Date(r.expiryDate) < new Date(Date.now() + shelfLifeWarningDays * 24 * 60 * 60 * 1000) && (
             <span title={`Expiring on ${r.expiryDate}`}>
               <AlertTriangle size={14} className="text-danger-500" />
             </span>
@@ -204,7 +211,7 @@ export default function ItemList() {
   return (
     <div>
       <PageHeader
-        title="Items & Locations"
+        title="Items"
         subtitle="Maintain the item master, its bin location, and min/max/reorder levels."
         actions={canCreate ? <Button icon={Plus} onClick={openCreate}>Add Item</Button> : null}
       />

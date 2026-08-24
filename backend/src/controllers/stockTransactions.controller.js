@@ -8,9 +8,10 @@ const { mapStockTransaction } = require('./_helpers');
 const list = asyncHandler(async (req, res) => {
   const { item } = req.query;
   let sql = `
-    SELECT st.*, i.name AS item_name
+    SELECT st.*, i.name AS item_name, s.name AS store_name
     FROM stock_transactions st
     JOIN items i ON i.id = st.item_id
+    LEFT JOIN stores s ON s.id = st.store_id
   `;
   const params = [];
   if (item) {

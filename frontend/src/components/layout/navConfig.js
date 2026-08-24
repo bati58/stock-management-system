@@ -51,7 +51,10 @@ export const NAV_SECTIONS = [
     items: [
       { to: '/stores', label: 'Stores', icon: Warehouse, roles: [ROLES.ADMIN, ROLES.STORE_HEAD] },
       { to: '/categories', label: 'Item Categories', icon: Tags, roles: [ROLES.ADMIN, ROLES.STORE_HEAD] },
-      { to: '/items', label: 'Items & Locations', icon: Boxes, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] }
+      { to: '/items', label: 'Items', icon: Boxes, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] }
+      , { to: '/locations', label: 'Locations', icon: Boxes, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] }
+      , { to: '/suppliers', label: 'Suppliers', icon: Boxes, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.ACCOUNTANT, ROLES.STOCK_CLERK] }
+      , { to: '/departments', label: 'Departments', icon: Users, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.DEPT_HEAD] }
     ]
   },
   {
@@ -106,6 +109,13 @@ export const NAV_SECTIONS = [
     ]
   },
   {
+    label: 'Stock Control',
+    items: [
+      { to: '/stock-taking', label: 'Stock Taking', icon: ClipboardCheck, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] },
+      { to: '/reconciliation', label: 'Reconciliation Report', icon: BarChart3, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOCK_CLERK, ROLES.ACCOUNTANT] }
+    ]
+  },
+  {
     label: 'Assets & Disposal',
     items: [
       { to: '/fixed-assets', label: 'Fixed Assets', icon: Landmark, roles: [ROLES.ADMIN, ROLES.PAO] },
@@ -117,8 +127,10 @@ export const NAV_SECTIONS = [
     label: 'Administration',
     items: [
       { to: '/users', label: 'Users', icon: Users, roles: [ROLES.ADMIN] },
+      { to: '/settings/business-rules', label: 'Business Rules', icon: ShieldCheck, roles: [ROLES.ADMIN] },
       { to: '/reports', label: 'Reports', icon: BarChart3, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOCK_CLERK, ROLES.TEC, ROLES.DEPT_HEAD, ROLES.ACCOUNTANT] },
       { to: '/audit-log', label: 'Audit Log', icon: ShieldCheck, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.ACCOUNTANT, ROLES.SECURITY] }
     ]
   }
 ]
+

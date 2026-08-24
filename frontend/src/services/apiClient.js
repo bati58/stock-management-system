@@ -14,6 +14,9 @@ const RESOURCE_PATHS = {
   materialTransfers: 'material-transfers',
   fixedAssets: 'fixed-assets',
   userCards: 'user-cards',
+  locations: 'locations',
+  suppliers: 'suppliers',
+  departments: 'departments',
   auditLogs: 'audit-logs'
 }
 
@@ -23,7 +26,7 @@ function resourcePath(resource) {
 
 async function request(path, options = {}) {
   const token = localStorage.getItem('sms_token')
-  const res = await fetch(`${BASE_URL}${path}`, {
+  let res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -31,6 +34,30 @@ async function request(path, options = {}) {
       ...(options.headers || {})
     }
   })
+
+  if (res.status === 401 && path !== '/auth/login' && path !== '/auth/refresh' && token) {
+    const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+    });
+    if (refreshRes.ok) {
+      const { token: newToken } = await refreshRes.json();
+      localStorage.setItem('sms_token', newToken);
+      // Retry request with new token
+      res = await fetch(`${BASE_URL}${path}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${newToken}`,
+          ...(options.headers || {})
+        }
+      });
+    } else {
+      localStorage.removeItem('sms_token');
+      window.dispatchEvent(new Event('auth:unauthorized'));
+    }
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.message || `Request failed with status ${res.status}`)
@@ -41,12 +68,14 @@ async function request(path, options = {}) {
 
 export const api = {
   list: (resource) => request(`/${resourcePath(resource)}`),
+  raw: (path, options) => request(path, options),
   get: (resource, id) => request(`/${resourcePath(resource)}/${id}`),
+  nestedList: (resource, id, child) => request(`/${resourcePath(resource)}/${id}/${child}`),
   create: (resource, data) => request(`/${resourcePath(resource)}`, { method: 'POST', body: JSON.stringify(data) }),
   update: (resource, id, data) => request(`/${resourcePath(resource)}/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   action: (resource, id, action, data) => request(`/${resourcePath(resource)}/${id}/${action}`, { method: 'POST', body: JSON.stringify(data) }),
   verifyGate: (resource, id) => request(`/gate-pass/${resourcePath(resource)}/${id}/verify`, { method: 'POST', body: JSON.stringify({}) }),
   remove: (resource, id) => request(`/${resourcePath(resource)}/${id}`, { method: 'DELETE' }),
   login: (credentials) => request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
-  me: () => request('/auth/me')
+  me: (options) => request('/auth/me', options)
 }

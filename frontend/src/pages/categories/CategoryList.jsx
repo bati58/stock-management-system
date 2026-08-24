@@ -25,7 +25,7 @@ export default function CategoryList() {
         { key: 'name', header: 'Category Name' },
         { key: 'store', header: 'Belongs To Store' },
         { key: 'description', header: 'Description' },
-        { key: 'active', header: 'Status', render: (row) => <StatusBadge status={row.active !== false ? 'Approved' : 'Cancelled'} /> }
+        { key: 'active', header: 'Status', render: (row) => <StatusBadge status={row.active !== false ? 'Active' : 'Inactive'} /> }
       ]}
       fields={[
         { name: 'code', label: 'Account Code', required: true, placeholder: 'e.g. 4402' },

@@ -5,6 +5,7 @@ import Table from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import Textarea from '../../components/ui/Textarea'
+import Input from '../../components/ui/Input'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { goodsReceiptService } from '../../services'
 import { api } from '../../services/apiClient'
@@ -21,6 +22,7 @@ export default function Evaluation() {
   const [target, setTarget] = useState(null)
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const [acceptedQuantities, setAcceptedQuantities] = useState([])
 
   async function load() {
     setLoading(true)
@@ -45,13 +47,15 @@ export default function Evaluation() {
     }
     setTarget(row)
     setNote(row.evaluationNote || '')
+    setAcceptedQuantities((row.items || []).map((line) => ({ item: line.item, qtyAccepted: line.qty })))
   }
 
   async function decide(decision) {
     setSaving(true)
     try {
       await api.action('goodsReceipts', target.id, 'evaluate', {
-        decision: decision === GRN_STATUS.ACCEPTED ? 'Approved' : 'Rejected',
+        decision: decision === GRN_STATUS.ACCEPTED ? 'Approved' : decision === GRN_STATUS.PARTIALLY_ACCEPTED ? 'Partially Approved' : 'Rejected',
+        items: acceptedQuantities,
         evaluationNote: note || (decision === GRN_STATUS.ACCEPTED ? 'Inspected and accepted.' : 'Rejected - does not meet specification.')
       })
       push(
@@ -117,6 +121,9 @@ export default function Evaluation() {
             <Button variant="danger" icon={XCircle} loading={saving} onClick={() => decide(GRN_STATUS.REJECTED)}>
               Reject (Return to Supplier)
             </Button>
+            <Button variant="secondary" loading={saving} onClick={() => decide(GRN_STATUS.PARTIALLY_ACCEPTED)}>
+              Partially Accept
+            </Button>
             <Button icon={CheckCircle2} loading={saving} onClick={() => decide(GRN_STATUS.ACCEPTED)}>
               Accept Materials
             </Button>
@@ -145,7 +152,8 @@ export default function Evaluation() {
                 <thead className="text-ink-500 border-b border-ink-100">
                   <tr>
                     <th className="py-2">Item</th>
-                    <th className="py-2">Qty</th>
+                    <th className="py-2">Received Qty</th>
+                    <th className="py-2">Accepted Qty</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -153,6 +161,15 @@ export default function Evaluation() {
                     <tr key={i} className="border-b border-ink-50">
                       <td className="py-2">{l.item}</td>
                       <td className="py-2">{l.qty}</td>
+                      <td className="py-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          max={l.qty}
+                          value={acceptedQuantities[i]?.qtyAccepted ?? l.qty}
+                          onChange={(e) => setAcceptedQuantities((prev) => prev.map((line, index) => index === i ? { ...line, qtyAccepted: e.target.value } : line))}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
