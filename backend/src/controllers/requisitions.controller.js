@@ -30,7 +30,7 @@ async function fetchWithLines(id, dbClient = { query }) {
 const list = asyncHandler(async (req, res) => {
   let scope = '';
   let params = [];
-  
+
   if (req.user.role === 'Department Head') {
     scope = 'WHERE r.department = $1 OR r.requested_by = $2';
     params = [req.user.department || req.user.name, req.user.name];
@@ -55,7 +55,7 @@ const list = asyncHandler(async (req, res) => {
 const getOne = asyncHandler(async (req, res) => {
   let scope = '';
   let params = [req.params.id];
-  
+
   if (req.user.role === 'Department Head') {
     scope = ' AND (r.department = $2 OR r.requested_by = $3)';
     params.push(req.user.department || req.user.name, req.user.name);
@@ -99,6 +99,15 @@ const create = asyncHandler(async (req, res) => {
     }
 
     await logAudit(client, { userName: req.user.name, action: `Created requisition ${srRef}`, module: 'Store Requisition' });
+    await notify(client, {
+      role: 'Property Administration Officer',
+      title: 'Requisition awaiting approval',
+      message: `${srRef} was submitted by ${req.user.name}.`,
+      type: 'warning',
+      route: '/requisitions',
+      entityType: 'requisition',
+      entityId: reqId
+    });
 
     return fetchWithLines(reqId, client);
   });
@@ -117,7 +126,7 @@ const submit = asyncHandler(async (req, res) => {
     }
     await client.query('UPDATE requisitions SET status = $1, updated_at = NOW() WHERE id = $2', ['Submitted', req.params.id]);
     await logAudit(client, { userName: req.user.name, action: `Submitted requisition ${reqDoc.sr_ref}`, module: 'Store Requisition' });
-    
+
     await notify(client, {
       role: 'Department Head',
       title: 'Requisition Submitted',
@@ -127,7 +136,7 @@ const submit = asyncHandler(async (req, res) => {
       entityType: 'requisition',
       entityId: req.params.id
     });
-    
+
     return fetchWithLines(req.params.id, client);
   });
   res.json(result);

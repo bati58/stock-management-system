@@ -5,6 +5,7 @@ const { nextRef } = require('../utils/refGenerator');
 const { logAudit } = require('../utils/audit');
 const { resolveStoreId, resolveItemId } = require('./_helpers');
 const stockService = require('../services/stockService');
+const { notify } = require('../utils/notify');
 
 const SELECT = `
   SELECT st.*, s.name AS store_name
@@ -109,6 +110,15 @@ const submit = asyncHandler(async (req, res) => {
         if (rows[0].status !== 'Draft') throw new AppError(`Cannot submit session in status: ${rows[0].status}`, 400);
         await client.query('UPDATE stock_taking_sessions SET status = $1, updated_at = NOW() WHERE id = $2', ['Submitted', req.params.id]);
         await logAudit(client, { userName: req.user.name, action: `Submitted stock-taking session ${rows[0].session_ref}`, module: 'Stock Taking' });
+        await notify(client, {
+            role: 'Property Administration Officer',
+            title: 'Stock-taking session awaiting approval',
+            message: `${rows[0].session_ref} is ready for review.`,
+            type: 'warning',
+            route: '/stock-taking',
+            entityType: 'stock_taking_session',
+            entityId: req.params.id
+        });
     });
     res.json(await fetchSession(req.params.id));
 });

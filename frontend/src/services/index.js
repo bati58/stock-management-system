@@ -43,6 +43,9 @@ export const auditService = {
 
 export const auditLogService = auditService
 export const stockTakingService = createEntityService('stock-taking')
+stockTakingService.submit = (id) => api.action('stock-taking', id, 'submit', {})
+stockTakingService.approve = (id) => api.action('stock-taking', id, 'approve', {})
+stockTakingService.post = (id) => api.action('stock-taking', id, 'post', {})
 export const reconciliationService = {
     list: () => api.list('reconciliation')
 }

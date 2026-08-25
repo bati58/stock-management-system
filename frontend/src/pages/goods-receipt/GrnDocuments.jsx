@@ -51,8 +51,8 @@ export default function GrnDocuments() {
     }
 
     function handleDownloadPDF(grn) {
-        push('PDF export coming soon.', 'info')
-        // In a real implementation, use a library like jsPDF or html2pdf
+        handlePrint(grn)
+        push('The print dialog can save this GRN as a PDF.', 'info')
     }
 
     const columns = [

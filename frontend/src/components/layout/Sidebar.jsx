@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { Boxes, X, ChevronDown } from 'lucide-react'
-import { NAV_SECTIONS } from './navConfig'
+import { getNavSections } from './navConfig'
 import { useAuth } from '../../context/AuthContext'
 import { useState } from 'react'
 
@@ -16,16 +16,8 @@ export default function Sidebar({ open, onClose }) {
     }))
   }
 
-  // Filter sections and items based on user role
-  const visibleSections = NAV_SECTIONS.map((section) => ({
-    ...section,
-    items: section.items.filter((item) => {
-      // If no roles specified, everyone can see it
-      if (!item.roles || item.roles.length === 0) return true
-      // Otherwise, only show if user's role is in the roles list
-      return item.roles.includes(user?.role)
-    })
-  })).filter((section) => section.items.length > 0) // Remove empty sections
+  // Sections are already scoped, grouped, and labelled per the user's role.
+  const visibleSections = getNavSections(user?.role)
 
   return (
     <>

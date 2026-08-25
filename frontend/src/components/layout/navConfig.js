@@ -21,116 +21,153 @@ import {
 } from 'lucide-react'
 import { ROLES } from '../../utils/constants'
 
-// Sidebar navigation, grouped to mirror the module breakdown in the
-// Frontend SRS (section 4). Specify roles array to limit visibility to those roles.
-// Empty roles array or roles: null means everyone authenticated can see it.
-export const NAV_SECTIONS = [
-  {
-    label: 'Overview',
-    items: [
-      {
-        to: '/',
-        label: 'Dashboard',
-        icon: LayoutDashboard,
-        roles: [
-          ROLES.ADMIN,
-          ROLES.PAO,
-          ROLES.STORE_HEAD,
-          ROLES.STOREKEEPER,
-          ROLES.STOCK_CLERK,
-          ROLES.TEC,
-          ROLES.DEPT_HEAD,
-          ROLES.ACCOUNTANT,
-          ROLES.SECURITY
-        ]
-      }
-    ]
-  },
-  {
-    label: 'Inventory Setup',
-    items: [
-      { to: '/stores', label: 'Stores', icon: Warehouse, roles: [ROLES.ADMIN, ROLES.STORE_HEAD] },
-      { to: '/categories', label: 'Item Categories', icon: Tags, roles: [ROLES.ADMIN, ROLES.STORE_HEAD] },
-      { to: '/items', label: 'Items', icon: Boxes, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] }
-      , { to: '/locations', label: 'Locations', icon: Boxes, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] }
-      , { to: '/suppliers', label: 'Suppliers', icon: Boxes, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.ACCOUNTANT, ROLES.STOCK_CLERK] }
-      , { to: '/departments', label: 'Departments', icon: Users, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.DEPT_HEAD] }
-    ]
-  },
-  {
-    label: 'Stock Receiving',
-    items: [
-      {
-        to: '/goods-receipt',
-        label: 'Goods Receipt',
-        icon: PackageCheck,
-        roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER]
-      },
-      {
-        to: '/goods-receipt/evaluation',
-        label: 'Technical Evaluation',
-        icon: ClipboardCheck,
-        roles: [ROLES.ADMIN, ROLES.TEC, ROLES.STORE_HEAD]
-      },
-      {
-        to: '/grn-documents',
-        label: 'GRN Documents',
-        icon: FileText,
-        roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.PAO]
-      }
-    ]
-  },
-  {
-    label: 'Stock Records',
-    items: [
-      { to: '/stock-cards', label: 'Stock Cards', icon: Layers, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] },
-      { to: '/bin-cards', label: 'Bin Cards', icon: Layers, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] },
-      { to: '/stock-transfer', label: 'Stock Transfer', icon: ArrowLeftRight, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] }
-    ]
-  },
-  {
-    label: 'Requisitions & Issues',
-    items: [
-      { to: '/requisitions', label: 'Store Requisitions', icon: FileText, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.DEPT_HEAD] },
-      { to: '/issue-vouchers', label: 'Issue Vouchers', icon: Send, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.ACCOUNTANT, ROLES.SECURITY] }
-    ]
-  },
-  {
-    label: 'Security',
-    items: [
-      { to: '/gate-pass', label: 'Gate Pass Verification', icon: Shield, roles: [ROLES.ADMIN, ROLES.SECURITY] }
-    ]
-  },
-  {
-    label: 'Returns & Transfers',
-    items: [
-      { to: '/material-return', label: 'Material Returns', icon: Undo2, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.DEPT_HEAD] },
-      { to: '/material-transfer', label: 'Material Transfers', icon: Repeat, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.DEPT_HEAD] }
-    ]
-  },
-  {
-    label: 'Stock Control',
-    items: [
-      { to: '/stock-taking', label: 'Stock Taking', icon: ClipboardCheck, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK] },
-      { to: '/reconciliation', label: 'Reconciliation Report', icon: BarChart3, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOCK_CLERK, ROLES.ACCOUNTANT] }
-    ]
-  },
-  {
-    label: 'Assets & Disposal',
-    items: [
-      { to: '/fixed-assets', label: 'Fixed Assets', icon: Landmark, roles: [ROLES.ADMIN, ROLES.PAO] },
-      { to: '/user-cards', label: 'User Material Cards', icon: IdCard, roles: [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER] },
-      { to: '/disposal', label: 'Disposal Management', icon: Trash2, roles: [ROLES.ADMIN, ROLES.PAO] }
-    ]
-  },
-  {
-    label: 'Administration',
-    items: [
-      { to: '/users', label: 'Users', icon: Users, roles: [ROLES.ADMIN] },
-      { to: '/settings/business-rules', label: 'Business Rules', icon: ShieldCheck, roles: [ROLES.ADMIN] },
-      { to: '/reports', label: 'Reports', icon: BarChart3, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOCK_CLERK, ROLES.TEC, ROLES.DEPT_HEAD, ROLES.ACCOUNTANT] },
-      { to: '/audit-log', label: 'Audit Log', icon: ShieldCheck, roles: [ROLES.ADMIN, ROLES.PAO, ROLES.ACCOUNTANT, ROLES.SECURITY] }
-    ]
-  }
-]
+// ---------------------------------------------------------------------------
+// Sidebar navigation.
+//
+// Each actor gets the section labels and grouping recommended in
+// docs/actorspage.md (§12). This layer is PRESENTATIONAL only — it decides
+// how the sidebar is grouped and labelled per role. What a role may actually
+// open is still enforced by ProtectedRoute -> canAccessPage() and by the
+// backend permission matrix. Every item placed in a role's tree below is one
+// that role can already reach, so there are no dead links here.
+//
+// To add a destination: register it once in NAV_ITEMS, then reference its id
+// from each role's tree in ROLE_NAV.
+// ---------------------------------------------------------------------------
 
+// Single definition of every nav destination, referenced by id from ROLE_NAV.
+const NAV_ITEMS = {
+  dashboard: { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  stores: { to: '/stores', label: 'Stores', icon: Warehouse },
+  categories: { to: '/categories', label: 'Item Categories', icon: Tags },
+  items: { to: '/items', label: 'Items', icon: Boxes },
+  locations: { to: '/locations', label: 'Locations', icon: Boxes },
+  suppliers: { to: '/suppliers', label: 'Suppliers', icon: Boxes },
+  departments: { to: '/departments', label: 'Departments', icon: Users },
+  goodsReceipt: { to: '/goods-receipt', label: 'Goods Receipt', icon: PackageCheck },
+  evaluation: { to: '/goods-receipt/evaluation', label: 'Technical Evaluation', icon: ClipboardCheck },
+  grnDocuments: { to: '/grn-documents', label: 'GRN Documents', icon: FileText },
+  stockCards: { to: '/stock-cards', label: 'Stock Cards', icon: Layers },
+  binCards: { to: '/bin-cards', label: 'Bin Cards', icon: Layers },
+  stockTransfer: { to: '/stock-transfer', label: 'Bin Transfers', icon: ArrowLeftRight },
+  requisitions: { to: '/requisitions', label: 'Store Requisitions', icon: FileText },
+  issueVouchers: { to: '/issue-vouchers', label: 'Issue Vouchers', icon: Send },
+  gatePass: { to: '/gate-pass', label: 'Gate Pass Verification', icon: Shield },
+  materialReturn: { to: '/material-return', label: 'Material Returns', icon: Undo2 },
+  materialTransfer: { to: '/material-transfer', label: 'Material Transfers', icon: Repeat },
+  stockTaking: { to: '/stock-taking', label: 'Stock Taking', icon: ClipboardCheck },
+  reconciliation: { to: '/reconciliation', label: 'Reconciliation Report', icon: BarChart3 },
+  fixedAssets: { to: '/fixed-assets', label: 'Fixed Assets', icon: Landmark },
+  userCards: { to: '/user-cards', label: 'User Material Cards', icon: IdCard },
+  disposal: { to: '/disposal', label: 'Disposal Management', icon: Trash2 },
+  users: { to: '/users', label: 'Users', icon: Users },
+  businessRules: { to: '/settings/business-rules', label: 'Business Rules', icon: ShieldCheck },
+  reports: { to: '/reports', label: 'Reports', icon: BarChart3 },
+  auditLog: { to: '/audit-log', label: 'Audit Log', icon: ShieldCheck },
+}
+
+// Per-role sidebar tree: ordered [section label, [item ids]]. Mirrors §12.
+const ROLE_NAV = {
+  [ROLES.ADMIN]: [
+    ['Overview', ['dashboard']],
+    ['Inventory Setup', ['stores', 'categories', 'items', 'locations', 'suppliers', 'departments']],
+    ['Receiving', ['goodsReceipt', 'evaluation', 'grnDocuments']],
+    ['Stock', ['stockCards', 'binCards', 'stockTransfer']],
+    ['Requisitions & Issues', ['requisitions', 'issueVouchers']],
+    ['Returns & Transfers', ['materialReturn', 'materialTransfer']],
+    ['Stock Control', ['stockTaking', 'reconciliation']],
+    ['Assets & Disposal', ['fixedAssets', 'userCards', 'disposal']],
+    ['Security', ['gatePass']],
+    ['Administration', ['users', 'businessRules', 'reports', 'auditLog']],
+  ],
+
+  [ROLES.PAO]: [
+    ['Overview', ['dashboard']],
+    ['Inventory Governance', ['stores', 'categories', 'items', 'locations', 'suppliers', 'departments']],
+    ['Receiving & Registration', ['goodsReceipt', 'evaluation', 'grnDocuments']],
+    ['Stock Control', ['stockCards', 'binCards', 'stockTransfer', 'stockTaking', 'reconciliation']],
+    ['Requisitions & Issues', ['requisitions', 'issueVouchers']],
+    ['Returns & Transfers', ['materialReturn', 'materialTransfer']],
+    ['Assets & Disposal', ['fixedAssets', 'userCards', 'disposal']],
+    ['Reports & Audit', ['reports', 'auditLog']],
+  ],
+
+  [ROLES.STORE_HEAD]: [
+    ['Overview', ['dashboard']],
+    ['Store Management', ['stores', 'categories', 'items', 'locations', 'suppliers']],
+    ['Receiving', ['goodsReceipt', 'evaluation', 'grnDocuments']],
+    ['Stock', ['stockCards', 'binCards', 'stockTransfer']],
+    ['Requisitions & Issues', ['requisitions', 'issueVouchers']],
+    ['Returns & Transfers', ['materialReturn', 'materialTransfer']],
+    ['Stock Control', ['stockTaking', 'reconciliation']],
+    ['Assets', ['userCards']],
+    ['Reports', ['reports']],
+  ],
+
+  [ROLES.STOREKEEPER]: [
+    ['Overview', ['dashboard']],
+    ['Inventory', ['items', 'locations']],
+    ['Receiving', ['goodsReceipt', 'grnDocuments']],
+    ['Stock', ['stockCards', 'binCards', 'stockTransfer']],
+    ['Issues', ['requisitions', 'issueVouchers']],
+    ['Returns', ['materialReturn']],
+    ['Transfers', ['materialTransfer']],
+    ['Stock Control', ['stockTaking']],
+    ['Assets', ['userCards']],
+    ['Reports', ['reports']],
+  ],
+
+  [ROLES.STOCK_CLERK]: [
+    ['Overview', ['dashboard']],
+    ['Inventory', ['items', 'locations']],
+    ['Stock Records', ['stockCards', 'binCards', 'stockTransfer']],
+    ['Stock Control', ['stockTaking', 'reconciliation']],
+    ['Reports', ['reports']],
+  ],
+
+  [ROLES.DEPT_HEAD]: [
+    ['Overview', ['dashboard']],
+    ['Requisitions', ['requisitions']],
+    ['Returns', ['materialReturn']],
+    ['Transfers', ['materialTransfer']],
+    ['User Materials', ['userCards']],
+    ['Reports', ['reports']],
+  ],
+
+  [ROLES.TEC]: [
+    ['Overview', ['dashboard']],
+    ['Material Evaluation', ['evaluation']],
+    ['Documents', ['grnDocuments']],
+    ['Reports', ['reports']],
+  ],
+
+  [ROLES.ACCOUNTANT]: [
+    ['Overview', ['dashboard']],
+    ['Financial Inventory', ['goodsReceipt', 'issueVouchers', 'materialReturn', 'materialTransfer']],
+    ['Reconciliation', ['reconciliation']],
+    ['Reports & Audit', ['reports', 'auditLog']],
+  ],
+
+  [ROLES.SECURITY]: [
+    ['Overview', ['dashboard']],
+    ['Material Movement', ['issueVouchers', 'materialTransfer']],
+    ['Gate Verification', ['gatePass']],
+    ['Reports & Audit', ['reports', 'auditLog']],
+  ],
+}
+
+/**
+ * Resolve the sidebar sections for a role into the shape the Sidebar renders:
+ * [{ label, items: [{ to, label, icon }] }]. Unknown item ids are skipped and
+ * empty sections dropped, so the tree is always safe to render.
+ */
+export function getNavSections(role) {
+  const tree = ROLE_NAV[role]
+  if (!tree) return []
+  return tree
+    .map(([label, ids]) => ({
+      label,
+      items: ids.map((id) => NAV_ITEMS[id]).filter(Boolean),
+    }))
+    .filter((section) => section.items.length > 0)
+}

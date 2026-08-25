@@ -50,6 +50,7 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     const currentUser = user
+    await api.logout().catch(() => { })
     localStorage.removeItem(SESSION_KEY)
     localStorage.removeItem('sms_token')
     setUser(null)

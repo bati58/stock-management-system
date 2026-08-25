@@ -15,6 +15,7 @@ import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, formatCurrency } from '../../utils/formatters'
 import { GRN_STATUS } from '../../utils/constants'
+import { canPerformAction } from '../../utils/rolePermissions'
 
 const EMPTY_LINE = { item: '', qty: '', unitPrice: '' }
 
@@ -33,6 +34,10 @@ export default function GoodsReceiptList() {
 
   const [header, setHeader] = useState({ supplier: '', poRef: '', store: '', receivedDate: '', type: 'Consumable', docRef: '', condition: 'New' })
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
+
+  // Only Store Head / Storekeeper may record and process receipts.
+  // Other roles with page access (e.g. Admin, PAO) get read-only.
+  const canManage = canPerformAction(user?.role, 'create', 'goodsReceipts')
 
   async function load() {
     setLoading(true)
@@ -59,6 +64,10 @@ export default function GoodsReceiptList() {
   }, [rows, query])
 
   function openCreate() {
+    if (!canManage) {
+      push('You do not have permission to record goods receipts.', 'error')
+      return
+    }
     setHeader({ supplier: '', poRef: '', store: '', receivedDate: '', type: 'Consumable', docRef: '', condition: 'New' })
     setLines([{ ...EMPTY_LINE }])
     setModalOpen(true)
@@ -129,12 +138,12 @@ export default function GoodsReceiptList() {
       className: 'text-right',
       render: (row) => (
         <div className="flex justify-end gap-1 items-center">
-          {row.status === GRN_STATUS.SUBMITTED && (
+          {canManage && row.status === GRN_STATUS.SUBMITTED && (
             <button onClick={() => handleNotifyTEC(row)} className="rounded-md p-1.5 text-info-600 hover:bg-info-50" title="Notify TEC">
               <Send size={15} />
             </button>
           )}
-          {(row.status === GRN_STATUS.ACCEPTED || row.status === GRN_STATUS.PARTIALLY_ACCEPTED) && (
+          {canManage && (row.status === GRN_STATUS.ACCEPTED || row.status === GRN_STATUS.PARTIALLY_ACCEPTED) && (
             <button onClick={() => handleGenerateGRN(row)} className="rounded-md p-1.5 text-success-600 hover:bg-success-50" title="Generate GRN">
               <FileText size={15} />
             </button>
@@ -142,9 +151,11 @@ export default function GoodsReceiptList() {
           <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600" title="View">
             <Eye size={15} />
           </button>
-          <button onClick={() => setDeleteTarget(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700" title="Delete">
-            <Trash2 size={15} />
-          </button>
+          {canManage && (
+            <button onClick={() => setDeleteTarget(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700" title="Delete">
+              <Trash2 size={15} />
+            </button>
+          )}
         </div>
       )
     }
@@ -156,11 +167,21 @@ export default function GoodsReceiptList() {
         title="Goods Receipt"
         subtitle="Record incoming materials, verify against the purchase or donation, and hand off to technical evaluation."
         actions={
-          <Button icon={Plus} onClick={openCreate}>
-            Record Goods Receipt
-          </Button>
+          canManage ? (
+            <Button icon={Plus} onClick={openCreate}>
+              Record Goods Receipt
+            </Button>
+          ) : null
         }
       />
+
+      {!canManage && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm text-amber-800">
+            <span className="font-semibold">Read-only access:</span> this role can view goods receipts but cannot record, process, or delete them.
+          </p>
+        </div>
+      )}
 
       <div className="card p-5">
         <div className="mb-4 flex items-center justify-between gap-3">

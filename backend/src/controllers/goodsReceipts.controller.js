@@ -72,6 +72,15 @@ const create = asyncHandler(async (req, res) => {
     }
 
     await logAudit(client, { userName: req.user.name, action: `Created ${grnRef}`, module: 'Goods Receipt' });
+    await notify(client, {
+      role: 'Technical Evaluation Committee',
+      title: 'Goods receipt awaiting evaluation',
+      message: `${grnRef} requires technical evaluation.`,
+      type: 'warning',
+      route: '/goods-receipt/evaluation',
+      entityType: 'goods_receipt',
+      entityId: grnId
+    });
 
     return fetchWithLines(grnId, client);
   });
@@ -98,6 +107,15 @@ const evaluate = asyncHandler(async (req, res) => {
       evaluatedBy: req.user.name,
       actorName: req.user.name
     });
+    await notify(client, {
+      role: 'Property Administration Officer',
+      title: 'Goods receipt evaluation completed',
+      message: `Receipt ${req.params.id} was evaluated as ${decision}.`,
+      type: decision === 'Rejected' ? 'warning' : 'success',
+      route: '/goods-receipt',
+      entityType: 'goods_receipt',
+      entityId: req.params.id
+    });
   });
 
   const grn = await fetchWithLines(req.params.id);
@@ -118,26 +136,38 @@ const generateGrn = asyncHandler(async (req, res) => {
 const setStatus = asyncHandler(async (req, res) => {
   const allowed = ['Draft', 'Submitted', 'Pending', 'Pending Evaluation', 'Under Evaluation'];
   if (!allowed.includes(req.body.status)) throw new AppError('Invalid goods receipt workflow status.', 400);
-  const { rows: currentRows } = await query('SELECT status FROM goods_receipts WHERE id = $1', [req.params.id]);
-  if (!currentRows[0]) throw new AppError('Goods receipt not found.', 404);
-  assertTransition('goodsReceipt', currentRows[0].status, req.body.status);
-  const { rows } = await query(
-    `UPDATE goods_receipts SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, grn_ref`,
-    [req.body.status, req.params.id]
-  );
-  if (!rows[0]) throw new AppError('Goods receipt not found.', 404);
-
-  if (req.body.status === 'Submitted') {
-    await notify(query, {
-      role: 'Technical Evaluation Committee',
-      title: 'Goods Receipt Submitted',
-      message: `Goods receipt ${rows[0].grn_ref} has been submitted for evaluation.`,
-      type: 'info',
-      route: `/goods-receipts/${req.params.id}`,
+  await withTransaction(async (client) => {
+    const { rows: currentRows } = await client.query('SELECT status, grn_ref FROM goods_receipts WHERE id = $1 FOR UPDATE', [req.params.id]);
+    if (!currentRows[0]) throw new AppError('Goods receipt not found.', 404);
+    assertTransition('goodsReceipt', currentRows[0].status, req.body.status);
+    await client.query(
+      `UPDATE goods_receipts SET status = $1, updated_at = NOW() WHERE id = $2`,
+      [req.body.status, req.params.id]
+    );
+    await logAudit(client, {
+      userId: req.user.id,
+      userName: req.user.name,
+      userRole: req.user.role,
+      action: `Changed ${currentRows[0].grn_ref} status to ${req.body.status}`,
+      module: 'Goods Receipt',
       entityType: 'goods_receipt',
-      entityId: req.params.id
+      entityId: req.params.id,
+      entityReference: currentRows[0].grn_ref,
+      beforeData: { status: currentRows[0].status },
+      afterData: { status: req.body.status }
     });
-  }
+    if (req.body.status === 'Submitted' || req.body.status === 'Pending Evaluation') {
+      await notify(client, {
+        role: 'Technical Evaluation Committee',
+        title: 'Goods receipt awaiting evaluation',
+        message: `${currentRows[0].grn_ref} is ready for technical evaluation.`,
+        type: 'warning',
+        route: '/goods-receipt/evaluation',
+        entityType: 'goods_receipt',
+        entityId: req.params.id
+      });
+    }
+  });
 
   res.json(await fetchWithLines(req.params.id));
 });

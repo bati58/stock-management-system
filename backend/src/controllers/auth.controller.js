@@ -59,13 +59,13 @@ const login = asyncHandler(async (req, res) => {
   });
 
   const token = jwt.sign(
-    { 
-      id: user.id, 
-      role: user.role, 
-      name: user.name, 
+    {
+      id: user.id,
+      role: user.role,
+      name: user.name,
       username: user.username,
       department: user.department,
-      store: user.store 
+      store: user.store
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
@@ -96,8 +96,21 @@ const me = asyncHandler(async (req, res) => {
      WHERE u.id = $1`,
     [req.user.id]
   );
+
   if (!rows[0]) throw new AppError('User not found.', 404);
   res.json(rows[0]);
+});
+
+const logout = asyncHandler(async (req, res) => {
+  await logAudit(query, {
+    userId: req.user.id,
+    userName: req.user.name,
+    userRole: req.user.role,
+    action: 'Logged out',
+    module: 'Authentication',
+    entityType: 'session'
+  });
+  res.status(204).send();
 });
 
 // PUT /api/auth/password
@@ -144,13 +157,13 @@ const refreshToken = asyncHandler(async (req, res) => {
   if (!user) throw new AppError('User not found or deactivated', 401);
 
   const token = jwt.sign(
-    { 
-      id: user.id, 
-      role: user.role, 
-      name: user.name, 
+    {
+      id: user.id,
+      role: user.role,
+      name: user.name,
       username: user.username,
       department: user.department,
-      store: user.store 
+      store: user.store
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
@@ -159,4 +172,4 @@ const refreshToken = asyncHandler(async (req, res) => {
   res.json({ token });
 });
 
-module.exports = { login, me, changePassword, refreshToken };
+module.exports = { login, me, logout, changePassword, refreshToken };

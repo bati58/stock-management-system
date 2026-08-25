@@ -16,6 +16,7 @@ export default function StockTransfer() {
       subtitle="Move stock from one bin or location to another within the same store."
       service={binTransferService}
       addLabel="New Bin Transfer"
+      entityType="stockTransfer"
       searchKeys={['item', 'fromBin', 'toBin']}
       emptyTitle="No bin transfers yet"
       emptyMessage="Record a transfer when materials are moved between bins."

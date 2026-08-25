@@ -9,6 +9,7 @@ import Card from '../../components/ui/Card'
 import EmptyState from '../../components/ui/EmptyState'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { Plus, CheckCircle2, Send, X } from 'lucide-react'
+import { ROLES } from '../../utils/constants'
 
 export default function StockTakingList() {
     const { user } = useAuth()
@@ -66,12 +67,12 @@ export default function StockTakingList() {
         }
 
         try {
-            const newSession = await stockTakingService.create({
-                store_id: parseInt(createForm.storeId),
-                count_date: createForm.countDate,
+            await stockTakingService.create({
+                store: stores.find((store) => String(store.id) === String(createForm.storeId))?.name,
+                countDate: createForm.countDate,
                 items: createForm.items.map(item => ({
-                    item_id: item.itemId,
-                    physical_qty: item.physicalQty || 0,
+                    item: items.find((catalogItem) => catalogItem.id === item.itemId)?.name,
+                    physicalQty: item.physicalQty || 0,
                     reason: item.reason || ''
                 }))
             })
@@ -84,11 +85,21 @@ export default function StockTakingList() {
         }
     }
 
+    const handleSubmitSession = async () => {
+        try {
+            await stockTakingService.submit(selectedSession.id)
+            push('Session submitted for approval', 'success')
+            setShowApproveDialog(false)
+            loadSessions()
+            setShowDetailModal(false)
+        } catch (error) {
+            push(error.message || 'Failed to submit session', 'error')
+        }
+    }
+
     const handleApproveSession = async () => {
         try {
-            await stockTakingService.update(selectedSession.id, {
-                action: 'approve'
-            })
+            await stockTakingService.approve(selectedSession.id)
             push('Session approved successfully', 'success')
             setShowApproveDialog(false)
             loadSessions()
@@ -100,9 +111,7 @@ export default function StockTakingList() {
 
     const handlePostSession = async () => {
         try {
-            await stockTakingService.update(selectedSession.id, {
-                action: 'post'
-            })
+            await stockTakingService.post(selectedSession.id)
             push('Session posted and adjustments applied', 'success')
             setShowPostDialog(false)
             loadSessions()
@@ -122,15 +131,17 @@ export default function StockTakingList() {
         return <Badge variant={variant}>{session.status}</Badge>
     }
 
-    const canApprove = ['Draft', 'Submitted'].includes(selectedSession?.status) &&
-        ['ADMIN', 'PAO', 'STORE_HEAD'].includes(user?.role)
+    const canSubmit = selectedSession?.status === 'Draft' &&
+        [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK].includes(user?.role)
+    const canApprove = selectedSession?.status === 'Submitted' &&
+        [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD].includes(user?.role)
     const canPost = selectedSession?.status === 'Approved' &&
-        ['ADMIN', 'PAO', 'STORE_HEAD', 'STOCK_CLERK'].includes(user?.role)
+        [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOCK_CLERK].includes(user?.role)
 
     const columns = [
-        { key: 'session_ref', header: 'Reference', width: '15%' },
-        { key: 'store_name', header: 'Store', width: '20%' },
-        { key: 'count_date', header: 'Count Date', width: '15%', render: (row) => new Date(row.count_date).toLocaleDateString() },
+        { key: 'sessionRef', header: 'Reference', width: '15%' },
+        { key: 'store', header: 'Store', width: '20%' },
+        { key: 'countDate', header: 'Count Date', width: '15%', render: (row) => new Date(row.countDate).toLocaleDateString() },
         { key: 'status', header: 'Status', width: '15%', render: (row) => getStockStatus(row) },
         {
             key: 'actions',
@@ -155,6 +166,12 @@ export default function StockTakingList() {
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Stock Taking Sessions</h1>
+                {[ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK].includes(user?.role) && (
+                    <Button onClick={() => setShowCreateModal(true)} size="sm">
+                        <Plus className="w-4 h-4 mr-2" />
+                        New Session
+                    </Button>
+                )}
             </div>
 
             <div className="card p-6">
@@ -173,7 +190,7 @@ export default function StockTakingList() {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold">Stock Taking Session {selectedSession.session_ref}</h2>
+                            <h2 className="text-xl font-bold">Stock Taking Session {selectedSession.sessionRef}</h2>
                             <button onClick={() => setShowDetailModal(false)} className="text-gray-500 hover:text-gray-700">
                                 <X className="w-5 h-5" />
                             </button>
@@ -182,11 +199,11 @@ export default function StockTakingList() {
                         <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b">
                             <div>
                                 <p className="text-sm text-gray-600">Store</p>
-                                <p className="font-semibold">{selectedSession.store_name}</p>
+                                <p className="font-semibold">{selectedSession.store}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-gray-600">Count Date</p>
-                                <p className="font-semibold">{new Date(selectedSession.count_date).toLocaleDateString()}</p>
+                                <p className="font-semibold">{new Date(selectedSession.countDate).toLocaleDateString()}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-gray-600">Status</p>
@@ -194,7 +211,7 @@ export default function StockTakingList() {
                             </div>
                             <div>
                                 <p className="text-sm text-gray-600">Created By</p>
-                                <p className="font-semibold">{selectedSession.created_by}</p>
+                                <p className="font-semibold">{selectedSession.createdBy}</p>
                             </div>
                         </div>
 
@@ -204,21 +221,21 @@ export default function StockTakingList() {
                             {selectedSession.items && selectedSession.items.length > 0 ? (
                                 <div className="space-y-2 max-h-96 overflow-y-auto">
                                     {selectedSession.items.map((item) => {
-                                        const variance = Number(item.physical_qty) - Number(item.system_qty)
+                                        const variance = Number(item.physicalQty) - Number(item.systemQty)
                                         const hasVariance = Math.abs(variance) > 0.0001
                                         return (
                                             <div key={item.id} className={`p-3 border rounded ${hasVariance ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50'}`}>
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex-1">
-                                                        <p className="font-semibold">{item.name}</p>
+                                                        <p className="font-semibold">{item.item}</p>
                                                         <div className="grid grid-cols-4 gap-2 text-sm mt-1 text-gray-600">
                                                             <div>
                                                                 <p className="text-xs uppercase">System Qty</p>
-                                                                <p className="font-semibold">{Number(item.system_qty).toFixed(2)}</p>
+                                                                <p className="font-semibold">{Number(item.systemQty).toFixed(2)}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs uppercase">Physical Qty</p>
-                                                                <p className="font-semibold">{Number(item.physical_qty).toFixed(2)}</p>
+                                                                <p className="font-semibold">{Number(item.physicalQty).toFixed(2)}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs uppercase">Variance</p>
@@ -237,8 +254,8 @@ export default function StockTakingList() {
                                                         {item.counter && (
                                                             <p className="text-xs text-gray-500 mt-1">Counted by: {item.counter}</p>
                                                         )}
-                                                        {item.verified_by && (
-                                                            <p className="text-xs text-gray-500">Verified by: {item.verified_by}</p>
+                                                        {item.verifiedBy && (
+                                                            <p className="text-xs text-gray-500">Verified by: {item.verifiedBy}</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -256,6 +273,12 @@ export default function StockTakingList() {
                             <Button variant="outline" onClick={() => setShowDetailModal(false)}>
                                 Close
                             </Button>
+                            {canSubmit && (
+                                <Button onClick={handleSubmitSession} variant="primary">
+                                    <Send className="w-4 h-4 mr-2" />
+                                    Submit Session
+                                </Button>
+                            )}
                             {canApprove && (
                                 <Button
                                     onClick={() => setShowApproveDialog(true)}
@@ -323,7 +346,7 @@ export default function StockTakingList() {
                                 <label className="block text-sm font-medium mb-2">Select Items to Count</label>
                                 <div className="max-h-60 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-2">
                                     {items
-                                        .filter((item) => !createForm.storeId || item.store_id === parseInt(createForm.storeId))
+                                        .filter((item) => !createForm.storeId || item.store === stores.find((store) => String(store.id) === String(createForm.storeId))?.name)
                                         .map((item) => (
                                             <label key={item.id} className="flex items-center gap-2">
                                                 <input
@@ -367,10 +390,10 @@ export default function StockTakingList() {
             <ConfirmDialog
                 open={showApproveDialog}
                 title="Approve Stock Taking Session?"
-                message={`Approve session ${selectedSession?.session_ref} to lock it for posting?`}
-                confirmText="Approve"
+                message={`Submit session ${selectedSession?.sessionRef} for approval?`}
+                confirmLabel="Approve"
                 onConfirm={handleApproveSession}
-                onCancel={() => setShowApproveDialog(false)}
+                onClose={() => setShowApproveDialog(false)}
             />
 
             {/* Post Confirmation */}
@@ -378,9 +401,9 @@ export default function StockTakingList() {
                 open={showPostDialog}
                 title="Post Stock Adjustments?"
                 message={`Post all variance adjustments for session ${selectedSession?.session_ref}? This will update stock quantities and create adjustment transactions.`}
-                confirmText="Post & Apply"
+                confirmLabel="Post & Apply"
                 onConfirm={handlePostSession}
-                onCancel={() => setShowPostDialog(false)}
+                onClose={() => setShowPostDialog(false)}
             />
         </div>
     )

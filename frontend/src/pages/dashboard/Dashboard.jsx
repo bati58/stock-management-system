@@ -6,12 +6,21 @@ import {
   Boxes,
   CheckCircle2,
   ClipboardCheck,
+  ClipboardList,
+  Coins,
   FileText,
+  History,
+  Landmark,
   PackageCheck,
+  Repeat,
+  ScrollText,
   Send,
   ShieldCheck,
   TrendingUp,
-  Trash2
+  Trash2,
+  Undo2,
+  Wallet,
+  XCircle
 } from 'lucide-react'
 import StatCard from '../../components/ui/StatCard'
 import Card from '../../components/ui/Card'
@@ -19,21 +28,34 @@ import StatusBadge from '../../components/ui/StatusBadge'
 import EmptyState from '../../components/ui/EmptyState'
 import { useAuth } from '../../context/AuthContext'
 import {
+  auditService,
   disposalService,
+  fixedAssetService,
   goodsReceiptService,
   itemService,
   materialReturnService,
   materialTransferService,
+  reconciliationService,
   requisitionService,
   issueVoucherService,
   stockTransactionService,
   reportService
 } from '../../services'
-import { formatCurrency, formatDate, formatNumber } from '../../utils/formatters'
-import { ROLES, STATUS } from '../../utils/constants'
+import { formatCurrency, formatDate, formatNumber, formatTimeAgo } from '../../utils/formatters'
+import {
+  ROLES,
+  GRN_STATUS,
+  REQUISITION_STATUS,
+  SIV_STATUS,
+  TRANSFER_STATUS,
+  RETURN_STATUS,
+  DISPOSAL_STATUS
+} from '../../utils/constants'
 
 const MAX_APPROVAL_ROWS = 6
 
+// Each role loads only the services that feed its dashboard cards. Keys here map
+// 1:1 to the state setters below, so a role only pays for the data it renders.
 const DASHBOARD_DATA_BY_ROLE = {
   [ROLES.ADMIN]: {
     items: itemService,
@@ -47,36 +69,49 @@ const DASHBOARD_DATA_BY_ROLE = {
   },
   [ROLES.PAO]: {
     items: itemService,
+    grns: goodsReceiptService,
     reqs: requisitionService,
     transfers: materialTransferService,
-    disposals: disposalService
+    disposals: disposalService,
+    assets: fixedAssetService,
+    reconciliation: reconciliationService,
+    audit: auditService
   },
   [ROLES.STORE_HEAD]: {
     items: itemService,
     grns: goodsReceiptService,
     reqs: requisitionService,
+    vouchers: issueVoucherService,
     transactions: stockTransactionService
   },
   [ROLES.STOREKEEPER]: {
     items: itemService,
     grns: goodsReceiptService,
     reqs: requisitionService,
+    returns: materialReturnService,
     transactions: stockTransactionService,
     vouchers: issueVoucherService
   },
   [ROLES.STOCK_CLERK]: {
     items: itemService,
-    transactions: stockTransactionService
+    transactions: stockTransactionService,
+    reconciliation: reconciliationService
   },
   [ROLES.TEC]: {
     grns: goodsReceiptService
   },
   [ROLES.DEPT_HEAD]: {
+    items: itemService,
     reqs: requisitionService,
     returns: materialReturnService
   },
   [ROLES.ACCOUNTANT]: {
-    items: itemService
+    items: itemService,
+    grns: goodsReceiptService,
+    vouchers: issueVoucherService,
+    returns: materialReturnService,
+    transactions: stockTransactionService,
+    reconciliation: reconciliationService
   },
   [ROLES.SECURITY]: {
     grns: goodsReceiptService,
@@ -89,6 +124,14 @@ function sortNewestFirst(rows = []) {
   return [...rows].sort((a, b) => new Date(b.date || b.receivedDate || b.createdAt || 0) - new Date(a.date || a.receivedDate || a.createdAt || 0))
 }
 
+function isToday(value) {
+  if (!value) return false
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return false
+  const now = new Date()
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+}
+
 function getUserStoreName(user) {
   return user?.store || user?.assignedStore || user?.departmentStore || null
 }
@@ -98,7 +141,7 @@ function getRoleSubtext(user, storeName) {
     case ROLES.ADMIN:
       return "Here's what's happening across your stores today."
     case ROLES.PAO:
-      return "Here's what needs your approval today."
+      return "Here's what needs your approval and attention today."
     case ROLES.STORE_HEAD:
       return storeName ? `Here's what's happening at ${storeName} today.` : "Store association is not yet linked to this account, so this view shows the current company overview until that data is updated."
     case ROLES.STOREKEEPER:
@@ -108,7 +151,7 @@ function getRoleSubtext(user, storeName) {
     case ROLES.TEC:
       return 'Materials waiting for your evaluation.'
     case ROLES.DEPT_HEAD:
-      return "Here's the status of your requests."
+      return "Here's the status of your department's requests and approvals."
     case ROLES.ACCOUNTANT:
       return "Here's the current financial position of inventory."
     case ROLES.SECURITY:
@@ -151,6 +194,9 @@ export default function Dashboard() {
   const [disposals, setDisposals] = useState([])
   const [transactions, setTransactions] = useState([])
   const [vouchers, setVouchers] = useState([])
+  const [assets, setAssets] = useState([])
+  const [variances, setVariances] = useState([])
+  const [audit, setAudit] = useState([])
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -166,6 +212,9 @@ export default function Dashboard() {
     setDisposals([])
     setTransactions([])
     setVouchers([])
+    setAssets([])
+    setVariances([])
+    setAudit([])
     setSummary(null)
 
     const promises = entries.map(([, service]) => service.list())
@@ -191,7 +240,10 @@ export default function Dashboard() {
             transfers: setTransfers,
             disposals: setDisposals,
             transactions: setTransactions,
-            vouchers: setVouchers
+            vouchers: setVouchers,
+            assets: setAssets,
+            reconciliation: setVariances,
+            audit: setAudit
           }
           setters[key](result.value)
         })
@@ -209,38 +261,81 @@ export default function Dashboard() {
     [items]
   )
 
+  const stockOnHandQty = useMemo(
+    () => items.reduce((sum, item) => sum + Number(item.qtyOnHand || 0), 0),
+    [items]
+  )
+
   const lowStock = useMemo(
     () => items.filter((item) => Number(item.qtyOnHand || 0) <= Number(item.reorderLevel || 0)),
     [items]
   )
 
+  // GRN receipts still moving through receiving/evaluation (pre-GRN, not rejected).
   const pendingGrns = useMemo(
-    () => grns.filter((g) => [STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(g.status)),
+    () => grns.filter((g) => [GRN_STATUS.SUBMITTED, GRN_STATUS.PENDING_EVAL, GRN_STATUS.UNDER_EVAL].includes(g.status)),
+    [grns]
+  )
+
+  const grnsUnderReview = useMemo(
+    () => grns.filter((g) => g.status === GRN_STATUS.UNDER_EVAL),
+    [grns]
+  )
+  const grnsApproved = useMemo(
+    () => grns.filter((g) => [GRN_STATUS.ACCEPTED, GRN_STATUS.GRN_GENERATED].includes(g.status)),
+    [grns]
+  )
+  const grnsPartiallyAccepted = useMemo(
+    () => grns.filter((g) => g.status === GRN_STATUS.PARTIALLY_ACCEPTED),
+    [grns]
+  )
+  const grnsRejected = useMemo(
+    () => grns.filter((g) => g.status === GRN_STATUS.REJECTED),
+    [grns]
+  )
+  const grnsHistory = useMemo(
+    () => grns.filter((g) => [GRN_STATUS.ACCEPTED, GRN_STATUS.PARTIALLY_ACCEPTED, GRN_STATUS.REJECTED, GRN_STATUS.GRN_GENERATED].includes(g.status)),
     [grns]
   )
 
   const pendingReqs = useMemo(
-    () => reqs.filter((r) => r.status === STATUS.PENDING),
+    () => reqs.filter((r) => r.status === REQUISITION_STATUS.PENDING),
+    [reqs]
+  )
+  const approvedReqs = useMemo(
+    () => reqs.filter((r) => r.status === REQUISITION_STATUS.APPROVED),
+    [reqs]
+  )
+  const partiallyApprovedReqs = useMemo(
+    () => reqs.filter((r) => r.status === REQUISITION_STATUS.PARTIALLY_APPROVED),
     [reqs]
   )
 
   const pendingReturns = useMemo(
-    () => returns.filter((r) => [STATUS.PENDING, STATUS.APPROVED].includes(r.status)),
+    () => returns.filter((r) => [RETURN_STATUS.DRAFT, RETURN_STATUS.SUBMITTED, RETURN_STATUS.PENDING_REVIEW].includes(r.status)),
     [returns]
   )
 
-  const pendingTransfers = useMemo(
-    () => transfers.filter((t) => ![STATUS.COMPLETED, STATUS.CANCELLED, STATUS.REJECTED].includes(t.status)),
+  const pendingTransfersForApproval = useMemo(
+    () => transfers.filter((t) => [TRANSFER_STATUS.SUBMITTED, TRANSFER_STATUS.PENDING_APPROVAL].includes(t.status)),
     [transfers]
   )
 
   const pendingDisposals = useMemo(
-    () => disposals.filter((d) => [STATUS.PENDING, STATUS.APPROVED].includes(d.status)),
+    () => disposals.filter((d) => [DISPOSAL_STATUS.FLAGGED, DISPOSAL_STATUS.REQUESTED, DISPOSAL_STATUS.PENDING_REVIEW].includes(d.status)),
     [disposals]
   )
 
-  const pendingEvaluationGrns = pendingGrns.filter((g) => g.status === STATUS.UNDER_EVALUATION || g.status === STATUS.PENDING)
-  const pendingEvaluationReturns = returns.filter((r) => [STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(r.status))
+  // Issue vouchers awaiting Store Head approval/posting (two-stage: stage 2).
+  const pendingSivApprovals = useMemo(
+    () => vouchers.filter((v) => [SIV_STATUS.PRELIMINARY, SIV_STATUS.PENDING_APPROVAL].includes(v.status)),
+    [vouchers]
+  )
+
+  const todaysTransactions = useMemo(
+    () => transactions.filter((t) => isToday(t.date)),
+    [transactions]
+  )
 
   const categoryTotals = useMemo(() => {
     const map = {}
@@ -289,61 +384,122 @@ export default function Dashboard() {
     () =>
       reqs.filter(
         (r) =>
-          r.status === STATUS.PENDING &&
+          r.status === REQUISITION_STATUS.PENDING &&
           r.department === user?.department &&
           r.requestedBy !== user?.name
       ),
     [reqs, user]
   )
 
-  const pendingGateIncoming = useMemo(
-    () => grns.filter((g) => !g.gateVerified && [STATUS.APPROVED, STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(g.status)).length,
-    [grns]
-  )
-
-  const pendingGateOutgoing = useMemo(() => {
-    const pendingVouchers = vouchers.filter((v) => v.status === STATUS.ISSUED && !v.gateVerified).length
-    const pendingTransfers = transfers.filter((t) => [STATUS.APPROVED, STATUS.COMPLETED].includes(t.status) && !t.gateVerified).length
-    return pendingVouchers + pendingTransfers
-  }, [vouchers, transfers])
-
   const myDeptReturns = useMemo(
-    () => returns.filter((r) => r.department === user?.department || r.requestedBy === user?.name),
+    () => returns.filter((r) => r.department === user?.department),
     [returns, user]
   )
 
+  // Approved requisitions not yet converted to an issue voucher. Requisitions carry
+  // no issueVoucherRef today, so this is an upper bound on "awaiting issue".
   const approvedReqsAwaitingIssue = useMemo(
-    () => reqs.filter((r) => r.status === STATUS.APPROVED && (!r.issueVoucherRef || !r.issueVoucherRef.trim())),
+    () => reqs.filter((r) => r.status === REQUISITION_STATUS.APPROVED && (!r.issueVoucherRef || !r.issueVoucherRef.trim())),
     [reqs]
   )
 
+  // ---- Fixed-asset statistics (PAO) ----
+  const assetStats = useMemo(() => {
+    const byStatus = {}
+    let totalAssetValue = 0
+    assets.forEach((a) => {
+      const key = a.status || 'Unknown'
+      byStatus[key] = (byStatus[key] || 0) + 1
+      totalAssetValue += Number(a.value || 0)
+    })
+    return {
+      total: assets.length,
+      totalValue: totalAssetValue,
+      byStatus: Object.entries(byStatus).map(([label, count]) => ({ label, count }))
+    }
+  }, [assets])
+
+  // ---- Financial values (Accountant) — indicative, period-to-date ----
+  const itemPriceByName = useMemo(() => {
+    const map = {}
+    items.forEach((it) => {
+      map[it.name] = Number(it.unitPrice || 0)
+    })
+    return map
+  }, [items])
+
+  const receiptsValue = useMemo(
+    () => grns.reduce((sum, g) => sum + (g.items || []).reduce((t, li) => t + Number(li.qty || 0) * Number(li.unitPrice || 0), 0), 0),
+    [grns]
+  )
+  const issueValue = useMemo(
+    () => vouchers.reduce((sum, v) => sum + (v.items || []).reduce((t, li) => t + Number(li.qty || 0) * Number(li.unitPrice || itemPriceByName[li.item] || 0), 0), 0),
+    [vouchers, itemPriceByName]
+  )
+  const returnValue = useMemo(
+    () => returns.reduce((sum, r) => sum + Number(r.qty || 0) * Number(itemPriceByName[r.item] || 0), 0),
+    [returns, itemPriceByName]
+  )
+  const adjustmentsCount = useMemo(
+    () => transactions.filter((t) => t.type === 'Adjustment').length,
+    [transactions]
+  )
+
+  // ---- Gate movement (Security) ----
+  const pendingGateIncoming = useMemo(
+    () => grns.filter((g) => !g.gateVerified).length,
+    [grns]
+  )
+  const outgoingVouchersPending = useMemo(
+    () => vouchers.filter((v) => [SIV_STATUS.APPROVED, SIV_STATUS.POSTED].includes(v.status) && !v.gateVerified),
+    [vouchers]
+  )
+  const outgoingTransfersPending = useMemo(
+    () => transfers.filter((t) => [TRANSFER_STATUS.APPROVED, TRANSFER_STATUS.DISPATCHED].includes(t.status) && !t.gateVerified),
+    [transfers]
+  )
+  const pendingGateOutgoing = outgoingVouchersPending.length + outgoingTransfersPending.length
+  const todaysIncoming = useMemo(
+    () => grns.filter((g) => g.gateVerified && isToday(g.gateVerifiedAt)).length,
+    [grns]
+  )
+  const todaysOutgoing = useMemo(
+    () =>
+      vouchers.filter((v) => v.gateVerified && isToday(v.gateVerifiedAt)).length +
+      transfers.filter((t) => t.gateVerified && isToday(t.gateVerifiedAt)).length,
+    [vouchers, transfers]
+  )
+  const verifiedMovements = useMemo(
+    () =>
+      grns.filter((g) => g.gateVerified).length +
+      vouchers.filter((v) => v.gateVerified).length +
+      transfers.filter((t) => t.gateVerified).length,
+    [grns, vouchers, transfers]
+  )
+
   const pendingIssueActionRows = useMemo(() => {
-    const receipts = grns
-      .filter((g) => [STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(g.status))
-      .map((g) => ({
-        id: `grn-${g.id}`,
-        ref: g.grnRef,
-        type: 'GRN',
-        label: 'Record receipt',
-        route: '/goods-receipt',
-        date: g.receivedDate,
-        meta: g.store || 'Store'
-      }))
+    const receipts = pendingGrns.map((g) => ({
+      id: `grn-${g.id}`,
+      ref: g.grnRef,
+      type: 'GRN',
+      label: 'Record receipt',
+      route: '/goods-receipt',
+      date: g.receivedDate,
+      meta: g.store || 'Store'
+    }))
 
-    const vouchers = reqs
-      .filter((r) => r.status === STATUS.APPROVED && (!r.issueVoucherRef || !r.issueVoucherRef.trim()))
-      .map((r) => ({
-        id: `sr-${r.id}`,
-        ref: r.srRef,
-        type: 'Requisition',
-        label: 'Generate voucher',
-        route: '/issue-vouchers',
-        date: r.date,
-        meta: r.department || 'Department'
-      }))
+    const issueTasks = approvedReqsAwaitingIssue.map((r) => ({
+      id: `sr-${r.id}`,
+      ref: r.srRef,
+      type: 'Requisition',
+      label: 'Generate voucher',
+      route: '/issue-vouchers',
+      date: r.date,
+      meta: r.department || 'Department'
+    }))
 
-    return [...receipts, ...vouchers].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-  }, [grns, reqs])
+    return [...receipts, ...issueTasks].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+  }, [pendingGrns, approvedReqsAwaitingIssue])
 
   const approvalRows = useMemo(() => {
     const reqRows = pendingReqs.map((r) => ({
@@ -352,20 +508,24 @@ export default function Dashboard() {
       ref: r.srRef,
       date: r.date,
       dept: r.department,
-      route: '/requisitions'
+      route: '/requisitions',
+      badge: REQUISITION_STATUS.PENDING
     }))
 
-    const transferRows = pendingTransfers.map((t) => ({
+    const transferRows = pendingTransfersForApproval.map((t) => ({
       id: `tr-${t.id}`,
       type: 'Transfer',
       ref: t.transferRef,
       date: t.date,
       dept: t.fromStore || 'Store',
-      route: '/material-transfer'
+      route: '/material-transfer',
+      badge: TRANSFER_STATUS.PENDING_APPROVAL
     }))
 
     return sortNewestFirst([...reqRows, ...transferRows]).slice(0, MAX_APPROVAL_ROWS)
-  }, [pendingReqs, pendingTransfers])
+  }, [pendingReqs, pendingTransfersForApproval])
+
+  const paoPendingApprovals = pendingReqs.length + pendingTransfersForApproval.length + pendingDisposals.length
 
   const renderAdmin = () => (
     <>
@@ -373,7 +533,7 @@ export default function Dashboard() {
         <StatCard label="Total Inventory Value" value={!summary ? '—' : formatCurrency(summary.totalInventoryValue || 0)} icon={Boxes} tone="brand" />
         <StatCard label="Items at Reorder Level" value={!summary ? '—' : summary.itemsAtReorderLevel || 0} icon={AlertTriangle} tone="warning" hint="Needs replenishment" />
         <StatCard label="Pending Goods Receipts" value={!summary ? '—' : summary.pendingGoodsReceipts || 0} icon={PackageCheck} tone="info" hint="Awaiting evaluation" />
-        <StatCard label="Pending Requisitions" value={!summary ? '—' : summary.pendingRequisitions || 0} icon={FileText} tone="success" hint="Awaiting PAO approval" />
+        <StatCard label="Pending Requisitions" value={!summary ? '—' : summary.pendingRequisitions || 0} icon={FileText} tone="success" hint="Awaiting approval" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -459,11 +619,18 @@ export default function Dashboard() {
 
   const renderPao = () => (
     <>
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Total Inventory Value" value={!summary && loading ? '—' : formatCurrency(summary?.totalInventoryValue ?? totalValue)} icon={Boxes} tone="brand" />
+        {renderStatCardLink('/requisitions', 'Pending Approvals', loading ? '—' : paoPendingApprovals, ClipboardCheck, 'warning', 'Requisitions, transfers & disposals')}
+        {renderStatCardLink('/goods-receipt', 'Pending GRNs', loading ? '—' : pendingGrns.length, PackageCheck, 'info', 'Awaiting evaluation')}
+        {renderStatCardLink('/reconciliation', 'Stock Variances', loading ? '—' : variances.length, AlertTriangle, 'danger', 'Open reconciliation items')}
+      </div>
+
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {renderStatCardLink('/requisitions', 'Pending Requisitions', !summary ? '—' : summary.pendingRequisitions || 0, FileText, 'brand', 'Awaiting your approval')}
-        {renderStatCardLink('/material-transfer', 'Pending Transfers', !summary ? '—' : summary.pendingTransfers || 0, ArrowRight, 'warning', 'Awaiting review')}
-        {renderStatCardLink('/disposal', 'Pending Disposals', !summary ? '—' : summary.pendingDisposals || 0, Trash2, 'danger', 'Items flagged')}
-        <StatCard label="Value at Reorder Risk" value={loading ? '—' : formatCurrency(valueAtReorderRisk)} icon={AlertTriangle} tone="info" hint="Total cost of low stock" />
+        {renderStatCardLink('/requisitions', 'Pending Requisitions', loading ? '—' : pendingReqs.length, FileText, 'brand', 'Awaiting approval')}
+        {renderStatCardLink('/material-transfer', 'Pending Transfers', loading ? '—' : pendingTransfersForApproval.length, Repeat, 'info', 'Awaiting review')}
+        {renderStatCardLink('/disposal', 'Disposal Requests', loading ? '—' : pendingDisposals.length, Trash2, 'danger', 'Items flagged')}
+        {renderStatCardLink('/fixed-assets', 'Asset Statistics', loading ? '—' : assetStats.total, Landmark, 'success', formatCurrency(assetStats.totalValue))}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -483,7 +650,7 @@ export default function Dashboard() {
                 <tbody>
                   {approvalRows.map((row) => (
                     <tr key={row.id} className="border-t border-ink-100 align-top">
-                      <td className="py-2 pr-4"><StatusBadge status={row.type === 'Requisition' ? STATUS.PENDING : STATUS.APPROVED} /></td>
+                      <td className="py-2 pr-4"><StatusBadge status={row.badge} /></td>
                       <td className="py-2 pr-4"><Link to={row.route} className="font-medium text-brand-600 hover:text-brand-700">{row.ref}</Link></td>
                       <td className="py-2 pr-4 text-ink-500">{formatDate(row.date)}</td>
                     </tr>
@@ -499,7 +666,42 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card title="Inventory Value by Category" subtitle="Current stock value by category" className="lg:col-span-1">
+        <Card title="Asset Statistics" subtitle="Registered fixed assets by status" className="lg:col-span-1">
+          {assetStats.total === 0 ? (
+            <EmptyState title="No assets registered" message="Fixed-asset statistics will appear here once assets are registered." icon={Landmark} />
+          ) : (
+            <ul className="space-y-3">
+              {assetStats.byStatus.map((row) => (
+                <li key={row.label} className="flex items-center justify-between gap-2 text-sm">
+                  <StatusBadge status={row.label} />
+                  <span className="font-medium text-ink-800">{row.count}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card title="Recent Audit Events" subtitle="Latest system activity" actions={<Link to="/audit-log" className="text-sm font-medium text-brand-600 hover:text-brand-700">View all</Link>}>
+          {audit.length === 0 ? (
+            <EmptyState title="No audit events" message="System activity will appear here as users act on records." icon={ScrollText} />
+          ) : (
+            <ul className="space-y-3">
+              {audit.slice(0, 6).map((event) => (
+                <li key={event.id} className="flex items-center justify-between gap-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-ink-800">{event.description || `${event.action || 'Action'} · ${event.module || ''}`}</p>
+                    <p className="text-xs text-ink-400">{event.actorName || 'System'}{event.entityReference ? ` · ${event.entityReference}` : ''}</p>
+                  </div>
+                  <span className="shrink-0 text-xs text-ink-400">{formatTimeAgo(event.timestamp || event.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card title="Inventory Value by Category" subtitle="Current stock value by category">
           {categoryTotals.length === 0 ? (
             <EmptyState title="No category data" message="There are no category totals to summarize yet." />
           ) : (
@@ -522,10 +724,11 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Items at Reorder Level" value={loading ? '—' : storeFilteredLowStock.length} icon={AlertTriangle} tone="warning" hint={isStoreScoped ? `${userStore} store` : 'Company-wide view'} />
-        <StatCard label="Pending Goods Receipts" value={loading ? '—' : storeFilteredGrns.filter((g) => [STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(g.status)).length} icon={PackageCheck} tone="info" hint={isStoreScoped ? `${userStore} store` : 'Company-wide view'} />
-        <StatCard label="Pending Requisitions" value={loading ? '—' : pendingReqs.filter((r) => isStoreScoped ? r.store === userStore : true).length} icon={FileText} tone="success" hint={isStoreScoped ? 'Targeting your store' : 'Current overview'} />
+        <StatCard label="Pending Goods Receipts" value={loading ? '—' : storeFilteredGrns.filter((g) => [GRN_STATUS.SUBMITTED, GRN_STATUS.PENDING_EVAL, GRN_STATUS.UNDER_EVAL].includes(g.status)).length} icon={PackageCheck} tone="info" hint={isStoreScoped ? `${userStore} store` : 'Company-wide view'} />
+        {renderStatCardLink('/issue-vouchers', 'Approved Reqs Awaiting Issue', loading ? '—' : approvedReqsAwaitingIssue.length, Send, 'success', 'Convert to issue voucher')}
+        {renderStatCardLink('/requisitions', 'Pending Requisitions', loading ? '—' : pendingReqs.filter((r) => (isStoreScoped ? r.store === userStore : true)).length, FileText, 'brand', isStoreScoped ? 'Targeting your store' : 'Current overview')}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -605,10 +808,13 @@ export default function Dashboard() {
 
   const renderStorekeeper = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard label="Pending Goods Receipts" value={loading ? '—' : pendingGrns.length} icon={PackageCheck} tone="info" hint="Needs action" />
-        <StatCard label="Approved Requisitions" value={loading ? '—' : approvedReqsAwaitingIssue.length} icon={FileText} tone="success" hint="Awaiting issue voucher" />
-        <StatCard label="Items at Reorder Level" value={loading ? '—' : lowStock.length} icon={AlertTriangle} tone="warning" hint="Replenishment watch" />
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard label="Stock on Hand" value={loading ? '—' : formatNumber(stockOnHandQty)} icon={Boxes} tone="brand" hint="Total units across catalog" />
+        {renderStatCardLink('/goods-receipt', 'Pending Receipts', loading ? '—' : pendingGrns.length, PackageCheck, 'info', 'Needs action')}
+        {renderStatCardLink('/issue-vouchers', 'Pending Issues', loading ? '—' : pendingSivApprovals.length, Send, 'warning', 'Issue vouchers in progress')}
+        {renderStatCardLink('/material-return', 'Pending Returns', loading ? '—' : pendingReturns.length, Undo2, 'info', 'Awaiting processing')}
+        <StatCard label="Low Stock" value={loading ? '—' : lowStock.length} icon={AlertTriangle} tone="warning" hint="Replenishment watch" />
+        <StatCard label="Today's Transactions" value={loading ? '—' : todaysTransactions.length} icon={TrendingUp} tone="success" hint="Receipts & issues today" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -635,16 +841,16 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card title="Recent Transactions" subtitle="Your recent receipts and issues">
+        <Card title="Recent Stock Movements" subtitle="Your recent receipts and issues">
           {transactions.length === 0 ? (
             <EmptyState title="No recent transactions" message="No stock movement has been recorded recently." />
           ) : (
             <ul className="space-y-3">
-              {transactions.slice(0, 5).map((transaction) => (
+              {transactions.slice(0, 6).map((transaction) => (
                 <li key={transaction.id} className="flex items-center justify-between gap-2 text-sm">
                   <div className="min-w-0">
                     <p className="truncate font-medium text-ink-800">{transaction.item}</p>
-                    <p className="text-xs text-ink-400">{transaction.ref}</p>
+                    <p className="text-xs text-ink-400">{transaction.ref} · {formatDate(transaction.date)}</p>
                   </div>
                   <span className={`shrink-0 text-xs font-medium ${transaction.type === 'Receipt' ? 'text-success-500' : 'text-danger-500'}`}>
                     {transaction.type === 'Receipt' ? `+${transaction.qtyIn}` : `-${transaction.qtyOut}`}
@@ -660,13 +866,14 @@ export default function Dashboard() {
 
   const renderStockClerk = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="Items at Reorder Level" value={lowStock.length} icon={AlertTriangle} tone="warning" hint="Watch list" />
-        <StatCard label="Total Line Items in Catalog" value={items.length} icon={Boxes} tone="brand" hint="Inventory records" />
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Items at Reorder Level" value={loading ? '—' : lowStock.length} icon={AlertTriangle} tone="warning" hint="Watch list" />
+        <StatCard label="Total Line Items in Catalog" value={loading ? '—' : items.length} icon={Boxes} tone="brand" hint="Inventory records" />
+        {renderStatCardLink('/reconciliation', 'Open Variances', loading ? '—' : variances.length, ClipboardList, 'danger', 'Stock-taking discrepancies')}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card title="Recent Transactions" subtitle="Full feed for stock activity" actions={<Link to="/stock-cards" className="text-sm font-medium text-brand-600">View Stock Cards</Link>}>
+        <Card title="Recent Stock Movements" subtitle="Full feed for stock activity" actions={<Link to="/stock-cards" className="text-sm font-medium text-brand-600">View Stock Cards</Link>}>
           {transactions.length === 0 ? (
             <EmptyState title="No stock activity" message="Transactions will appear here as items move through the system." />
           ) : (
@@ -694,7 +901,7 @@ export default function Dashboard() {
               {lowStock.slice(0, 6).map((item) => (
                 <li key={item.id} className="flex items-center justify-between gap-2 text-sm">
                   <span className="font-medium text-ink-800">{item.name}</span>
-                  <span className="rounded-full bg-warning-50 px-2 py-0.5 text-xs font-medium text-warning-700">{item.qtyOnHand}</span>
+                  <span className="rounded-full bg-warning-50 px-2 py-0.5 text-xs font-medium text-warning-700">{formatNumber(item.qtyOnHand)}</span>
                 </li>
               ))}
             </ul>
@@ -706,34 +913,69 @@ export default function Dashboard() {
 
   const renderTec = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {renderStatCardLink('/goods-receipt', 'Goods Receipts Pending Evaluation', pendingEvaluationGrns.length, ClipboardCheck, 'warning', 'Review queue')}
-        {renderStatCardLink('/material-return', 'Material Returns Pending Evaluation', pendingEvaluationReturns.length, CheckCircle2, 'info', 'Review queue')}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {renderStatCardLink('/goods-receipt/evaluation', 'Pending Evaluations', loading ? '—' : pendingGrns.length, ClipboardCheck, 'warning', 'Awaiting your decision')}
+        <StatCard label="Under Review" value={loading ? '—' : grnsUnderReview.length} icon={ClipboardList} tone="info" hint="Currently being evaluated" />
+        <StatCard label="Approved" value={loading ? '—' : grnsApproved.length} icon={CheckCircle2} tone="success" hint="Accepted receipts" />
+        <StatCard label="Partially Accepted" value={loading ? '—' : grnsPartiallyAccepted.length} icon={PackageCheck} tone="info" hint="Some lines rejected" />
+        <StatCard label="Rejected" value={loading ? '—' : grnsRejected.length} icon={XCircle} tone="danger" hint="Failed evaluation" />
+        <StatCard label="Evaluation History" value={loading ? '—' : grnsHistory.length} icon={History} tone="brand" hint="Completed evaluations" />
       </div>
 
-      <Card title="Evaluation Queue" subtitle="GRNs and returns waiting for your decision">
-        {pendingEvaluationGrns.length === 0 && pendingEvaluationReturns.length === 0 ? (
-          <EmptyState title="Nothing pending evaluation" message="You're all caught up — there are no materials waiting for review." />
+      <Card title="Evaluation Queue" subtitle="Goods receipts waiting for your decision">
+        {pendingGrns.length === 0 ? (
+          <EmptyState title="Nothing pending evaluation" message="You're all caught up — there are no receipts waiting for review." />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead className="text-ink-500">
                 <tr>
                   <th className="py-2 pr-4">Reference</th>
-                  <th className="py-2 pr-4">Type</th>
-                  <th className="py-2 pr-4">Store / Department</th>
-                  <th className="py-2 pr-4">Date</th>
+                  <th className="py-2 pr-4">Supplier</th>
+                  <th className="py-2 pr-4">Store</th>
+                  <th className="py-2 pr-4">Received</th>
+                  <th className="py-2 pr-4">Status</th>
                   <th className="py-2 pr-4">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {[...pendingEvaluationGrns.map((g) => ({ ...g, type: 'GRN', route: '/goods-receipt/evaluation', ref: g.grnRef, storeLabel: g.store, date: g.receivedDate })), ...pendingEvaluationReturns.map((r) => ({ ...r, type: 'Return', route: '/material-return', ref: r.srnRef, storeLabel: r.department, date: r.date }))].map((entry) => (
-                  <tr key={`${entry.type}-${entry.id}`} className="border-t border-ink-100">
-                    <td className="py-2 pr-4 font-medium text-ink-800">{entry.ref}</td>
-                    <td className="py-2 pr-4"><StatusBadge status={entry.type === 'GRN' ? STATUS.UNDER_EVALUATION : STATUS.PENDING} /></td>
-                    <td className="py-2 pr-4">{entry.storeLabel}</td>
-                    <td className="py-2 pr-4">{formatDate(entry.date)}</td>
-                    <td className="py-2 pr-4"><Link to={entry.route} className="font-medium text-brand-600 hover:text-brand-700">Review</Link></td>
+                {sortNewestFirst(pendingGrns.map((g) => ({ ...g, date: g.receivedDate }))).map((g) => (
+                  <tr key={g.id} className="border-t border-ink-100">
+                    <td className="py-2 pr-4 font-medium text-ink-800">{g.grnRef}</td>
+                    <td className="py-2 pr-4">{g.supplier}</td>
+                    <td className="py-2 pr-4">{g.store}</td>
+                    <td className="py-2 pr-4">{formatDate(g.receivedDate)}</td>
+                    <td className="py-2 pr-4"><StatusBadge status={g.status} /></td>
+                    <td className="py-2 pr-4"><Link to="/goods-receipt/evaluation" className="font-medium text-brand-600 hover:text-brand-700">Review</Link></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      <Card title="Evaluation History" subtitle="Recently completed evaluations" className="mt-6">
+        {grnsHistory.length === 0 ? (
+          <EmptyState title="No completed evaluations yet" message="Evaluated receipts will appear here once you record a decision." icon={History} />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="text-ink-500">
+                <tr>
+                  <th className="py-2 pr-4">Reference</th>
+                  <th className="py-2 pr-4">Supplier</th>
+                  <th className="py-2 pr-4">Store</th>
+                  <th className="py-2 pr-4">Outcome</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortNewestFirst(grnsHistory.map((g) => ({ ...g, date: g.receivedDate }))).slice(0, 6).map((g) => (
+                  <tr key={g.id} className="border-t border-ink-100">
+                    <td className="py-2 pr-4 font-medium text-ink-800">{g.grnRef}</td>
+                    <td className="py-2 pr-4">{g.supplier}</td>
+                    <td className="py-2 pr-4">{g.store}</td>
+                    <td className="py-2 pr-4"><StatusBadge status={g.status} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -746,10 +988,13 @@ export default function Dashboard() {
 
   const renderDeptHead = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Awaiting Your Approval" value={pendingDeptApprovals.length} icon={FileText} tone="warning" hint="Department requisitions" />
-        <StatCard label="Your Pending Requisitions" value={myDeptReqs.filter((r) => r.status === STATUS.PENDING).length} icon={ClipboardCheck} tone="info" hint="Submitted by you" />
-        <StatCard label="Your Pending Return Requests" value={myDeptReturns.filter((r) => [STATUS.PENDING, STATUS.APPROVED].includes(r.status)).length} icon={PackageCheck} tone="success" hint="Submitted by your team" />
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard label="My Pending Requisitions" value={loading ? '—' : myDeptReqs.filter((r) => r.status === REQUISITION_STATUS.PENDING).length} icon={ClipboardCheck} tone="info" hint="Submitted, awaiting outcome" />
+        {renderStatCardLink('/requisitions', 'Awaiting Your Approval', loading ? '—' : pendingDeptApprovals.length, FileText, 'warning', 'Department requisitions')}
+        <StatCard label="Approved Requisitions" value={loading ? '—' : myDeptReqs.filter((r) => r.status === REQUISITION_STATUS.APPROVED).length} icon={CheckCircle2} tone="success" hint="Ready for issue" />
+        <StatCard label="Partially Fulfilled" value={loading ? '—' : myDeptReqs.filter((r) => r.status === REQUISITION_STATUS.PARTIALLY_APPROVED).length} icon={PackageCheck} tone="info" hint="Partially approved" />
+        {renderStatCardLink('/material-return', 'Pending Returns', loading ? '—' : myDeptReturns.filter((r) => [RETURN_STATUS.DRAFT, RETURN_STATUS.SUBMITTED, RETURN_STATUS.PENDING_REVIEW].includes(r.status)).length, Undo2, 'warning', 'Submitted by your team')}
+        {renderStatCardLink('/items', 'Department Stock', loading ? '—' : items.length, Boxes, 'brand', 'Items available to request')}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -780,7 +1025,7 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card title="Your Requisitions" subtitle="Newest first">
+        <Card title="Recent Requests" subtitle="Your requisitions — newest first">
           {myDeptReqs.length === 0 ? (
             <EmptyState title="No requisitions yet" message="Your requisition history will appear here once you submit a request." />
           ) : (
@@ -839,9 +1084,13 @@ export default function Dashboard() {
 
   const renderAccountant = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="Total Inventory Value" value={loading ? '—' : formatCurrency(totalValue)} icon={Boxes} tone="brand" />
-        <StatCard label="Value at Reorder Risk" value={loading ? '—' : formatCurrency(valueAtReorderRisk)} icon={AlertTriangle} tone="warning" hint="Below reorder threshold" />
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard label="Inventory Value" value={loading ? '—' : formatCurrency(summary?.totalInventoryValue ?? totalValue)} icon={Boxes} tone="brand" />
+        <StatCard label="Receipts Value" value={loading ? '—' : formatCurrency(receiptsValue)} icon={PackageCheck} tone="success" hint="Goods received (to date)" />
+        <StatCard label="Issue Value" value={loading ? '—' : formatCurrency(issueValue)} icon={Send} tone="info" hint="Materials issued (to date)" />
+        <StatCard label="Return Value" value={loading ? '—' : formatCurrency(returnValue)} icon={Undo2} tone="warning" hint="Returned to stock (indicative)" />
+        <StatCard label="Adjustments" value={loading ? '—' : adjustmentsCount} icon={ClipboardList} tone="danger" hint="Adjustment transactions" />
+        {renderStatCardLink('/reconciliation', 'Reconciliation Variances', loading ? '—' : variances.length, AlertTriangle, 'warning', 'Open variance items')}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -864,14 +1113,36 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
+
+      <Card title="Financial Reports" subtitle="Valuation and transaction reporting" className="mt-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: 'Inventory Valuation', icon: Boxes },
+            { label: 'FIFO Valuation', icon: Coins },
+            { label: 'Transactions', icon: TrendingUp },
+            { label: 'Financial Summary', icon: Wallet }
+          ].map((report) => (
+            <Link key={report.label} to="/reports" className="flex items-center gap-3 rounded-lg border border-ink-100 bg-ink-50/40 p-3 text-sm transition hover:border-brand-200 hover:bg-brand-50/40">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                <report.icon size={18} />
+              </span>
+              <span className="font-medium text-ink-800">{report.label}</span>
+            </Link>
+          ))}
+        </div>
+      </Card>
     </>
   )
 
   const renderSecurity = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {renderStatCardLink('/gate-pass', 'Incoming — Pending Verification', pendingGateIncoming, PackageCheck, 'success', 'Goods entering premises')}
-        {renderStatCardLink('/gate-pass', 'Outgoing — Pending Clearance', pendingGateOutgoing, Send, 'warning', 'Materials leaving premises')}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {renderStatCardLink('/gate-pass', 'Pending Gate Passes', pendingGateIncoming + pendingGateOutgoing, ShieldCheck, 'warning', 'Awaiting verification')}
+        {renderStatCardLink('/gate-pass', "Today's Incoming", todaysIncoming, PackageCheck, 'success', 'Verified entering premises')}
+        {renderStatCardLink('/gate-pass', "Today's Outgoing", todaysOutgoing, Send, 'info', 'Verified leaving premises')}
+        {renderStatCardLink('/gate-pass', 'Transfers Awaiting Verification', outgoingTransfersPending.length, Repeat, 'warning', 'Dispatched transfers')}
+        <StatCard label="Verified Movements" value={verifiedMovements} icon={CheckCircle2} tone="success" hint="Total cleared at gate" />
+        <StatCard label="Rejected Movements" value={0} icon={XCircle} tone="danger" hint="Gate rejection not tracked yet" />
       </div>
 
       <Card title="Gate Pass Queue" subtitle="Verify materials at the gate before entry or exit" actions={<Link to="/gate-pass" className="text-sm font-medium text-brand-600 hover:text-brand-700">Open verification</Link>}>
@@ -888,13 +1159,22 @@ export default function Dashboard() {
                 <Link to="/gate-pass" className="text-xs font-medium text-brand-600">Verify</Link>
               </li>
             ))}
-            {vouchers.filter((v) => v.status === STATUS.ISSUED && !v.gateVerified).slice(0, 4).map((v) => (
+            {outgoingVouchersPending.slice(0, 4).map((v) => (
               <li key={v.id} className="flex items-center justify-between gap-2 rounded-lg border border-ink-100 bg-ink-50/40 p-3 text-sm">
                 <div>
                   <p className="font-medium text-ink-900">{v.sivRef} · Outgoing</p>
                   <p className="text-xs text-ink-500">Issued to {v.issuedTo}</p>
                 </div>
                 <Link to="/gate-pass" className="text-xs font-medium text-brand-600">Clear</Link>
+              </li>
+            ))}
+            {outgoingTransfersPending.slice(0, 4).map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-2 rounded-lg border border-ink-100 bg-ink-50/40 p-3 text-sm">
+                <div>
+                  <p className="font-medium text-ink-900">{t.transferRef} · Transfer</p>
+                  <p className="text-xs text-ink-500">{t.fromStore} → {t.toStore}</p>
+                </div>
+                <Link to="/gate-pass" className="text-xs font-medium text-brand-600">Verify</Link>
               </li>
             ))}
           </ul>

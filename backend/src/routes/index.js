@@ -36,6 +36,7 @@ const notificationsController = require('../controllers/notifications.controller
 router.post('/auth/login', authController.login);
 router.post('/auth/refresh', authController.refreshToken);
 router.get('/auth/me', requireAuth, authController.me);
+router.post('/auth/logout', requireAuth, authController.logout);
 router.put('/auth/password', requireAuth, authController.changePassword);
 
 // Every route below requires a valid session.

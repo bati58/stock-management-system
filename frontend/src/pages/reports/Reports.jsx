@@ -26,6 +26,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import { formatCurrency, formatDate, formatNumber } from '../../utils/formatters'
 import { canPerformAction } from '../../utils/rolePermissions'
+import { ROLES } from '../../utils/constants'
 
 const REPORT_CATEGORIES = [
   {
@@ -88,6 +89,35 @@ function flattenReportOptions() {
 const BASE_REPORT_OPTIONS = flattenReportOptions()
 const FIFO_REPORT = { value: 'fifo-valuation', label: 'FIFO Inventory Valuation (Accountant)' }
 
+// Which reports each role may select. Data itself is still permission-enforced
+// on the server (see backend utils/permissions.js); this only scopes the menu
+// to reports the role can actually populate and is meant to use, mirroring the
+// per-role "Reports" scope in docs/actorspage.md. Roles not listed here
+// (Administrator, PAO, Store Head) get the full base report catalogue.
+const REPORT_ACCESS = {
+  [ROLES.STOREKEEPER]: [
+    'inventory-summary', 'stock-card-report', 'bin-card-report', 'low-stock',
+    'stock-movement', 'stock-variance', 'expiring-items',
+    'grn-status', 'grn-report', 'requisition-status', 'siv-report',
+    'transfer-report', 'material-return-report'
+  ],
+  [ROLES.STOCK_CLERK]: [
+    'inventory-summary', 'stock-card-report', 'bin-card-report', 'low-stock',
+    'stock-movement', 'stock-variance', 'expiring-items'
+  ],
+  [ROLES.TEC]: ['material-evaluation', 'grn-status', 'grn-report'],
+  [ROLES.DEPT_HEAD]: [
+    'requisition-status', 'department-consumption', 'siv-report',
+    'material-return-report', 'transfer-report'
+  ],
+  [ROLES.ACCOUNTANT]: [
+    'inventory-summary', 'inventory-valuation', 'stock-movement',
+    'stock-movement-value', 'supplier-transactions'
+  ],
+  // Security Officer: goods-movement monitoring only (incoming, outgoing, transfers).
+  [ROLES.SECURITY]: ['grn-status', 'grn-report', 'siv-report', 'transfer-report']
+}
+
 function computeFifoValue(itemName, qtyOnHand, transactions, fallbackUnitPrice = 0) {
   const receipts = transactions
     .filter((t) => t.item === itemName && t.type === 'Receipt')
@@ -141,7 +171,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       itemService.list(),
       stockTransactionService.list(),
       goodsReceiptService.list(),
@@ -155,32 +185,46 @@ export default function Reports() {
       storeService.list(),
       categoryService.list(),
       userCardService.list()
-    ]).then(
-      ([i, t, g, r, s, tr, ret, a, b, d, st, c, uc]) => {
-        setItems(i)
-        setTransactions(t)
-        setGrns(g)
-        setReqs(r)
-        setSivs(s)
-        setTransfers(tr)
-        setReturns(ret)
-        setAssets(a)
-        setBinCards(b)
-        setDisposals(d)
-        setStores(st)
-        setCategories(c)
-        setUserCards(uc)
-        setLoading(false)
-      }
-    ).catch(() => {
+    ]).then((results) => {
+      // Degrade gracefully: a role may lack READ on some resources (e.g. a
+      // Storekeeper cannot read disposals, a Security Officer only sees
+      // receipts/issues/transfers). Those come back empty instead of blanking
+      // the entire report screen, so each role sees the reports it can populate.
+      const [i, t, g, r, s, tr, ret, a, b, d, st, c, uc] = results.map((res) =>
+        res.status === 'fulfilled' && Array.isArray(res.value) ? res.value : []
+      )
+      setItems(i)
+      setTransactions(t)
+      setGrns(g)
+      setReqs(r)
+      setSivs(s)
+      setTransfers(tr)
+      setReturns(ret)
+      setAssets(a)
+      setBinCards(b)
+      setDisposals(d)
+      setStores(st)
+      setCategories(c)
+      setUserCards(uc)
       setLoading(false)
     })
   }, [])
 
-  const reportOptions = useMemo(
-    () => (canViewFifo ? [...BASE_REPORT_OPTIONS, FIFO_REPORT] : BASE_REPORT_OPTIONS),
-    [canViewFifo]
-  )
+  const reportOptions = useMemo(() => {
+    const allowed = REPORT_ACCESS[user?.role]
+    const base = allowed
+      ? BASE_REPORT_OPTIONS.filter((o) => allowed.includes(o.value))
+      : BASE_REPORT_OPTIONS
+    return canViewFifo ? [...base, FIFO_REPORT] : base
+  }, [user?.role, canViewFifo])
+
+  // Keep the selected report valid for the current role's menu (e.g. a Security
+  // Officer should never land on the default 'inventory-summary' they can't see).
+  useEffect(() => {
+    if (reportOptions.length && !reportOptions.some((o) => o.value === reportType)) {
+      setReportType(reportOptions[0].value)
+    }
+  }, [reportOptions, reportType])
 
   const storeOptions = useMemo(
     () => [{ value: 'all', label: 'All Stores' }, ...stores.map((s) => ({ value: s.name, label: s.name }))],
