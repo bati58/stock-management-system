@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Boxes, X, ChevronDown } from 'lucide-react'
+import { X, ChevronDown } from 'lucide-react'
 import { getNavSections } from './navConfig'
 import { useAuth } from '../../context/AuthContext'
 import { useState } from 'react'
@@ -30,8 +30,8 @@ export default function Sidebar({ open, onClose }) {
       >
         <div className="flex items-center justify-between border-b border-ink-100 px-5 py-5 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-md shadow-brand-600/30">
-              <Boxes size={18} />
+            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-brand-50 shadow-md shadow-brand-600/20">
+              <img src="/logo-img.png" alt="Stock Management System logo" className="h-full w-full object-cover" />
             </div>
             <div>
               <p className="text-sm font-semibold leading-tight text-ink-900">Stock Management</p>

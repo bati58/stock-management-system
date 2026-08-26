@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { Boxes, LogIn, Mail, Lock } from 'lucide-react'
+import { LogIn, Mail, Lock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 
@@ -54,9 +54,7 @@ export default function Login() {
         {/* Logo & title */}
         <div className="mb-6 text-center">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-md ring-4 ring-white/80">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-700 text-white">
-              <Boxes size={32} strokeWidth={1.5} />
-            </div>
+            <img src="/logo-img.png" alt="Stock Management System logo" className="h-16 w-16 rounded-full object-cover" />
           </div>
           <h1 className="text-2xl font-normal tracking-wide text-[#495057] sm:text-[26px]">
             Stock Management System
