@@ -4,6 +4,7 @@ const AppError = require('../utils/AppError');
 const { nextRef } = require('../utils/refGenerator');
 const { logAudit } = require('../utils/audit');
 const { mapMaterialTransfer, resolveStoreId, resolveItemId } = require('./_helpers');
+const { notify } = require('../utils/notify');
 const stockService = require('../services/stockService');
 
 const SELECT = `
@@ -57,11 +58,54 @@ const create = asyncHandler(async (req, res) => {
   res.status(201).json(result);
 });
 
-// POST /api/material-transfers/:id/approve — Backend-SRS §6.4 step 2
+// POST /api/material-transfers/:id/approve — Backend-SRS §6.4 step 2 (approval decision)
+// Approve/Reject/Return only. Dispatch & receive are the store operators' job — see `execute`.
 const decide = asyncHandler(async (req, res) => {
   const { decision } = req.body;
-  if (!['Approved', 'Rejected', 'Dispatched', 'Received', 'Returned for Correction'].includes(decision)) {
-    throw new AppError('decision must be "Approved", "Rejected", "Dispatched", "Received", or "Returned for Correction".', 400);
+  if (!['Approved', 'Rejected', 'Returned for Correction'].includes(decision)) {
+    throw new AppError('decision must be "Approved", "Rejected", or "Returned for Correction".', 400);
+  }
+
+  await withTransaction((client) =>
+    stockService.decideMaterialTransfer(client, { transferId: req.params.id, decision, actorName: req.user.name })
+  );
+
+  const { rows } = await query(`${SELECT} WHERE mt.id = $1`, [req.params.id]);
+  const transfer = rows[0];
+
+  // Persisted notification for the store operators who must now move the goods
+  // (Phase 5: this event must not live only in the browser).
+  if (decision === 'Approved') {
+    await notify(query, {
+      role: 'Storekeeper',
+      title: 'Transfer Approved',
+      message: `Transfer ${transfer.transfer_ref} (${transfer.from_store_name} → ${transfer.to_store_name}) is approved and ready to dispatch.`,
+      type: 'success',
+      route: `/material-transfers/${req.params.id}`,
+      entityType: 'material-transfer',
+      entityId: req.params.id
+    });
+  } else if (decision === 'Returned for Correction') {
+    await notify(query, {
+      role: 'Storekeeper',
+      title: 'Transfer Returned for Correction',
+      message: `Transfer ${transfer.transfer_ref} was returned for correction. Update and resubmit it for approval.`,
+      type: 'warning',
+      route: `/material-transfers/${req.params.id}`,
+      entityType: 'material-transfer',
+      entityId: req.params.id
+    });
+  }
+
+  res.json(mapMaterialTransfer(transfer));
+});
+
+// POST /api/material-transfers/:id/execute — Backend-SRS §6.4 steps 3-4 (Dispatch / Receive).
+// Restricted to the store operators (material-transfers-execute), separate from approval (SoD).
+const execute = asyncHandler(async (req, res) => {
+  const { decision } = req.body;
+  if (!['Dispatched', 'Received'].includes(decision)) {
+    throw new AppError('decision must be "Dispatched" or "Received".', 400);
   }
 
   await withTransaction((client) =>
@@ -72,14 +116,24 @@ const decide = asyncHandler(async (req, res) => {
   res.json(mapMaterialTransfer(rows[0]));
 });
 
+// POST /api/material-transfers/:id/resubmit — re-open a corrected transfer for approval,
+// closing the "Returned for Correction" loop so it is never a dead-end (§34).
+const resubmit = asyncHandler(async (req, res) => {
+  await withTransaction((client) =>
+    stockService.decideMaterialTransfer(client, { transferId: req.params.id, decision: 'Pending Approval', actorName: req.user.name })
+  );
+  const { rows } = await query(`${SELECT} WHERE mt.id = $1`, [req.params.id]);
+  res.json(mapMaterialTransfer(rows[0]));
+});
+
 const remove = asyncHandler(async (req, res) => {
   const { rows: check } = await query('SELECT status FROM material_transfers WHERE id = $1', [req.params.id]);
   if (!check[0]) throw new AppError('Material transfer not found.', 404);
-  if (!['Draft', 'Submitted', 'Pending Approval'].includes(check[0].status)) throw new AppError('Cannot delete a material transfer that has already been processed.', 400);
+  if (!['Draft', 'Submitted', 'Pending Approval', 'Returned for Correction'].includes(check[0].status)) throw new AppError('Cannot delete a material transfer that has already been processed.', 400);
 
   const { rows } = await query('DELETE FROM material_transfers WHERE id = $1 RETURNING transfer_ref', [req.params.id]);
   await logAudit(query, { userName: req.user.name, action: `Deleted transfer ${rows[0].transfer_ref}`, module: 'Material Transfer' });
   res.status(204).send();
 });
 
-module.exports = { list, getOne, create, decide, remove };
+module.exports = { list, getOne, create, decide, execute, resubmit, remove };

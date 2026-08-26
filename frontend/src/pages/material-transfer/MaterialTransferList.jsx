@@ -37,7 +37,8 @@ export default function MaterialTransferList() {
 
   const canApprove = canPerformAction(user?.role, 'approve', 'materialTransfers')
   const canCreate = canPerformAction(user?.role, 'create', 'materialTransfers')
-  const isStorekeeper = user?.role === ROLES.STOREKEEPER || user?.role === ROLES.STORE_HEAD
+  // Store operators who physically move goods (backend: material-transfers-execute).
+  const isStorekeeper = [ROLES.STOREKEEPER, ROLES.STORE_HEAD, ROLES.ADMIN].includes(user?.role)
 
   async function load() {
     setLoading(true)
@@ -119,12 +120,12 @@ export default function MaterialTransferList() {
         await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Approved' })
         push(`${viewing.transferRef} approved. Source store can now dispatch materials.`, 'success')
       } else if (status === TRANSFER_STATUS.DISPATCHED) {
-        await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Dispatched' })
+        await api.action('materialTransfers', viewing.id, 'execute', { decision: 'Dispatched' })
         push(`${viewing.transferRef} dispatched.`, 'success')
       } else if (status === TRANSFER_STATUS.RECEIVED) {
-        await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Received' })
+        await api.action('materialTransfers', viewing.id, 'execute', { decision: 'Received' })
         push(`${viewing.transferRef} completed and stock levels updated.`, 'success')
-      } else if (status === 'Returned for Correction') {
+      } else if (status === TRANSFER_STATUS.RETURNED) {
         await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Returned for Correction' })
         push(`${viewing.transferRef} returned for correction.`, 'info')
       } else {
@@ -132,6 +133,21 @@ export default function MaterialTransferList() {
         push(`${viewing.transferRef} rejected.`, 'info')
       }
 
+      setViewing(null)
+      await load()
+    } catch (err) {
+      push(err.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Re-open a corrected transfer for approval — closes the "Returned for Correction" loop.
+  async function handleResubmit() {
+    setSaving(true)
+    try {
+      await api.action('materialTransfers', viewing.id, 'resubmit', {})
+      push(`${viewing.transferRef} resubmitted for approval.`, 'success')
       setViewing(null)
       await load()
     } catch (err) {
@@ -164,7 +180,7 @@ export default function MaterialTransferList() {
           <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600">
             <Eye size={15} />
           </button>
-          {row.status === TRANSFER_STATUS.PENDING_APPROVAL && (
+          {[TRANSFER_STATUS.PENDING_APPROVAL, TRANSFER_STATUS.RETURNED].includes(row.status) && (
             <button onClick={() => setDeleteTarget(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700">
               <Trash2 size={15} />
             </button>
@@ -260,6 +276,11 @@ export default function MaterialTransferList() {
                 Receive Materials
               </Button>
             )}
+            {viewing?.status === TRANSFER_STATUS.RETURNED && canCreate && (
+              <Button icon={RotateCcw} loading={saving} onClick={handleResubmit}>
+                Resubmit for Approval
+              </Button>
+            )}
           </>
         }
       >
@@ -303,6 +324,12 @@ export default function MaterialTransferList() {
                 <div className="mt-4 p-3 bg-brand-50 border border-brand-100 rounded-lg text-brand-800">
                   <p className="font-medium text-sm mb-1">Destination Store Action Required</p>
                   <p className="text-xs text-brand-600">Click Receive when materials physically arrive. This records the receipt and updates stock levels for both stores.</p>
+                </div>
+              )}
+              {viewing.status === TRANSFER_STATUS.RETURNED && (
+                <div className="mt-4 p-3 bg-warning-50 border border-warning-100 rounded-lg text-warning-800">
+                  <p className="font-medium text-sm mb-1">Returned for Correction</p>
+                  <p className="text-xs text-warning-600">The approver returned this transfer. Resubmit it for approval, or delete it and raise a corrected request.</p>
                 </div>
               )}
             </div>

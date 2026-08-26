@@ -4,6 +4,7 @@ const AppError = require('../utils/AppError');
 const { nextRef } = require('../utils/refGenerator');
 const { logAudit } = require('../utils/audit');
 const { mapDisposal, resolveStoreId, resolveItemId } = require('./_helpers');
+const { notify } = require('../utils/notify');
 const stockService = require('../services/stockService');
 
 const SELECT = `
@@ -76,9 +77,23 @@ const decide = asyncHandler(async (req, res) => {
   const { decision } = req.body;
   if (!['Approved', 'Rejected', 'Returned for Correction'].includes(decision)) throw new AppError('decision must be "Approved", "Rejected", or "Returned for Correction".', 400);
 
-  await withTransaction((client) =>
-    stockService.decideDisposal(client, { disposalId: req.params.id, decision, actorName: req.user.name })
-  );
+  await withTransaction(async (client) => {
+    await stockService.decideDisposal(client, { disposalId: req.params.id, decision, actorName: req.user.name });
+
+    // Phase 5: persist the approval so the executor is notified server-side, not only in the browser.
+    if (decision === 'Approved') {
+      const { rows } = await client.query('SELECT disposal_ref FROM disposals WHERE id = $1', [req.params.id]);
+      await notify(client, {
+        role: 'Store Head',
+        title: 'Disposal Approved',
+        message: `Disposal ${rows[0]?.disposal_ref} was approved and is ready to execute.`,
+        type: 'success',
+        route: `/disposals/${req.params.id}`,
+        entityType: 'disposal',
+        entityId: req.params.id
+      });
+    }
+  });
 
   const { rows } = await query(`${SELECT} WHERE d.id = $1`, [req.params.id]);
   res.json(mapDisposal(rows[0]));

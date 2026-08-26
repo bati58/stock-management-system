@@ -1,4 +1,4 @@
-import { ROLES, STATUS } from './constants'
+import { ROLES, REQUISITION_STATUS } from './constants'
 
 /**
  * Role-Based Access Control (RBAC) aligned with SRS section 4.4.8.
@@ -314,22 +314,26 @@ export function getSidebarType(userRole) {
 
 /**
  * Department heads may only approve requisitions raised for their department.
+ * A requisition awaits a decision in status 'Submitted' (the status the backend
+ * actually sets on submit); 'Pending' is accepted too for any legacy record.
  */
+const REQUISITION_AWAITING_DECISION = [REQUISITION_STATUS.SUBMITTED, REQUISITION_STATUS.PENDING]
+
 export function canApproveRequisition(user, requisition) {
     if (!user || !requisition) return false
     if (!canPerformAction(user.role, 'approve', 'requisitions')) return false
+    if (!REQUISITION_AWAITING_DECISION.includes(requisition.status)) return false
     if (user.role === ROLES.DEPT_HEAD) {
-        if (requisition.status !== STATUS.PENDING) return false
         const dept = user.department || ''
         return requisition.department === dept || requisition.requestedBy === user.name
     }
-    return requisition.status === STATUS.PENDING
+    return true
 }
 
 export function canRejectRequisition(user, requisition) {
     if (!user || !requisition) return false
     if (!canPerformAction(user.role, 'reject', 'requisitions')) return false
-    if (requisition.status !== STATUS.PENDING) return false
+    if (!REQUISITION_AWAITING_DECISION.includes(requisition.status)) return false
     if (user.role === ROLES.DEPT_HEAD) {
         const dept = user.department || ''
         return requisition.department === dept || requisition.requestedBy === user.name

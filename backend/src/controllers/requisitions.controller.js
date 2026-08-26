@@ -142,9 +142,35 @@ const decide = asyncHandler(async (req, res) => {
     throw new AppError('decision must be "Approved", "Partially Approved", "Rejected", or "Returned for Correction".', 400);
   }
 
-  await withTransaction((client) =>
-    stockService.decideRequisition(client, { requisitionId: req.params.id, decision, items, comments, actorName: req.user.name })
-  );
+  await withTransaction(async (client) => {
+    await stockService.decideRequisition(client, { requisitionId: req.params.id, decision, items, comments, actorName: req.user.name });
+
+    const { rows } = await client.query('SELECT sr_ref FROM requisitions WHERE id = $1', [req.params.id]);
+    const srRef = rows[0]?.sr_ref;
+
+    // Phase 5: the approval outcome must be persisted, not derived only in the browser.
+    if (decision === 'Approved' || decision === 'Partially Approved') {
+      await notify(client, {
+        role: 'Storekeeper',
+        title: 'Requisition Approved',
+        message: `Requisition ${srRef} was ${decision.toLowerCase()}. Generate the issue voucher to fulfil it.`,
+        type: 'success',
+        route: `/requisitions/${req.params.id}`,
+        entityType: 'requisition',
+        entityId: req.params.id
+      });
+    } else if (decision === 'Returned for Correction') {
+      await notify(client, {
+        role: 'Department Head',
+        title: 'Requisition Returned for Correction',
+        message: `Requisition ${srRef} was returned for correction. Update and resubmit it.`,
+        type: 'warning',
+        route: `/requisitions/${req.params.id}`,
+        entityType: 'requisition',
+        entityId: req.params.id
+      });
+    }
+  });
 
   res.json(await fetchWithLines(req.params.id));
 });

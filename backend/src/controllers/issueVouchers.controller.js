@@ -2,6 +2,7 @@ const { query, withTransaction } = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../utils/AppError');
 const { mapIssueVoucher } = require('./_helpers');
+const { notify } = require('../utils/notify');
 const stockService = require('../services/stockService');
 
 const SELECT = 'SELECT * FROM issue_vouchers';
@@ -64,8 +65,25 @@ const post = asyncHandler(async (req, res) => {
 });
 
 const amend = asyncHandler(async (req, res) => {
-  await withTransaction((client) => stockService.amendIssueVoucher(client, { voucherId: req.params.id, items: req.body.items, reason: req.body.reason, actorName: req.user.name }));
-  res.json(await fetchWithLines(req.params.id));
+  const result = await withTransaction(async (client) => {
+    await stockService.amendIssueVoucher(client, { voucherId: req.params.id, items: req.body.items, reason: req.body.reason, actorName: req.user.name });
+
+    // Amend is the storekeeper's submit-for-approval step (status -> 'Pending Approval').
+    // Persist a notification for the approver so the event does not live only in the browser (Phase 5).
+    const { rows } = await client.query('SELECT siv_ref FROM issue_vouchers WHERE id = $1', [req.params.id]);
+    await notify(client, {
+      role: 'Store Head',
+      title: 'Issue Voucher Awaiting Approval',
+      message: `Issue voucher ${rows[0]?.siv_ref} is pending your approval.`,
+      type: 'info',
+      route: `/issue-vouchers/${req.params.id}`,
+      entityType: 'issue_voucher',
+      entityId: req.params.id
+    });
+
+    return fetchWithLines(req.params.id, client);
+  });
+  res.json(result);
 });
 
 module.exports = { list, getOne, create, approve, amend, post };

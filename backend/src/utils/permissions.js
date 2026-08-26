@@ -50,16 +50,18 @@ const READ_PERMISSIONS = {
   disposals: REPORT_READERS,
   users: [ADMIN],
   'audit-logs': [ADMIN, PAO, ACCOUNTANT, SECURITY],
-  reports: REPORT_READERS,
+  reports: [...REPORT_READERS, STOREKEEPER, SECURITY],
   'gate-pass': [ADMIN, SECURITY],
   'user-cards': [...REPORT_READERS, STOREKEEPER]
 };
 
 const ACTION_PERMISSIONS = {
-  'goods-receipts': [ADMIN, STORE_HEAD, STOREKEEPER, TEC],
+  'goods-receipts': [ADMIN, STORE_HEAD, STOREKEEPER], // generate-grn / status; TEC acts only via goods-receipts-evaluate
   requisitions: [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
   'material-returns': [ADMIN, STORE_HEAD, STOREKEEPER],
-  'material-transfers': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, DEPT_HEAD],
+  // Approve/Reject/Return only. Storekeeper is intentionally excluded so it cannot
+  // approve its own transfer; it dispatches/receives via 'material-transfers-execute'.
+  'material-transfers': [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
   'issue-vouchers': [ADMIN, STORE_HEAD],
   disposals: [ADMIN, PAO, STORE_HEAD],
   'gate-pass': [ADMIN, SECURITY]
@@ -67,8 +69,9 @@ const ACTION_PERMISSIONS = {
 ACTION_PERMISSIONS['issue-voucher-post'] = [ADMIN, STORE_HEAD, STOREKEEPER];
 ACTION_PERMISSIONS['goods-receipts-evaluate'] = [ADMIN, TEC];
 ACTION_PERMISSIONS['goods-receipts-post'] = [ADMIN, STORE_HEAD, STOREKEEPER];
+ACTION_PERMISSIONS['material-transfers-execute'] = [ADMIN, STORE_HEAD, STOREKEEPER]; // dispatch/receive: the store operators, not the approver
 ACTION_PERMISSIONS['stock-taking'] = [ADMIN, PAO, STORE_HEAD];
-ACTION_PERMISSIONS['stock-taking-post'] = [ADMIN, PAO, STORE_HEAD, STOCK_CLERK];
+ACTION_PERMISSIONS['stock-taking-post'] = [ADMIN, PAO, STORE_HEAD]; // Stock Clerk counts/submits but cannot post its own adjustment
 
 ACTION_PERMISSIONS['business-rules'] = [ADMIN];
 

@@ -69,6 +69,7 @@ export const TRANSFER_STATUS = {
   DISPATCHED: 'Dispatched',
   RECEIVED: 'Received',
   COMPLETED: 'Completed',
+  RETURNED: 'Returned for Correction',
   REJECTED: 'Rejected'
 }
 
@@ -134,6 +135,9 @@ export const STATUS_COLOR = {
 
   // Requisition
   [REQUISITION_STATUS.PARTIALLY_APPROVED]: 'bg-info-50 text-info-700',
+
+  // Shared correction state (Requisition + Transfer + Disposal all use this string)
+  [REQUISITION_STATUS.RETURNED]: 'bg-warning-50 text-warning-700',
 
   // Transfer
   [TRANSFER_STATUS.PENDING_APPROVAL]: 'bg-warning-50 text-warning-700',

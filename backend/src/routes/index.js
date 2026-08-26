@@ -170,6 +170,8 @@ router.get('/material-transfers', requireRole('material-transfers'), materialTra
 router.get('/material-transfers/:id', requireRole('material-transfers'), materialTransfersController.getOne);
 router.post('/material-transfers', requireRole('material-transfers'), materialTransfersController.create);
 router.post('/material-transfers/:id/approve', requireRole('material-transfers', 'action'), materialTransfersController.decide);
+router.post('/material-transfers/:id/execute', requireRole('material-transfers-execute', 'action'), materialTransfersController.execute);
+router.post('/material-transfers/:id/resubmit', requireRole('material-transfers'), materialTransfersController.resubmit);
 router.delete('/material-transfers/:id', requireRole('material-transfers'), materialTransfersController.remove);
 
 // ---------------------------------------------------------------------------
