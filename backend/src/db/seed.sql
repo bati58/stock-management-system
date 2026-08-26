@@ -44,7 +44,7 @@ INSERT INTO items (code, name, category_id, store_id, bin, unit, min_level, max_
   ('4411-003-001', 'Arduino Uno R3 Board', (SELECT id FROM categories WHERE code='4411'), (SELECT id FROM stores WHERE code='STR-MAIN'), 'B-11', 'pcs', 10, 100, 20, 62, 950),
   ('4414-002-007', 'Ball Bearing 6205-ZZ', (SELECT id FROM categories WHERE code='4414'), (SELECT id FROM stores WHERE code='STR-MEE'), 'M-03', 'pcs', 30, 300, 60, 45, 180),
   ('4406-001-005', 'Cooking Oil (5L)', (SELECT id FROM categories WHERE code='4406'), (SELECT id FROM stores WHERE code='STR-CAF'), 'C-01', 'litre', 40, 400, 80, 75, 900)
-ON CONFLICT (code) DO NOTHING;
+ON CONFLICT (code, store_id) DO NOTHING;
 
 -- Seed a FIFO lot for every item matching its current qty_on_hand, so FIFO
 -- issuing works correctly from the very first transaction after seeding.

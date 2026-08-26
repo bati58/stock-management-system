@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS goods_receipts (
   received_by               TEXT,
   store_id                  INTEGER NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
   status                    TEXT NOT NULL DEFAULT 'Pending'
-                              CHECK (status IN ('Draft','Submitted','Pending','Pending Evaluation','Under Evaluation','Accepted','Partially Accepted','Approved','Rejected','GRN Generated')),
+                              CHECK (status IN ('Draft','Submitted','Pending','Pending Evaluation','Under Evaluation','Accepted','Partially Accepted','Approved','Rejected','GRN Generated','Posted')),
   evaluation_status         TEXT NOT NULL DEFAULT 'Pending',
   evaluation_date           DATE,
   evaluation_note           TEXT,
@@ -268,7 +268,7 @@ CREATE TABLE IF NOT EXISTS requisitions (
   date            DATE NOT NULL DEFAULT CURRENT_DATE,
   store_id        INTEGER NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
   status          TEXT NOT NULL DEFAULT 'Pending'
-                    CHECK (status IN ('Draft','Submitted','Pending','Pending Approval','Partially Approved','Approved','Ready for Issue','Partially Issued','Fulfilled','Rejected','Cancelled')),
+                    CHECK (status IN ('Draft','Submitted','Pending','Pending Approval','Partially Approved','Approved','Ready for Issue','Partially Issued','Fulfilled','Rejected','Returned for Correction','Cancelled')),
   created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -361,7 +361,7 @@ CREATE TABLE IF NOT EXISTS material_returns (
   original_issue_ref           TEXT,
   date                         DATE NOT NULL DEFAULT CURRENT_DATE,
   status                       TEXT NOT NULL DEFAULT 'Pending'
-                                 CHECK (status IN ('Draft','Submitted','Pending Review','Approved','Rejected','Returned to Stock')),
+                                 CHECK (status IN ('Draft','Submitted','Pending','Pending Review','Approved','Rejected','Returned to Stock')),
   qty_approved                 NUMERIC(14,2),
   evaluated_by                 TEXT,
   evaluated_at                 TIMESTAMP,
@@ -381,7 +381,7 @@ CREATE TABLE IF NOT EXISTS material_transfers (
   qty                  NUMERIC(14,2) NOT NULL CHECK (qty > 0),
   date                 DATE NOT NULL DEFAULT CURRENT_DATE,
   status               TEXT NOT NULL DEFAULT 'Pending'
-                         CHECK (status IN ('Draft','Submitted','Pending Approval','Approved','Dispatched','Received','Completed','Rejected')),
+                         CHECK (status IN ('Draft','Submitted','Pending','Pending Approval','Approved','Dispatched','Received','Completed','Rejected','Returned for Correction')),
   destination_bin      TEXT,
   dispatched_by        TEXT,
   dispatched_at        TIMESTAMP,
@@ -405,7 +405,7 @@ CREATE TABLE IF NOT EXISTS disposals (
   reason         TEXT,
   date_flagged   DATE NOT NULL DEFAULT CURRENT_DATE,
   status         TEXT NOT NULL DEFAULT 'Pending'
-                   CHECK (status IN ('Flagged','Requested','Pending Review','Approved','Rejected','Executed','Completed')),
+                   CHECK (status IN ('Flagged','Requested','Pending','Pending Review','Approved','Rejected','Returned for Correction','Executed','Completed')),
   created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -455,7 +455,7 @@ CREATE TABLE IF NOT EXISTS stock_taking_sessions (
   store_id     INTEGER NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
   count_date   DATE NOT NULL DEFAULT CURRENT_DATE,
   status       TEXT NOT NULL DEFAULT 'Draft'
-                 CHECK (status IN ('Draft','Submitted','Approved','Closed','Rejected')),
+                 CHECK (status IN ('Draft','Submitted','Pending Approval','Approved','Posted','Closed','Rejected')),
   created_by   TEXT NOT NULL,
   approved_by  TEXT,
   approved_at  TIMESTAMP,

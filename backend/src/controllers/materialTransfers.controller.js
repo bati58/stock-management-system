@@ -44,7 +44,7 @@ const create = asyncHandler(async (req, res) => {
 
     const { rows } = await client.query(
       `INSERT INTO material_transfers (transfer_ref, from_store_id, to_store_id, item_id, qty, date, status, destination_bin)
-       VALUES ($1,$2,$3,$4,$5,COALESCE($6, CURRENT_DATE),'Pending',$7) RETURNING id`,
+       VALUES ($1,$2,$3,$4,$5,COALESCE($6, CURRENT_DATE),'Pending Approval',$7) RETURNING id`,
       [transferRef, fromStoreId, toStoreId, itemId, qty, date || null, destinationBin || null]
     );
 
@@ -60,8 +60,8 @@ const create = asyncHandler(async (req, res) => {
 // POST /api/material-transfers/:id/approve — Backend-SRS §6.4 step 2
 const decide = asyncHandler(async (req, res) => {
   const { decision } = req.body;
-  if (!['Approved', 'Rejected', 'Dispatched', 'Received'].includes(decision)) {
-    throw new AppError('decision must be "Approved", "Rejected", "Dispatched", or "Received".', 400);
+  if (!['Approved', 'Rejected', 'Dispatched', 'Received', 'Returned for Correction'].includes(decision)) {
+    throw new AppError('decision must be "Approved", "Rejected", "Dispatched", "Received", or "Returned for Correction".', 400);
   }
 
   await withTransaction((client) =>

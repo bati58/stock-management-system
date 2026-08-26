@@ -21,7 +21,8 @@ import {
   disposalService,
   storeService,
   categoryService,
-  userCardService
+  userCardService,
+  reportService
 } from '../../services'
 import { useAuth } from '../../context/AuthContext'
 import { formatCurrency, formatDate, formatNumber } from '../../utils/formatters'
@@ -169,6 +170,7 @@ export default function Reports() {
   const [categories, setCategories] = useState([])
   const [userCards, setUserCards] = useState([])
   const [loading, setLoading] = useState(true)
+  const [serverReportRows, setServerReportRows] = useState(null)
 
   useEffect(() => {
     Promise.allSettled([
@@ -209,6 +211,39 @@ export default function Reports() {
       setLoading(false)
     })
   }, [])
+
+  useEffect(() => {
+    const loaders = {
+      'inventory-summary': () => reportService.inventorySummary(),
+      'low-stock': () => reportService.lowStock(),
+      'stock-movement': () => reportService.stockMovement({ from: filters.startDate, to: filters.endDate }),
+      'grn-status': () => reportService.grnStatus(),
+      'requisition-status': () => reportService.requisitionStatus(),
+      'siv-report': () => reportService.issueStatus(),
+      'material-return-report': () => reportService.returnStatus(),
+      'transfer-report': () => reportService.transferStatus(),
+      'asset-register': () => reportService.assetSummary(),
+      'disposal-report': () => reportService.disposalStatus(),
+      'fifo-valuation': () => reportService.fifoValuation()
+    }
+    const loadServerReport = loaders[reportType]
+    if (!loadServerReport) {
+      setServerReportRows(null)
+      return
+    }
+    let active = true
+    loadServerReport()
+      .then((report) => {
+        if (active) setServerReportRows(Array.isArray(report) ? report : [])
+      })
+      .catch((error) => {
+        if (active) {
+          setServerReportRows(null)
+          push(error.message || 'Could not load the server report.', 'error')
+        }
+      })
+    return () => { active = false }
+  }, [reportType, filters.startDate, filters.endDate])
 
   const reportOptions = useMemo(() => {
     const allowed = REPORT_ACCESS[user?.role]
@@ -678,6 +713,10 @@ export default function Reports() {
       ...item,
       fifoValue: computeFifoValue(item.name, item.qtyOnHand, transactions, item.unitPrice)
     }))
+  }
+
+  if (serverReportRows && reportType !== 'fifo-valuation') {
+    rows = serverReportRows
   }
 
   const reportTitle = reportOptions.find((o) => o.value === reportType)?.label || 'Report'

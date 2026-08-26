@@ -3,6 +3,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const AppError = require('../utils/AppError');
 const { nextRef } = require('../utils/refGenerator');
 const { logAudit } = require('../utils/audit');
+const { notify } = require('../utils/notify');
 const { mapMaterialReturn, resolveItemId } = require('./_helpers');
 const stockService = require('../services/stockService');
 
@@ -16,7 +17,7 @@ const SELECT = `
 const list = asyncHandler(async (req, res) => {
   let scope = '';
   let params = [];
-  
+
   if (req.user.role === 'Department Head') {
     scope = 'WHERE mr.department = $1';
     params = [req.user.department || req.user.name];
@@ -32,7 +33,7 @@ const list = asyncHandler(async (req, res) => {
 const getOne = asyncHandler(async (req, res) => {
   let scope = '';
   let params = [req.params.id];
-  
+
   if (req.user.role === 'Department Head') {
     scope = ' AND mr.department = $2';
     params.push(req.user.department || req.user.name);
@@ -46,7 +47,7 @@ const getOne = asyncHandler(async (req, res) => {
   res.json(mapMaterialReturn(rows[0]));
 });
 
-// POST /api/material-returns — Backend-SRS §6.3 step 1 (Pending, no stock change)
+// POST /api/material-returns — Backend-SRS §6.3 step 1 (Draft, no stock change)
 const create = asyncHandler(async (req, res) => {
   const { department, item, qty, reason, date, condition, originalIssueRef } = req.body;
   if (!department || !item || !qty) throw new AppError('department, item, and qty are required.', 400);
@@ -58,7 +59,7 @@ const create = asyncHandler(async (req, res) => {
 
     const { rows } = await client.query(
       `INSERT INTO material_returns (srn_ref, department, item_id, qty, reason, date, status, condition, original_issue_ref)
-       VALUES ($1,$2,$3,$4,$5,COALESCE($6, CURRENT_DATE),'Pending',$7,$8) RETURNING id`,
+      VALUES ($1,$2,$3,$4,$5,COALESCE($6, CURRENT_DATE),'Draft',$7,$8) RETURNING id`,
       [srnRef, department, itemId, qty, reason || null, date || null, condition || null, originalIssueRef || null]
     );
 
@@ -82,6 +83,15 @@ const submit = asyncHandler(async (req, res) => {
     }
     await client.query('UPDATE material_returns SET status = $1, updated_at = NOW() WHERE id = $2', ['Submitted', req.params.id]);
     await logAudit(client, { userName: req.user.name, action: `Submitted return ${ret.srn_ref}`, module: 'Material Return' });
+    await notify(client, {
+      role: 'Store Head',
+      title: 'Material return awaiting inspection',
+      message: `${ret.srn_ref} is ready for store review.`,
+      type: 'warning',
+      route: '/material-return',
+      entityType: 'material_return',
+      entityId: req.params.id
+    });
     const { rows: full } = await client.query(`${SELECT} WHERE mr.id = $1`, [req.params.id]);
     return mapMaterialReturn(full[0]);
   });

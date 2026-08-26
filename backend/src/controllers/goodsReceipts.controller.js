@@ -43,7 +43,7 @@ const getOne = asyncHandler(async (req, res) => {
   res.json(grn);
 });
 
-// POST /api/goods-receipts — Backend-SRS §6.1 step 1 (Pending only, no stock change)
+// POST /api/goods-receipts — Backend-SRS §6.1 step 1 (Draft only, no stock change)
 const create = asyncHandler(async (req, res) => {
   const { supplier, poRef, receivedDate, receivedBy, store, items } = req.body;
   if (!supplier || !receivedDate || !store || !Array.isArray(items) || items.length === 0) {
@@ -57,7 +57,7 @@ const create = asyncHandler(async (req, res) => {
 
     const { rows } = await client.query(
       `INSERT INTO goods_receipts (grn_ref, supplier, supplier_id, po_ref, received_date, received_by, store_id, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,'Pending') RETURNING id`,
+      VALUES ($1,$2,$3,$4,$5,$6,$7,'Draft') RETURNING id`,
       [grnRef, supplier, supplierId, poRef || null, receivedDate, receivedBy || req.user.name, storeId]
     );
     const grnId = rows[0].id;
@@ -72,16 +72,6 @@ const create = asyncHandler(async (req, res) => {
     }
 
     await logAudit(client, { userName: req.user.name, action: `Created ${grnRef}`, module: 'Goods Receipt' });
-    await notify(client, {
-      role: 'Technical Evaluation Committee',
-      title: 'Goods receipt awaiting evaluation',
-      message: `${grnRef} requires technical evaluation.`,
-      type: 'warning',
-      route: '/goods-receipt/evaluation',
-      entityType: 'goods_receipt',
-      entityId: grnId
-    });
-
     return fetchWithLines(grnId, client);
   });
 
@@ -124,12 +114,17 @@ const evaluate = asyncHandler(async (req, res) => {
 
 const generateGrn = asyncHandler(async (req, res) => {
   await withTransaction(async (client) => {
-    await stockService.generateGrnAndPost(client, {
+    await stockService.generateGrn(client, {
       grnId: req.params.id,
       generatedBy: req.user.name,
       actorName: req.user.name
     });
   });
+  res.json(await fetchWithLines(req.params.id));
+});
+
+const postStock = asyncHandler(async (req, res) => {
+  await withTransaction((client) => stockService.postGrn(client, { grnId: req.params.id, actorName: req.user.name }));
   res.json(await fetchWithLines(req.params.id));
 });
 
@@ -182,4 +177,4 @@ const remove = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
-module.exports = { list, getOne, create, evaluate, generateGrn, setStatus, remove };
+module.exports = { list, getOne, create, evaluate, generateGrn, postStock, setStatus, remove };

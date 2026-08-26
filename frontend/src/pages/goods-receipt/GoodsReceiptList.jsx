@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Eye, Trash2, Send, FileText } from 'lucide-react'
+import { Plus, Eye, Trash2, Send, FileText, PackageCheck } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Table from '../../components/ui/Table'
@@ -14,7 +14,7 @@ import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate, formatCurrency } from '../../utils/formatters'
-import { GRN_STATUS } from '../../utils/constants'
+import { GRN_STATUS, ROLES } from '../../utils/constants'
 import { canPerformAction } from '../../utils/rolePermissions'
 
 const EMPTY_LINE = { item: '', qty: '', unitPrice: '' }
@@ -38,6 +38,7 @@ export default function GoodsReceiptList() {
   // Only Store Head / Storekeeper may record and process receipts.
   // Other roles with page access (e.g. Admin, PAO) get read-only.
   const canManage = canPerformAction(user?.role, 'create', 'goodsReceipts')
+  const canPost = [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER].includes(user?.role)
 
   async function load() {
     setLoading(true)
@@ -102,6 +103,16 @@ export default function GoodsReceiptList() {
     }
   }
 
+  async function handleSubmit(row) {
+    try {
+      await api.action('goodsReceipts', row.id, 'status', { status: GRN_STATUS.SUBMITTED })
+      push(`${row.grnRef} submitted for Store Head review.`, 'success')
+      await load()
+    } catch (e) {
+      push(e.message, 'error')
+    }
+  }
+
   async function handleNotifyTEC(row) {
     await api.action('goodsReceipts', row.id, 'status', { status: GRN_STATUS.PENDING_EVAL })
     push(`TEC notified for ${row.grnRef}`, 'success')
@@ -111,7 +122,17 @@ export default function GoodsReceiptList() {
   async function handleGenerateGRN(row) {
     try {
       await api.action('goodsReceipts', row.id, 'generate-grn', {})
-      push(`Official Model 19 GRN Generated for ${row.grnRef}. Stock updated.`, 'success')
+      push(`Official Model 19 GRN Generated for ${row.grnRef}. Review it before posting stock.`, 'success')
+      await load()
+    } catch (e) {
+      push(e.message, 'error')
+    }
+  }
+
+  async function handlePostStock(row) {
+    try {
+      await api.action('goodsReceipts', row.id, 'post-stock', {})
+      push(`Accepted stock for ${row.grnRef} has been posted.`, 'success')
       await load()
     } catch (e) {
       push(e.message, 'error')
@@ -143,9 +164,19 @@ export default function GoodsReceiptList() {
               <Send size={15} />
             </button>
           )}
+          {canManage && row.status === GRN_STATUS.DRAFT && (
+            <button onClick={() => handleSubmit(row)} className="rounded-md p-1.5 text-info-600 hover:bg-info-50" title="Submit for review">
+              <Send size={15} />
+            </button>
+          )}
           {canManage && (row.status === GRN_STATUS.ACCEPTED || row.status === GRN_STATUS.PARTIALLY_ACCEPTED) && (
             <button onClick={() => handleGenerateGRN(row)} className="rounded-md p-1.5 text-success-600 hover:bg-success-50" title="Generate GRN">
               <FileText size={15} />
+            </button>
+          )}
+          {canPost && row.status === GRN_STATUS.GRN_GENERATED && (
+            <button onClick={() => handlePostStock(row)} className="rounded-md p-1.5 text-success-600 hover:bg-success-50" title="Post accepted stock">
+              <PackageCheck size={15} />
             </button>
           )}
           <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600" title="View">
@@ -293,7 +324,16 @@ export default function GoodsReceiptList() {
                 <FileText className="text-success-600" />
                 <div>
                   <p className="text-sm font-semibold text-success-800">Official Model 19 GRN Generated</p>
-                  <p className="text-xs text-success-700">Stock cards and bin cards have been updated.</p>
+                  <p className="text-xs text-success-700">Review the GRN, then use Post Accepted Stock to update inventory.</p>
+                </div>
+              </div>
+            )}
+            {viewing.status === GRN_STATUS.POSTED && (
+              <div className="rounded-lg bg-success-50 p-4 border border-success-100 mt-4 flex items-center gap-3">
+                <PackageCheck className="text-success-600" />
+                <div>
+                  <p className="text-sm font-semibold text-success-800">Accepted stock posted</p>
+                  <p className="text-xs text-success-700">Stock cards and bin cards were updated atomically.</p>
                 </div>
               </div>
             )}

@@ -6,13 +6,18 @@ const TRANSITIONS = {
         Submitted: ['Pending Evaluation', 'Under Evaluation'],
         Pending: ['Pending Evaluation', 'Under Evaluation'],
         'Pending Evaluation': ['Under Evaluation'],
-        'Under Evaluation': ['Accepted', 'Partially Accepted', 'Rejected', 'GRN Generated']
+        'Under Evaluation': ['Accepted', 'Partially Accepted', 'Rejected'],
+        Accepted: ['GRN Generated'],
+        'Partially Accepted': ['GRN Generated'],
+        'GRN Generated': ['Posted'],
+        Posted: []
     },
     requisition: {
         Draft: ['Submitted', 'Pending', 'Approved', 'Partially Approved', 'Rejected'],
-        Submitted: ['Pending Approval', 'Approved', 'Partially Approved', 'Rejected'],
-        Pending: ['Approved', 'Partially Approved', 'Rejected'],
-        'Pending Approval': ['Approved', 'Partially Approved', 'Rejected']
+        Submitted: ['Pending Approval', 'Approved', 'Partially Approved', 'Rejected', 'Returned for Correction'],
+        Pending: ['Approved', 'Partially Approved', 'Rejected', 'Returned for Correction'],
+        'Pending Approval': ['Approved', 'Partially Approved', 'Rejected', 'Returned for Correction'],
+        'Returned for Correction': ['Submitted', 'Pending']
     },
     materialReturn: {
         Draft: ['Submitted', 'Pending Review', 'Approved', 'Rejected'],
@@ -22,17 +27,26 @@ const TRANSITIONS = {
     },
     materialTransfer: {
         Draft: ['Submitted', 'Pending', 'Pending Approval', 'Approved', 'Rejected'],
-        Submitted: ['Pending Approval', 'Approved', 'Rejected'],
-        Pending: ['Pending Approval', 'Approved', 'Rejected'],
-        'Pending Approval': ['Approved', 'Rejected'],
+        Submitted: ['Pending Approval', 'Approved', 'Rejected', 'Returned for Correction'],
+        Pending: ['Pending Approval', 'Approved', 'Rejected', 'Returned for Correction'],
+        'Pending Approval': ['Approved', 'Rejected', 'Returned for Correction'],
+        'Returned for Correction': ['Pending Approval', 'Submitted'],
         Approved: ['Dispatched'],
         Dispatched: ['Received']
+    },
+    stockTaking: {
+        Draft: ['Submitted'],
+        Submitted: ['Pending Approval', 'Approved', 'Rejected'],
+        'Pending Approval': ['Approved', 'Rejected'],
+        Approved: ['Posted'],
+        Posted: ['Closed']
     },
     disposal: {
         Flagged: ['Requested', 'Pending Review', 'Approved', 'Rejected'],
         Requested: ['Pending Review', 'Approved', 'Rejected'],
-        Pending: ['Pending Review', 'Approved', 'Rejected'],
-        'Pending Review': ['Approved', 'Rejected'],
+        Pending: ['Pending Review', 'Approved', 'Rejected', 'Returned for Correction'],
+        'Pending Review': ['Approved', 'Rejected', 'Returned for Correction'],
+        'Returned for Correction': ['Pending Review', 'Requested'],
         Approved: ['Executed']
     },
     issueVoucher: {

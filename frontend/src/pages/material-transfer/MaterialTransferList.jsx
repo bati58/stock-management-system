@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Eye, CheckCircle2, XCircle, Truck, PackageCheck, Trash2 } from 'lucide-react'
+import { Plus, Eye, CheckCircle2, XCircle, Truck, PackageCheck, Trash2, RotateCcw } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Table from '../../components/ui/Table'
@@ -124,6 +124,9 @@ export default function MaterialTransferList() {
       } else if (status === TRANSFER_STATUS.RECEIVED) {
         await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Received' })
         push(`${viewing.transferRef} completed and stock levels updated.`, 'success')
+      } else if (status === 'Returned for Correction') {
+        await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Returned for Correction' })
+        push(`${viewing.transferRef} returned for correction.`, 'info')
       } else {
         await api.action('materialTransfers', viewing.id, 'approve', { decision: 'Rejected' })
         push(`${viewing.transferRef} rejected.`, 'info')
@@ -241,6 +244,9 @@ export default function MaterialTransferList() {
                 </Button>
                 <Button icon={CheckCircle2} loading={saving} onClick={() => handleDecide(TRANSFER_STATUS.APPROVED)}>
                   Approve Transfer
+                </Button>
+                <Button variant="secondary" icon={RotateCcw} loading={saving} onClick={() => handleDecide('Returned for Correction')}>
+                  Return for Correction
                 </Button>
               </>
             )}

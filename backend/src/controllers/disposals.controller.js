@@ -74,7 +74,7 @@ const update = asyncHandler(async (req, res) => {
 // POST /api/disposals/:id/approve — Backend-SRS §6.7 step 2
 const decide = asyncHandler(async (req, res) => {
   const { decision } = req.body;
-  if (!['Approved', 'Rejected'].includes(decision)) throw new AppError('decision must be "Approved" or "Rejected".', 400);
+  if (!['Approved', 'Rejected', 'Returned for Correction'].includes(decision)) throw new AppError('decision must be "Approved", "Rejected", or "Returned for Correction".', 400);
 
   await withTransaction((client) =>
     stockService.decideDisposal(client, { disposalId: req.params.id, decision, actorName: req.user.name })

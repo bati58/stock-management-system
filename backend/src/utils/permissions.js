@@ -65,6 +65,8 @@ const ACTION_PERMISSIONS = {
   'gate-pass': [ADMIN, SECURITY]
 };
 ACTION_PERMISSIONS['issue-voucher-post'] = [ADMIN, STORE_HEAD, STOREKEEPER];
+ACTION_PERMISSIONS['goods-receipts-evaluate'] = [ADMIN, TEC];
+ACTION_PERMISSIONS['goods-receipts-post'] = [ADMIN, STORE_HEAD, STOREKEEPER];
 ACTION_PERMISSIONS['stock-taking'] = [ADMIN, PAO, STORE_HEAD];
 ACTION_PERMISSIONS['stock-taking-post'] = [ADMIN, PAO, STORE_HEAD, STOCK_CLERK];
 
