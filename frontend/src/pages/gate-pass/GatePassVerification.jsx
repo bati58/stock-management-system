@@ -62,7 +62,7 @@ export default function GatePassVerification() {
   const outgoingRows = useMemo(() => {
     const q = query.trim().toLowerCase()
     const voucherRows = vouchers
-      .filter((v) => v.status === STATUS.ISSUED)
+      .filter((v) => [STATUS.ISSUED, 'Posted'].includes(v.status))
       .map((v) => ({
         id: `siv-${v.id}`,
         serviceId: v.id,
