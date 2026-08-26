@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Eye, CheckCircle2, XCircle, Trash2, Play } from 'lucide-react'
+import { Plus, Eye, CheckCircle2, XCircle, Trash2, Play, RotateCcw } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Table from '../../components/ui/Table'
@@ -35,7 +35,7 @@ export default function DisposalList() {
   const canCreate = canPerformAction(user?.role, 'create', 'disposals')
   const canDelete = canPerformAction(user?.role, 'delete', 'disposals')
   const canApprove = canPerformAction(user?.role, 'approve', 'disposals')
-  
+
   // According to roles, Store Head / Administrator approves disposals.
   const isStoreHead = user?.role === ROLES.STORE_HEAD || user?.role === ROLES.ADMIN
 
@@ -104,7 +104,7 @@ export default function DisposalList() {
     }
     try {
       await api.action('disposals', viewing.id, 'approve', { decision })
-      push(`Disposal request ${viewing.disposalRef} ${decision.toLowerCase()}.`, 'success')
+      push(`Disposal request ${viewing.disposalRef} ${decision.toLowerCase()}.`, decision === 'Returned for Correction' ? 'info' : 'success')
       setViewing(null)
       await load()
     } catch (err) {
@@ -196,7 +196,7 @@ export default function DisposalList() {
             <Input label="Date Flagged" type="date" value={formData.dateFlagged} onChange={(e) => setFormData({ ...formData, dateFlagged: e.target.value })} required />
           </div>
           <Input label="Reason for Disposal" type="textarea" value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} required />
-          
+
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <Button variant="secondary" type="button" onClick={() => setModalOpen(false)} disabled={saving}>Cancel</Button>
             <Button type="submit" loading={saving}>Submit Request</Button>
@@ -236,11 +236,14 @@ export default function DisposalList() {
 
             <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
               <Button variant="secondary" onClick={() => setViewing(null)}>Close</Button>
-              
+
               {canApprove && (['Pending', 'Flagged', 'Requested', 'Pending Review'].includes(viewing.status)) && (
                 <>
                   <Button variant="danger" onClick={() => decide('Rejected')} className="gap-2">
                     <XCircle size={18} /> Reject
+                  </Button>
+                  <Button variant="secondary" onClick={() => decide('Returned for Correction')} className="gap-2">
+                    <RotateCcw size={18} /> Return for Correction
                   </Button>
                   <Button variant="primary" onClick={() => decide('Approved')} className="gap-2 bg-emerald-600 hover:bg-emerald-700 border-transparent text-white">
                     <CheckCircle2 size={18} /> Approve

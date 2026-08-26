@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Eye, CheckCircle2, XCircle, Trash2, Printer } from 'lucide-react'
+import { Plus, Eye, CheckCircle2, XCircle, Trash2, Printer, Send } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Table from '../../components/ui/Table'
@@ -100,13 +100,23 @@ export default function MaterialReturnList() {
         condition: line.condition,
         originalIssueRef: header.originalIssueRef
       })
-      push(`Store Return Note ${srnRef} submitted.`, 'success')
+      push(`Draft Store Return Note ${srnRef} created. Submit it from the actions column.`, 'success')
       setModalOpen(false)
       await load()
     } catch (err) {
       push(err.message, 'error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSubmit(row) {
+    try {
+      await api.action('materialReturns', row.id, 'submit', {})
+      push(`${row.srnRef} submitted for inspection.`, 'success')
+      await load()
+    } catch (err) {
+      push(err.message, 'error')
     }
   }
 
@@ -163,6 +173,11 @@ export default function MaterialReturnList() {
           <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600">
             <Eye size={15} />
           </button>
+          {row.status === RETURN_STATUS.DRAFT && canCreate && (
+            <button onClick={() => handleSubmit(row)} className="rounded-md p-1.5 text-info-600 hover:bg-info-50" title="Submit return">
+              <Send size={15} />
+            </button>
+          )}
           {row.status === RETURN_STATUS.SUBMITTED && canDelete && (
             <button onClick={() => setDeleteTarget(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700">
               <Trash2 size={15} />

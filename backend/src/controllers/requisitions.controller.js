@@ -99,15 +99,8 @@ const create = asyncHandler(async (req, res) => {
     }
 
     await logAudit(client, { userName: req.user.name, action: `Created requisition ${srRef}`, module: 'Store Requisition' });
-    await notify(client, {
-      role: 'Property Administration Officer',
-      title: 'Requisition awaiting approval',
-      message: `${srRef} was submitted by ${req.user.name}.`,
-      type: 'warning',
-      route: '/requisitions',
-      entityType: 'requisition',
-      entityId: reqId
-    });
+    // No notification on create: a Draft requisition is not yet awaiting anyone.
+    // The approver is notified when the requester submits it (see `submit`).
 
     return fetchWithLines(reqId, client);
   });
@@ -121,7 +114,7 @@ const submit = asyncHandler(async (req, res) => {
     const { rows } = await client.query('SELECT status, sr_ref FROM requisitions WHERE id = $1 FOR UPDATE', [req.params.id]);
     const reqDoc = rows[0];
     if (!reqDoc) throw new AppError('Requisition not found.', 404);
-    if (reqDoc.status !== 'Draft' && reqDoc.status !== 'Pending') {
+    if (!['Draft', 'Pending', 'Returned for Correction'].includes(reqDoc.status)) {
       throw new AppError(`Cannot submit requisition in status: ${reqDoc.status}`, 400);
     }
     await client.query('UPDATE requisitions SET status = $1, updated_at = NOW() WHERE id = $2', ['Submitted', req.params.id]);
@@ -145,8 +138,8 @@ const submit = asyncHandler(async (req, res) => {
 // POST /api/requisitions/:id/approve — Backend-SRS §6.2 step 2 (no stock change)
 const decide = asyncHandler(async (req, res) => {
   const { decision, items, comments } = req.body;
-  if (!['Approved', 'Partially Approved', 'Rejected'].includes(decision)) {
-    throw new AppError('decision must be "Approved" or "Rejected".', 400);
+  if (!['Approved', 'Partially Approved', 'Rejected', 'Returned for Correction'].includes(decision)) {
+    throw new AppError('decision must be "Approved", "Partially Approved", "Rejected", or "Returned for Correction".', 400);
   }
 
   await withTransaction((client) =>

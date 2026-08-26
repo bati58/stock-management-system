@@ -71,7 +71,7 @@ const create = asyncHandler(async (req, res) => {
         const storeId = await resolveStoreId(store, client);
 
         const { rows: openSessions } = await client.query(
-            `SELECT session_ref FROM stock_taking_sessions WHERE store_id = $1 AND status IN ('Draft', 'Pending Approval')`,
+            `SELECT session_ref FROM stock_taking_sessions WHERE store_id = $1 AND status IN ('Draft', 'Submitted', 'Approved')`,
             [storeId]
         );
         if (openSessions.length > 0) {
@@ -91,10 +91,13 @@ const create = asyncHandler(async (req, res) => {
             const physicalQty = Number(line.physicalQty);
             if (!Number.isFinite(physicalQty) || physicalQty < 0) throw new AppError('Physical quantity must be zero or greater.', 400);
             const systemQty = Number(stockRows[0].qty_on_hand);
+            // Compute variance in JS rather than as `$5 - $4` in SQL: subtracting two
+            // untyped bind params makes Postgres raise "operator is not unique: unknown - unknown".
+            const variance = physicalQty - systemQty;
             await client.query(
                 `INSERT INTO stock_taking_items (session_id, item_id, bin, system_qty, physical_qty, variance, reason, counter)
-         VALUES ($1, $2, $3, $4, $5, $5 - $4, $6, $7)`,
-                [rows[0].id, itemId, line.bin || stockRows[0].bin, systemQty, physicalQty, line.reason || null, req.user.name]
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                [rows[0].id, itemId, line.bin || stockRows[0].bin, systemQty, physicalQty, variance, line.reason || null, req.user.name]
             );
         }
         await logAudit(client, { userId: req.user.id, userName: req.user.name, userRole: req.user.role, action: `Created stock-taking session ${sessionRef}`, module: 'Stock Taking', entityType: 'stock_taking_session', entityId: rows[0].id, entityReference: sessionRef });

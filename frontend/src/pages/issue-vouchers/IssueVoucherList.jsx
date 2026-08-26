@@ -135,7 +135,7 @@ export default function IssueVoucherList() {
       className: 'text-right',
       render: (row) => (
         <div className="flex justify-end gap-1">
-          {canApprove && row.status === SIV_STATUS.PRELIMINARY && <Button variant="secondary" onClick={() => handleApprove(row)}>Approve</Button>}
+          {canApprove && [SIV_STATUS.PRELIMINARY, SIV_STATUS.PENDING_APPROVAL].includes(row.status) && <Button variant="secondary" onClick={() => handleApprove(row)}>Approve</Button>}
           {canGenerate && row.status === SIV_STATUS.APPROVED && <Button onClick={() => handlePost(row)}>Post</Button>}
           <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600">
             <Eye size={15} />

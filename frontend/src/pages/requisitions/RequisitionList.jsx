@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus, Eye, CheckCircle2, XCircle, Trash2, Edit } from 'lucide-react'
+import { Plus, Eye, CheckCircle2, XCircle, Trash2, Edit, Send, RotateCcw } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Table from '../../components/ui/Table'
@@ -146,6 +146,20 @@ export default function RequisitionList() {
     await load()
   }
 
+  async function submitRequisition() {
+    setSaving(true)
+    try {
+      await api.action('requisitions', viewing.id, 'submit', {})
+      push(`${viewing.srRef} submitted for approval.`, 'success')
+      setViewing(null)
+      await load()
+    } catch (err) {
+      push(err.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function handleDelete() {
     await requisitionService.remove(deleteTarget.id)
     push('Requisition deleted.', 'success')
@@ -253,21 +267,33 @@ export default function RequisitionList() {
         title={viewing?.srRef}
         size="lg"
         footer={
-          viewing?.status === REQUISITION_STATUS.PENDING &&
-          (canApproveRequisition(user, viewing) || canRejectRequisition(user, viewing)) && (
-            <>
-              {canRejectRequisition(user, viewing) && (
-                <Button variant="danger" icon={XCircle} onClick={() => decide(REQUISITION_STATUS.REJECTED)}>
-                  Reject
-                </Button>
+          <>
+            {viewing?.status === REQUISITION_STATUS.DRAFT && canCreate && (
+              <Button icon={Send} loading={saving} onClick={submitRequisition}>
+                Submit for Approval
+              </Button>
+            )}
+            {viewing?.status === REQUISITION_STATUS.SUBMITTED &&
+              (canApproveRequisition(user, viewing) || canRejectRequisition(user, viewing)) && (
+                <>
+                  {canRejectRequisition(user, viewing) && (
+                    <Button variant="danger" icon={XCircle} loading={saving} onClick={() => decide(REQUISITION_STATUS.REJECTED)}>
+                      Reject
+                    </Button>
+                  )}
+                  {canApproveRequisition(user, viewing) && (
+                    <>
+                      <Button variant="secondary" icon={RotateCcw} loading={saving} onClick={() => decide(REQUISITION_STATUS.RETURNED)}>
+                        Return for Correction
+                      </Button>
+                      <Button icon={CheckCircle2} loading={saving} onClick={() => decide(REQUISITION_STATUS.APPROVED)}>
+                        Approve (Full/Partial)
+                      </Button>
+                    </>
+                  )}
+                </>
               )}
-              {canApproveRequisition(user, viewing) && (
-                <Button icon={CheckCircle2} onClick={() => decide(REQUISITION_STATUS.APPROVED)}>
-                  Approve (Full/Partial)
-                </Button>
-              )}
-            </>
-          )
+          </>
         }
       >
         {viewing && (
@@ -294,7 +320,7 @@ export default function RequisitionList() {
                       <td className="py-2 font-medium">{l.item}</td>
                       <td className="py-2">{l.qty}</td>
                       <td className="py-2">
-                        {viewing.status === REQUISITION_STATUS.PENDING && canApproveRequisition(user, viewing) ? (
+                        {viewing.status === REQUISITION_STATUS.SUBMITTED && canApproveRequisition(user, viewing) ? (
                           <input
                             type="number"
                             className="w-20 rounded border border-ink-200 px-2 py-1 text-sm focus:border-brand-500 focus:outline-none"
@@ -311,7 +337,7 @@ export default function RequisitionList() {
                   ))}
                 </tbody>
               </table>
-              {viewing.status === REQUISITION_STATUS.PENDING && canApproveRequisition(user, viewing) && (
+              {viewing.status === REQUISITION_STATUS.SUBMITTED && canApproveRequisition(user, viewing) && (
                 <p className="mt-2 text-xs text-ink-500">
                   You can adjust the Approved Qty to issue a partial approval.
                 </p>

@@ -130,7 +130,7 @@ async function recordGoodsReceiptEvaluation(client, { grnId, decision, evaluatio
   await logAudit(client, { userName: actorName, action: `${decision} evaluation for ${receipt.grn_ref}`, module: 'Technical Evaluation', entityType: 'goods_receipt', entityId: grnId, entityReference: receipt.grn_ref });
 }
 
-async function generateGrnAndPost(client, { grnId, generatedBy, actorName }) {
+async function generateGrn(client, { grnId, generatedBy, actorName }) {
   const { rows: receiptRows } = await client.query('SELECT * FROM goods_receipts WHERE id = $1 FOR UPDATE', [grnId]);
   const receipt = receiptRows[0];
   if (!receipt) throw new AppError('Goods receipt not found.', 404);
@@ -148,16 +148,31 @@ async function generateGrnAndPost(client, { grnId, generatedBy, actorName }) {
   for (const line of lines) {
     const accepted = Number(line.qty_accepted ?? line.qty);
     if (accepted <= 0) continue;
-    const item = await getItemForUpdate(client, line.item_id);
-    const newQty = Number(item.qty_on_hand) + accepted;
-    await client.query('UPDATE items SET qty_on_hand = $1, unit_price = $2, updated_at = NOW() WHERE id = $3', [newQty, line.unit_price, item.id]);
-    await addStockLot(client, { itemId: item.id, receivedDate: receipt.received_date, unitPrice: line.unit_price, qty: accepted, sourceRef: grnNumber });
-    await insertStockTransaction(client, { itemId: item.id, date: receipt.received_date, type: 'Receipt', ref: grnNumber, qtyIn: accepted, unitPrice: line.unit_price, balance: newQty, actorName: actorName, storeId: item.store_id, bin: item.bin, sourceType: 'GRN', sourceId: grnNumber });
-    await upsertBinCard(client, { bin: item.bin, storeId: item.store_id, itemId: item.id, delta: accepted, date: receipt.received_date, reference: grnNumber, type: 'Receipt', actorName });
-    await client.query('INSERT INTO grn_items (grn_id, item_id, qty, unit_price) VALUES ($1, $2, $3, $4)', [grnRows[0].id, item.id, accepted, line.unit_price]);
+    await client.query('INSERT INTO grn_items (grn_id, item_id, qty, unit_price) VALUES ($1, $2, $3, $4)', [grnRows[0].id, line.item_id, accepted, line.unit_price]);
   }
   await client.query("UPDATE goods_receipts SET status = 'GRN Generated', updated_at = NOW() WHERE id = $1", [grnId]);
   await logAudit(client, { userName: actorName, action: `Generated ${grnNumber}`, module: 'GRN', entityType: 'grn', entityId: grnRows[0].id, entityReference: grnNumber });
+}
+
+async function postGrn(client, { grnId, actorName }) {
+  const { rows: receiptRows } = await client.query('SELECT * FROM goods_receipts WHERE id = $1 FOR UPDATE', [grnId]);
+  const receipt = receiptRows[0];
+  if (!receipt) throw new AppError('Goods receipt not found.', 404);
+  assertTransition('goodsReceipt', receipt.status, 'Posted');
+  const { rows: grnRows } = await client.query('SELECT * FROM grns WHERE goods_receipt_id = $1 FOR UPDATE', [grnId]);
+  if (!grnRows[0]) throw new AppError('Generate the GRN before posting stock.', 409);
+  const { rows: lines } = await client.query('SELECT * FROM grn_items WHERE grn_id = $1', [grnRows[0].id]);
+  for (const line of lines) {
+    const item = await getItemForUpdate(client, line.item_id);
+    const accepted = Number(line.qty);
+    const newQty = Number(item.qty_on_hand) + accepted;
+    await client.query('UPDATE items SET qty_on_hand = $1, unit_price = $2, updated_at = NOW() WHERE id = $3', [newQty, line.unit_price, item.id]);
+    await addStockLot(client, { itemId: item.id, receivedDate: receipt.received_date, unitPrice: line.unit_price, qty: accepted, sourceRef: grnRows[0].grn_number });
+    await insertStockTransaction(client, { itemId: item.id, date: receipt.received_date, type: 'Receipt', ref: grnRows[0].grn_number, qtyIn: accepted, unitPrice: line.unit_price, balance: newQty, actorName, storeId: item.store_id, bin: item.bin, sourceType: 'GRN', sourceId: grnRows[0].grn_number });
+    await upsertBinCard(client, { bin: item.bin, storeId: item.store_id, itemId: item.id, delta: accepted, date: receipt.received_date, reference: grnRows[0].grn_number, type: 'Receipt', actorName });
+  }
+  await client.query("UPDATE goods_receipts SET status = 'Posted', updated_at = NOW() WHERE id = $1", [grnId]);
+  await logAudit(client, { userName: actorName, action: `Posted ${grnRows[0].grn_number}`, module: 'GRN', entityType: 'grn', entityId: grnRows[0].id, entityReference: grnRows[0].grn_number });
 }
 
 // ---------------------------------------------------------------------------
@@ -297,7 +312,9 @@ async function decideMaterialReturn(client, { returnId, decision, qtyApproved, f
   if (!ret) throw new AppError('Material return not found.', 404);
   assertTransition('materialReturn', ret.status, decision === 'Approved' ? 'Approved' : 'Rejected');
 
-  if (decision === 'Approved') {
+  const reusableCondition = ['good', 'usable', 'reusable'].includes(String(ret.condition || '').trim().toLowerCase());
+
+  if (decision === 'Approved' && reusableCondition) {
     const item = await getItemForUpdate(client, ret.item_id);
     const requestedQty = Number(ret.qty);
     const approvedQty = qtyApproved == null ? requestedQty : Number(qtyApproved);
@@ -350,7 +367,7 @@ async function decideMaterialReturn(client, { returnId, decision, qtyApproved, f
     `UPDATE material_returns SET status = $1, qty_approved = $2, evaluated_by = $3,
        evaluated_at = NOW(), evaluation_findings = $4, evaluation_recommendation = $5, updated_at = NOW()
      WHERE id = $6`,
-    [decision === 'Approved' ? 'Returned to Stock' : decision, decision === 'Approved' ? (qtyApproved == null ? ret.qty : qtyApproved) : 0, actorName, findings || null, recommendation || null, returnId]
+    [decision === 'Approved' && reusableCondition ? 'Returned to Stock' : decision, decision === 'Approved' ? (qtyApproved == null ? ret.qty : qtyApproved) : 0, actorName, findings || null, recommendation || null, returnId]
   );
   await logAudit(client, { userName: actorName, action: `${decision} return ${ret.srn_ref}`, module: 'Material Return' });
 }
@@ -538,10 +555,10 @@ async function postStockTaking(client, { sessionId, actorName }) {
   const { rows: lines } = await client.query('SELECT sti.*, i.name, i.bin, i.store_id, i.unit_price FROM stock_taking_items sti JOIN items i ON i.id = sti.item_id WHERE sti.session_id = $1 FOR UPDATE', [sessionId]);
   const { nextRef } = require('../utils/refGenerator');
   for (const line of lines) {
-    const variance = Number(line.variance);
+    const item = await getItemForUpdate(client, line.item_id);
+    const variance = Number(line.physical_qty) - Number(item.qty_on_hand);
     if (Math.abs(variance) < 0.0001) continue;
     if (!line.reason) throw new AppError(`A reason is required for the variance on "${line.name}".`, 400);
-    const item = await getItemForUpdate(client, line.item_id);
     const reference = session.session_ref;
     if (variance > 0) {
       await addStockLot(client, { itemId: item.id, receivedDate: session.count_date, unitPrice: item.unit_price, qty: variance, sourceRef: reference });
@@ -623,7 +640,8 @@ module.exports = {
   amendIssueVoucher,
   postIssueVoucher,
   recordGoodsReceiptEvaluation,
-  generateGrnAndPost,
+  generateGrn,
+  postGrn,
   decideRequisition,
 
   decideMaterialReturn,

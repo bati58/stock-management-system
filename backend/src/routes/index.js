@@ -107,8 +107,9 @@ router.get('/goods-receipts', requireRole('goods-receipts'), goodsReceiptsContro
 router.get('/goods-receipts/:id', requireRole('goods-receipts'), goodsReceiptsController.getOne);
 router.post('/goods-receipts', requireRole('goods-receipts'), goodsReceiptsController.create);
 router.post('/goods-receipts/:id/submit', requireRole('goods-receipts'), goodsReceiptsController.setStatus);
-router.post('/goods-receipts/:id/evaluate', requireRole('goods-receipts', 'action'), goodsReceiptsController.evaluate);
+router.post('/goods-receipts/:id/evaluate', requireRole('goods-receipts-evaluate', 'action'), goodsReceiptsController.evaluate);
 router.post('/goods-receipts/:id/generate-grn', requireRole('goods-receipts', 'action'), goodsReceiptsController.generateGrn);
+router.post('/goods-receipts/:id/post-stock', requireRole('goods-receipts-post', 'action'), goodsReceiptsController.postStock);
 router.post('/goods-receipts/:id/status', requireRole('goods-receipts', 'action'), goodsReceiptsController.setStatus);
 router.delete('/goods-receipts/:id', requireRole('goods-receipts'), goodsReceiptsController.remove);
 

@@ -39,15 +39,18 @@ export const GRN_STATUS = {
   ACCEPTED: 'Accepted',
   PARTIALLY_ACCEPTED: 'Partially Accepted',
   REJECTED: 'Rejected',
-  GRN_GENERATED: 'GRN Generated'
+  GRN_GENERATED: 'GRN Generated',
+  POSTED: 'Posted'
 }
 
 export const REQUISITION_STATUS = {
   DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
   PENDING: 'Pending',
   PARTIALLY_APPROVED: 'Partially Approved',
   APPROVED: 'Approved',
-  REJECTED: 'Rejected'
+  REJECTED: 'Rejected',
+  RETURNED: 'Returned for Correction'
 }
 
 export const SIV_STATUS = {
@@ -127,6 +130,7 @@ export const STATUS_COLOR = {
   [GRN_STATUS.ACCEPTED]: 'bg-success-50 text-success-700',
   [GRN_STATUS.PARTIALLY_ACCEPTED]: 'bg-info-50 text-info-700',
   [GRN_STATUS.GRN_GENERATED]: 'bg-success-50 text-success-700',
+  [GRN_STATUS.POSTED]: 'bg-success-50 text-success-700',
 
   // Requisition
   [REQUISITION_STATUS.PARTIALLY_APPROVED]: 'bg-info-50 text-info-700',
