@@ -65,9 +65,9 @@ export default function UserCardList() {
 
     return (
         <div>
-            <PageHeader title="User Material Cards" subtitle="Track material issued to individual users." />
+            <PageHeader title="User Material Cards" subtitle="Record material custody after a posted issue voucher." />
             {canEdit && (
-                <Card title={editing ? 'Edit card' : 'Issue material'} className="mb-6">
+                <Card title={editing ? 'Edit custody record' : 'Record custody'} className="mb-6">
                     <form onSubmit={save} className="grid grid-cols-1 gap-3 md:grid-cols-4">
                         <Input placeholder="User name" value={form.user} onChange={(e) => setForm({ ...form, user: e.target.value })} required />
                         <Input placeholder="Department" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />

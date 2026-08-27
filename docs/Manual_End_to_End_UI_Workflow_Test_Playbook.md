@@ -1004,6 +1004,22 @@ workflow.
 
 # 13. User Material Cards
 
+## Responsibility and current working flow
+
+The **Storekeeper** records custody after the related SIV has been approved and
+posted. The **Store Head** supervises or corrects the record. The **Department
+Head** confirms the recipient through the requisition process; they do not issue
+stock from this page. The Administrator has technical override access but is not
+the normal transaction actor.
+
+1. Complete the requisition and SIV workflow above.
+2. Confirm the SIV is `Posted` and stock has already been deducted.
+3. Login as `storekeeper` (or `storehead` when supervising) and open User Cards.
+4. Create the record with the recipient, item, quantity, issue date, and the
+   real posted SIV reference. Use status `In Use`.
+5. Refresh and verify the persisted row. Creating a card must not deduct stock
+   again.
+
 ## Create card
 
 **Login:** `storekeeper` or `storehead`
@@ -1031,11 +1047,16 @@ no second stock deduction occurs
 issue_ref links the card to the real SIV reference
 ```
 
-Use Edit to change status to `Returned` and enter the return date if the form
-supports it. Verify the row after refresh.
+Use Edit only to maintain the custody record. For a return, use **Material
+Return** with the original posted SIV. After the return is approved and reusable
+stock is posted back, edit the card to `Returned` and enter the return date.
+Editing the card alone does not return material, restore stock, or create an SRN.
 
-Current gap: the full Assign, Transfer Custody, History, Print, and In Custody
-workflow is not yet available as separate backend actions.
+Current limitation: this page is a manual custody register. It does not validate
+that `issueRef` belongs to an existing SIV, create cards automatically from
+posted SIVs, or provide separate Assign, Transfer Custody, History, Print, or
+`In Custody` actions. Verify the SIV/SRN separately and do not treat this page as
+an issue or return transaction.
 
 ---
 
