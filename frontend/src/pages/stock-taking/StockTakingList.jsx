@@ -60,9 +60,20 @@ export default function StockTakingList() {
         }
     }
 
+    const updateItemField = (itemId, field, value) =>
+        setCreateForm((prev) => ({
+            ...prev,
+            items: prev.items.map((i) => (i.itemId === itemId ? { ...i, [field]: value } : i))
+        }))
+
     const handleCreateSession = async () => {
         if (!createForm.storeId || createForm.items.length === 0) {
             push('Select a store and at least one item', 'error')
+            return
+        }
+        const missingQty = createForm.items.some((i) => i.physicalQty === '' || i.physicalQty === null || i.physicalQty === undefined)
+        if (missingQty) {
+            push('Enter a physical (counted) quantity for every selected item.', 'error')
             return
         }
 
@@ -72,7 +83,7 @@ export default function StockTakingList() {
                 countDate: createForm.countDate,
                 items: createForm.items.map(item => ({
                     item: items.find((catalogItem) => catalogItem.id === item.itemId)?.name,
-                    physicalQty: item.physicalQty || 0,
+                    physicalQty: Number(item.physicalQty),
                     reason: item.reason || ''
                 }))
             })
@@ -347,29 +358,65 @@ export default function StockTakingList() {
                                 <div className="max-h-60 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-2">
                                     {items
                                         .filter((item) => !createForm.storeId || item.store === stores.find((store) => String(store.id) === String(createForm.storeId))?.name)
-                                        .map((item) => (
-                                            <label key={item.id} className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={createForm.items.some((i) => i.itemId === item.id)}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setCreateForm({
-                                                                ...createForm,
-                                                                items: [...createForm.items, { itemId: item.id, physicalQty: 0, reason: '' }]
-                                                            })
-                                                        } else {
-                                                            setCreateForm({
-                                                                ...createForm,
-                                                                items: createForm.items.filter((i) => i.itemId !== item.id)
-                                                            })
-                                                        }
-                                                    }}
-                                                    className="w-4 h-4"
-                                                />
-                                                <span className="text-sm">{item.name} (Bin: {item.bin || '-'})</span>
-                                            </label>
-                                        ))}
+                                        .map((item) => {
+                                            const selected = createForm.items.find((i) => i.itemId === item.id)
+                                            return (
+                                                <div key={item.id} className="rounded-md border border-gray-100 p-2">
+                                                    <label className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={Boolean(selected)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setCreateForm((prev) => ({
+                                                                        ...prev,
+                                                                        items: [...prev.items, { itemId: item.id, physicalQty: '', reason: '' }]
+                                                                    }))
+                                                                } else {
+                                                                    setCreateForm((prev) => ({
+                                                                        ...prev,
+                                                                        items: prev.items.filter((i) => i.itemId !== item.id)
+                                                                    }))
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4"
+                                                        />
+                                                        <span className="text-sm">
+                                                            {item.name} (Bin: {item.bin || '-'})
+                                                            <span className="text-gray-400"> · System: {Number(item.qtyOnHand ?? 0)}</span>
+                                                        </span>
+                                                    </label>
+                                                    {selected && (
+                                                        <div className="mt-2 ml-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                                    Physical Qty <span className="text-red-500">*</span>
+                                                                </label>
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="any"
+                                                                    value={selected.physicalQty}
+                                                                    onChange={(e) => updateItemField(item.id, 'physicalQty', e.target.value)}
+                                                                    placeholder="Counted quantity"
+                                                                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-gray-600 mb-1">Reason (optional)</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={selected.reason}
+                                                                    onChange={(e) => updateItemField(item.id, 'reason', e.target.value)}
+                                                                    placeholder="e.g. breakage, miscount"
+                                                                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
                                 </div>
                             </div>
                         </div>

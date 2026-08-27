@@ -55,10 +55,18 @@ FROM items;
 INSERT INTO bin_cards (bin, store_id, item_id, last_movement, balance)
 SELECT bin, store_id, id, CURRENT_DATE - INTERVAL '5 days', qty_on_hand FROM items WHERE bin IS NOT NULL;
 
-INSERT INTO goods_receipts (grn_ref, supplier, po_ref, received_date, received_by, store_id, status, evaluation_note, evaluated_by) VALUES
-  ('GRN-2026-0001', 'Ethio Office Supplies PLC', 'PO-2026-014', '2026-08-05', 'Sara Alemu', (SELECT id FROM stores WHERE code='STR-MAIN'), 'Approved', 'Quantity and quality verified against packing slip. Accepted.', 'Dr. Fikru Wolde'),
-  ('GRN-2026-0002', 'National Lab Equipment Importers', 'PO-2026-021', '2026-08-11', 'Sara Alemu', (SELECT id FROM stores WHERE code='STR-EEE'), 'Under Evaluation', NULL, NULL),
-  ('GRN-2026-0003', 'Addis Hardware Trading', 'PO-2026-028', '2026-08-13', 'Kaleb Mulugeta', (SELECT id FROM stores WHERE code='STR-MEE'), 'Pending', NULL, NULL)
+-- Approved suppliers/donors. Goods receipts may only reference a registered
+-- supplier — the Goods Receipt form offers these as a dropdown.
+INSERT INTO suppliers (code, name, contact, address, active) VALUES
+  ('SUP-001', 'Ethio Office Supplies PLC',        '+251 11 111 2233', 'Bole, Addis Ababa',    TRUE),
+  ('SUP-002', 'National Lab Equipment Importers', '+251 11 445 6677', 'Kirkos, Addis Ababa',  TRUE),
+  ('SUP-003', 'Addis Hardware Trading',           '+251 11 889 0011', 'Merkato, Addis Ababa', TRUE)
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO goods_receipts (grn_ref, supplier, supplier_id, po_ref, received_date, received_by, store_id, status, evaluation_note, evaluated_by) VALUES
+  ('GRN-2026-0001', 'Ethio Office Supplies PLC',        (SELECT id FROM suppliers WHERE code='SUP-001'), 'PO-2026-014', '2026-08-05', 'Sara Alemu', (SELECT id FROM stores WHERE code='STR-MAIN'), 'Approved', 'Quantity and quality verified against packing slip. Accepted.', 'Dr. Fikru Wolde'),
+  ('GRN-2026-0002', 'National Lab Equipment Importers', (SELECT id FROM suppliers WHERE code='SUP-002'), 'PO-2026-021', '2026-08-11', 'Sara Alemu', (SELECT id FROM stores WHERE code='STR-EEE'), 'Under Evaluation', NULL, NULL),
+  ('GRN-2026-0003', 'Addis Hardware Trading',           (SELECT id FROM suppliers WHERE code='SUP-003'), 'PO-2026-028', '2026-08-13', 'Kaleb Mulugeta', (SELECT id FROM stores WHERE code='STR-MEE'), 'Pending', NULL, NULL)
 ON CONFLICT (grn_ref) DO NOTHING;
 
 INSERT INTO goods_receipt_items (goods_receipt_id, item_id, qty, unit_price) VALUES

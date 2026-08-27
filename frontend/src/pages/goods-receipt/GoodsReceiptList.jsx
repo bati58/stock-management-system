@@ -9,7 +9,7 @@ import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import StatusBadge from '../../components/ui/StatusBadge'
-import { goodsReceiptService, storeService, itemService } from '../../services'
+import { goodsReceiptService, storeService, itemService, supplierService } from '../../services'
 import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
@@ -25,6 +25,7 @@ export default function GoodsReceiptList() {
   const [rows, setRows] = useState([])
   const [stores, setStores] = useState([])
   const [items, setItems] = useState([])
+  const [suppliers, setSuppliers] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -43,10 +44,11 @@ export default function GoodsReceiptList() {
   async function load() {
     setLoading(true)
     try {
-      const [grns, storeList, itemList] = await Promise.all([goodsReceiptService.list(), storeService.list(), itemService.list()])
+      const [grns, storeList, itemList, supplierList] = await Promise.all([goodsReceiptService.list(), storeService.list(), itemService.list(), supplierService.list()])
       setRows(grns)
       setStores(storeList)
       setItems(itemList)
+      setSuppliers(supplierList)
     } catch (err) {
       push(err.message || 'Could not load goods receipts.', 'error')
     } finally {
@@ -240,7 +242,7 @@ export default function GoodsReceiptList() {
       >
         <form onSubmit={handleCreate} className="space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Input label="Supplier / Donor" required value={header.supplier} onChange={(e) => setHeader((h) => ({ ...h, supplier: e.target.value }))} />
+            <Select label="Supplier" required options={suppliers.filter((s) => s.active).map((s) => s.name)} value={header.supplier} onChange={(e) => setHeader((h) => ({ ...h, supplier: e.target.value }))} />
             <Input label="PO / Donation Ref" required value={header.poRef} onChange={(e) => setHeader((h) => ({ ...h, poRef: e.target.value }))} />
             <Input label="Supporting Document Ref" placeholder="e.g. Waybill-123" value={header.docRef} onChange={(e) => setHeader((h) => ({ ...h, docRef: e.target.value }))} />
             <Select label="Receiving Store" required options={stores.map((s) => s.name)} value={header.store} onChange={(e) => setHeader((h) => ({ ...h, store: e.target.value }))} />
