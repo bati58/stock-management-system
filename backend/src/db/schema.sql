@@ -116,6 +116,7 @@ CREATE TABLE IF NOT EXISTS suppliers (
   created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMP NOT NULL DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS idx_suppliers_name ON suppliers(name);
 
 -- ---------- departments ----------
 CREATE TABLE IF NOT EXISTS departments (
@@ -127,6 +128,7 @@ CREATE TABLE IF NOT EXISTS departments (
   created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMP NOT NULL DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS idx_departments_name ON departments(name);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_users_department ON users(department_id);
 
@@ -141,7 +143,7 @@ CREATE TABLE IF NOT EXISTS goods_receipts (
   received_by               TEXT,
   store_id                  INTEGER NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
   status                    TEXT NOT NULL DEFAULT 'Pending'
-                              CHECK (status IN ('Draft','Submitted','Pending','Pending Evaluation','Under Evaluation','Accepted','Partially Acc                              CHECK (status IN ('Draft','Submitted','Pending','Pending Evaluation','Under Evaluation','Accepted','Partially Accepted','Approved','Rejected','GRN Generated','Posted')),
+                              CHECK (status IN ('Draft','Submitted','Pending','Pending Evaluation','Under Evaluation','Accepted','Partially Accepted','Approved','Rejected','GRN Generated','Posted')),
   evaluation_status         TEXT NOT NULL DEFAULT 'Pending',
   evaluation_date           DATE,
   evaluation_note           TEXT,
@@ -456,7 +458,27 @@ CREATE TABLE IF NOT EXISTS stock_taking_sessions (
   count_date   DATE NOT NULL DEFAULT CURRENT_DATE,
   status       TEXT NOT NULL DEFAULT 'Draft'
                  CHECK (status IN ('Draft','Submitted','Pending Approval','Approved','Posted','Closed','Rejected')),
-)
+  created_by   TEXT NOT NULL,
+  approved_by  TEXT,
+  approved_at  TIMESTAMP,
+  closed_by    TEXT,
+  closed_at    TIMESTAMP,
+  created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS stock_taking_items (
+  id              SERIAL PRIMARY KEY,
+  session_id      INTEGER NOT NULL REFERENCES stock_taking_sessions(id) ON DELETE RESTRICT,
+  item_id         INTEGER NOT NULL REFERENCES items(id) ON DELETE RESTRICT,
+  bin             TEXT,
+  system_qty      NUMERIC(14,2) NOT NULL,
+  physical_qty    NUMERIC(14,2) NOT NULL CHECK (physical_qty >= 0),
+  variance        NUMERIC(14,2) NOT NULL,
+  reason          TEXT,
+  counter         TEXT,
+  verified_by     TEXT,
+  adjustment_ref  TEXT,
+  UNIQUE (session_id, item_id, bin)
 );
 CREATE INDEX IF NOT EXISTS idx_stock_taking_status ON stock_taking_sessions(status);
 CREATE INDEX IF NOT EXISTS idx_stock_taking_items_session ON stock_taking_items(session_id);

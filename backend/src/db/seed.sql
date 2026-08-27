@@ -10,15 +10,15 @@
 -- and replace if you want a different demo password.
 
 INSERT INTO users (name, username, password_hash, role, email, active) VALUES
-  ('Abel Tesfaye',   'admin',       '$2a$10$W9wq0m8b2m6E9hq9C8Ir4uQeYVw6Vb0m0t8hEwv2m8b2m6E9hq9C.', 'Administrator', 'admin@sms.local', TRUE),
-  ('Meron Getachew', 'pao',         '$2a$10$W9wq0m8b2m6E9hq9C8Ir4uQeYVw6Vb0m0t8hEwv2m8b2m6E9hq9C.', 'Property Administration Officer', 'pao@sms.local', TRUE),
-  ('Yonas Bekele',   'storehead',   '$2a$10$W9wq0m8b2m6E9hq9C8Ir4uQeYVw6Vb0m0t8hEwv2m8b2m6E9hq9C.', 'Store Head', 'storehead@sms.local', TRUE),
-  ('Sara Alemu',     'storekeeper', '$2a$10$W9wq0m8b2m6E9hq9C8Ir4uQeYVw6Vb0m0t8hEwv2m8b2m6E9hq9C.', 'Storekeeper', 'storekeeper@sms.local', TRUE),
-  ('Kaleb Mulugeta', 'clerk',       '$2a$10$W9wq0m8b2m6E9hq9C8Ir4uQeYVw6Vb0m0t8hEwv2m8b2m6E9hq9C.', 'Stock Clerk', 'clerk@sms.local', TRUE),
-  ('Dr. Fikru Wolde','tec',         '$2a$10$W9wq0m8b2m6E9hq9C8Ir4uQeYVw6Vb0m0t8hEwv2m8b2m6E9hq9C.', 'Technical Evaluation Committee', 'tec@sms.local', TRUE),
-  ('Hana Girma',     'depthead',    '$2a$10$W9wq0m8b2m6E9hq9C8Ir4uQeYVw6Vb0m0t8hEwv2m8b2m6E9hq9C.', 'Department Head', 'depthead@sms.local', TRUE),
-  ('Biniam Assefa',  'accountant',  '$2a$10$W9wq0m8b2m6E9hq9C8Ir4uQeYVw6Vb0m0t8hEwv2m8b2m6E9hq9C.', 'Accountant', 'accountant@sms.local', TRUE),
-  ('Samuel Tadesse', 'security',    '$2a$10$W9wq0m8b2m6E9hq9C8Ir4uQeYVw6Vb0m0t8hEwv2m8b2m6E9hq9C.', 'Security Officer', 'security@sms.local', TRUE)
+  ('Abel Tesfaye',   'admin',       '$2a$10$fF.Qgf.cGWoI8R7KsGJHkuOA42j/R49By3m3JX7MSnhzt1W6w/Ytq', 'Administrator', 'admin@sms.local', TRUE),
+  ('Meron Getachew', 'pao',         '$2a$10$fF.Qgf.cGWoI8R7KsGJHkuOA42j/R49By3m3JX7MSnhzt1W6w/Ytq', 'Property Administration Officer', 'pao@sms.local', TRUE),
+  ('Yonas Bekele',   'storehead',   '$2a$10$fF.Qgf.cGWoI8R7KsGJHkuOA42j/R49By3m3JX7MSnhzt1W6w/Ytq', 'Store Head', 'storehead@sms.local', TRUE),
+  ('Sara Alemu',     'storekeeper', '$2a$10$fF.Qgf.cGWoI8R7KsGJHkuOA42j/R49By3m3JX7MSnhzt1W6w/Ytq', 'Storekeeper', 'storekeeper@sms.local', TRUE),
+  ('Kaleb Mulugeta', 'clerk',       '$2a$10$fF.Qgf.cGWoI8R7KsGJHkuOA42j/R49By3m3JX7MSnhzt1W6w/Ytq', 'Stock Clerk', 'clerk@sms.local', TRUE),
+  ('Dr. Fikru Wolde','tec',         '$2a$10$fF.Qgf.cGWoI8R7KsGJHkuOA42j/R49By3m3JX7MSnhzt1W6w/Ytq', 'Technical Evaluation Committee', 'tec@sms.local', TRUE),
+  ('Hana Girma',     'depthead',    '$2a$10$fF.Qgf.cGWoI8R7KsGJHkuOA42j/R49By3m3JX7MSnhzt1W6w/Ytq', 'Department Head', 'depthead@sms.local', TRUE),
+  ('Biniam Assefa',  'accountant',  '$2a$10$fF.Qgf.cGWoI8R7KsGJHkuOA42j/R49By3m3JX7MSnhzt1W6w/Ytq', 'Accountant', 'accountant@sms.local', TRUE),
+  ('Samuel Tadesse', 'security',    '$2a$10$fF.Qgf.cGWoI8R7KsGJHkuOA42j/R49By3m3JX7MSnhzt1W6w/Ytq', 'Security Officer', 'security@sms.local', TRUE)
 ON CONFLICT (username) DO NOTHING;
 
 INSERT INTO stores (name, code, type, location, head_of_store, active) VALUES

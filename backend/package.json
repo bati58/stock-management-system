@@ -8,8 +8,6 @@
     "start": "node src/server.js",
     "test": "node --test test/workflow.test.js",
     "db:schema": "node src/db/runSql.js src/db/schema.sql",
-    "db:migrate:operational-extensions": "node src/db/runSql.js src/db/migrations/001_operational_extensions.sql",
-    "db:migrate:workflow-returns": "node src/db/runSql.js src/db/migrations/002_workflow_returns.sql",
     "db:seed": "node src/db/runSql.js src/db/seed.sql",
     "db:reset": "npm run db:schema && npm run db:seed"
   },
