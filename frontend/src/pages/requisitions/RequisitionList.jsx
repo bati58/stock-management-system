@@ -9,7 +9,7 @@ import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import StatusBadge from '../../components/ui/StatusBadge'
-import { requisitionService, storeService, itemService } from '../../services'
+import { requisitionService, storeService, itemService, departmentService } from '../../services'
 import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
@@ -29,6 +29,7 @@ export default function RequisitionList() {
   const [rows, setRows] = useState([])
   const [stores, setStores] = useState([])
   const [items, setItems] = useState([])
+  const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -48,10 +49,16 @@ export default function RequisitionList() {
   async function load() {
     setLoading(true)
     try {
-      const [reqs, storeList, itemList] = await Promise.all([requisitionService.list(), storeService.list(), itemService.list()])
+      const [reqs, storeList, itemList, departmentList] = await Promise.all([
+        requisitionService.list(),
+        storeService.list(),
+        itemService.list(),
+        departmentService.list()
+      ])
       setRows(reqs)
       setStores(storeList)
       setItems(itemList)
+      setDepartments(departmentList.filter((department) => department.active))
     } catch (err) {
       push(err.message || 'Could not load requisitions.', 'error')
     } finally {
@@ -238,7 +245,14 @@ export default function RequisitionList() {
       >
         <form onSubmit={handleCreate} className="space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input label="Requesting Department" required value={header.department} onChange={(e) => setHeader((h) => ({ ...h, department: e.target.value }))} />
+            <Select
+              label="Requesting Department"
+              required
+              options={departments.map((department) => department.name)}
+              value={header.department}
+              onChange={(e) => setHeader((h) => ({ ...h, department: e.target.value }))}
+              placeholder="Select a department..."
+            />
             <Select label="Issuing Store" required options={stores.map((s) => s.name)} value={header.store} onChange={(e) => setHeader((h) => ({ ...h, store: e.target.value }))} />
             <Input label="Date" type="date" required value={header.date} onChange={(e) => setHeader((h) => ({ ...h, date: e.target.value }))} />
           </div>

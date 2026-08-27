@@ -356,6 +356,7 @@ CREATE TABLE IF NOT EXISTS material_returns (
   id                           SERIAL PRIMARY KEY,
   srn_ref                      TEXT NOT NULL UNIQUE,
   department                   TEXT NOT NULL,
+  created_by                   TEXT,
   item_id                      INTEGER NOT NULL REFERENCES items(id) ON DELETE RESTRICT,
   qty                          NUMERIC(14,2) NOT NULL CHECK (qty > 0),
   reason                       TEXT,
@@ -372,6 +373,7 @@ CREATE TABLE IF NOT EXISTS material_returns (
   created_at                   TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at                   TIMESTAMP NOT NULL DEFAULT NOW()
 );
+ALTER TABLE material_returns ADD COLUMN IF NOT EXISTS created_by TEXT;
 
 -- ---------- material_transfers — store to store (§5.14) ----------
 CREATE TABLE IF NOT EXISTS material_transfers (

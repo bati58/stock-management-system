@@ -9,7 +9,7 @@ import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import StatusBadge from '../../components/ui/StatusBadge'
-import { materialReturnService, storeService, itemService } from '../../services'
+import { materialReturnService, storeService, itemService, departmentService } from '../../services'
 import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
@@ -25,6 +25,7 @@ export default function MaterialReturnList() {
   const [rows, setRows] = useState([])
   const [stores, setStores] = useState([])
   const [items, setItems] = useState([])
+  const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -43,10 +44,16 @@ export default function MaterialReturnList() {
   async function load() {
     setLoading(true)
     try {
-      const [returns, storeList, itemList] = await Promise.all([materialReturnService.list(), storeService.list(), itemService.list()])
+      const [returns, storeList, itemList, departmentList] = await Promise.all([
+        materialReturnService.list(),
+        storeService.list(),
+        itemService.list(),
+        departmentService.list()
+      ])
       setRows(returns)
       setStores(storeList)
       setItems(itemList)
+      setDepartments(departmentList.filter((department) => department.active))
     } catch (err) {
       push(err.message || 'Could not load material returns.', 'error')
     } finally {
@@ -221,7 +228,14 @@ export default function MaterialReturnList() {
       >
         <form onSubmit={handleCreate} className="space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input label="Returning Department" required value={header.department} onChange={(e) => setHeader((h) => ({ ...h, department: e.target.value }))} />
+            <Select
+              label="Returning Department"
+              required
+              options={departments.map((department) => department.name)}
+              value={header.department}
+              onChange={(e) => setHeader((h) => ({ ...h, department: e.target.value }))}
+              placeholder="Select a department..."
+            />
             <Select label="Returning To Store" required options={stores.map((s) => s.name)} value={header.store} onChange={(e) => setHeader((h) => ({ ...h, store: e.target.value }))} />
             <Input label="Date" type="date" required value={header.date} onChange={(e) => setHeader((h) => ({ ...h, date: e.target.value }))} />
             <Input label="Original SIV Reference" placeholder="e.g. SIV-2026-0001" value={header.originalIssueRef} onChange={(e) => setHeader((h) => ({ ...h, originalIssueRef: e.target.value }))} />
@@ -294,7 +308,7 @@ export default function MaterialReturnList() {
               </table>
               {canReviewRow(viewing) && (
                 <div className="mt-4 p-3 bg-brand-50 border border-brand-100 rounded-lg text-brand-800">
-                  <p className="font-medium text-sm mb-1">Storekeeper Review Required</p>
+                  <p className="font-medium text-sm mb-1">Store Head Review Required</p>
                   <p className="text-xs text-brand-600">
                     Verify the physical items. If you choose "Accept to Stock", the items will be added back to the inventory and the bin card will be updated.
                   </p>

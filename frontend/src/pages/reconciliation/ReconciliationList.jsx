@@ -47,11 +47,11 @@ export default function ReconciliationList() {
 
     const columns = [
         { key: 'session_ref', header: 'Session Ref', width: '12%' },
-        { key: 'store_name', header: 'Store', width: '12%' },
-        { key: 'item_name', header: 'Item', width: '18%' },
+        { key: 'store', header: 'Store', width: '12%' },
+        { key: 'item', header: 'Item', width: '18%' },
         { key: 'bin', header: 'Bin', width: '10%' },
-        { key: 'system_qty', header: 'System Qty', width: '10%', render: (row) => Number(row.system_qty).toFixed(2) },
-        { key: 'physical_qty', header: 'Physical Qty', width: '10%', render: (row) => Number(row.physical_qty).toFixed(2) },
+        { key: 'systemQty', header: 'System Qty', width: '10%', render: (row) => Number(row.systemQty).toFixed(2) },
+        { key: 'physicalQty', header: 'Physical Qty', width: '10%', render: (row) => Number(row.physicalQty).toFixed(2) },
         {
             key: 'variance',
             header: 'Variance',
@@ -72,7 +72,7 @@ export default function ReconciliationList() {
             columns.map(col => {
                 const val = row[col.key]
                 if (col.key === 'variance') return val
-                if (col.key === 'system_qty' || col.key === 'physical_qty') return Number(val).toFixed(2)
+                if (col.key === 'systemQty' || col.key === 'physicalQty') return Number(val).toFixed(2)
                 return val || ''
             })
         )

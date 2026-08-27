@@ -40,6 +40,7 @@ export default function GoodsReceiptList() {
   // Other roles with page access (e.g. Admin, PAO) get read-only.
   const canManage = canPerformAction(user?.role, 'create', 'goodsReceipts')
   const canPost = [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER].includes(user?.role)
+  const canNotifyTec = [ROLES.ADMIN, ROLES.STORE_HEAD].includes(user?.role)
 
   async function load() {
     setLoading(true)
@@ -161,7 +162,7 @@ export default function GoodsReceiptList() {
       className: 'text-right',
       render: (row) => (
         <div className="flex justify-end gap-1 items-center">
-          {canManage && row.status === GRN_STATUS.SUBMITTED && (
+          {canNotifyTec && row.status === GRN_STATUS.SUBMITTED && (
             <button onClick={() => handleNotifyTEC(row)} className="rounded-md p-1.5 text-info-600 hover:bg-info-50" title="Notify TEC">
               <Send size={15} />
             </button>

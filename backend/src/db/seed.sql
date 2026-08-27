@@ -21,6 +21,26 @@ INSERT INTO users (name, username, password_hash, role, email, active) VALUES
   ('Samuel Tadesse', 'security',    '$2a$10$fF.Qgf.cGWoI8R7KsGJHkuOA42j/R49By3m3JX7MSnhzt1W6w/Ytq', 'Security Officer', 'security@sms.local', TRUE)
 ON CONFLICT (username) DO NOTHING;
 
+UPDATE users
+SET department = 'Software Engineering', updated_at = NOW()
+WHERE username = 'depthead' AND (department IS NULL OR department = '');
+
+-- Technology-university academic departments used by requisitions.
+INSERT INTO departments (code, name, active) VALUES
+  ('DEPT-CS',   'Computer Science', TRUE),
+  ('DEPT-SE',   'Software Engineering', TRUE),
+  ('DEPT-ECE',  'Electronics and Communication Engineering', TRUE),
+  ('DEPT-PCE',  'Power and Control Engineering', TRUE),
+  ('DEPT-ME',   'Mechanical Engineering', TRUE),
+  ('DEPT-CHE',  'Chemical Engineering', TRUE),
+  ('DEPT-MTE',  'Materials Engineering', TRUE),
+  ('DEPT-CE',   'Civil Engineering', TRUE),
+  ('DEPT-AM',   'Applied Mathematics', TRUE),
+  ('DEPT-AP',   'Applied Physics', TRUE),
+  ('DEPT-IE',   'Industrial Engineering', TRUE),
+  ('DEPT-PH',   'Pharmacy', TRUE)
+ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, active = EXCLUDED.active, updated_at = NOW();
+
 INSERT INTO stores (name, code, type, location, head_of_store, active) VALUES
   ('Main Store', 'STR-MAIN', 'Main Store', 'Central Warehouse', 'Yonas Bekele', TRUE),
   ('Electrical Engineering Dept. Store', 'STR-EEE', 'Department Store', 'EEE Building', 'Sara Alemu', TRUE),
@@ -29,31 +49,42 @@ INSERT INTO stores (name, code, type, location, head_of_store, active) VALUES
   ('Cafeteria Store', 'STR-CAF', 'Cafe Store', 'Student Cafeteria', 'Biniam Assefa', TRUE)
 ON CONFLICT (code) DO NOTHING;
 
-INSERT INTO categories (code, name, store_id, description) VALUES
+INSERT INTO categories (code, name, store_id, description)
+SELECT seed.code, seed.name, seed.store_id, seed.description
+FROM (VALUES
   ('4402', 'Office Supplies', (SELECT id FROM stores WHERE code='STR-MAIN'), 'Stationery and general office consumables'),
   ('4405', 'Educational Supplies', (SELECT id FROM stores WHERE code='STR-MAIN'), 'Teaching and laboratory materials'),
   ('4411', 'Research & Development Supplies', (SELECT id FROM stores WHERE code='STR-MAIN'), 'Equipment and materials for R&D labs'),
   ('4414', 'Spare Parts', (SELECT id FROM stores WHERE code='STR-MEE'), 'Workshop and machine spare parts'),
   ('4406', 'Food Items', (SELECT id FROM stores WHERE code='STR-CAF'), 'Cafeteria consumables')
-ON CONFLICT DO NOTHING;
+) AS seed(code, name, store_id, description)
+WHERE NOT EXISTS (
+  SELECT 1 FROM categories existing WHERE existing.code = seed.code
+);
 
 INSERT INTO items (code, name, category_id, store_id, bin, unit, min_level, max_level, reorder_level, qty_on_hand, unit_price) VALUES
-  ('4402-001-001', 'A4 Photocopy Paper (White)', (SELECT id FROM categories WHERE code='4402'), (SELECT id FROM stores WHERE code='STR-MAIN'), 'A-01', 'ream', 50, 500, 100, 320, 220),
-  ('4402-002-004', 'Ballpoint Pen (Blue)', (SELECT id FROM categories WHERE code='4402'), (SELECT id FROM stores WHERE code='STR-MAIN'), 'A-02', 'box', 20, 200, 40, 18, 150),
-  ('4405-001-002', 'Digital Multimeter', (SELECT id FROM categories WHERE code='4405'), (SELECT id FROM stores WHERE code='STR-EEE'), 'E-05', 'pcs', 5, 60, 10, 34, 1850),
-  ('4411-003-001', 'Arduino Uno R3 Board', (SELECT id FROM categories WHERE code='4411'), (SELECT id FROM stores WHERE code='STR-MAIN'), 'B-11', 'pcs', 10, 100, 20, 62, 950),
-  ('4414-002-007', 'Ball Bearing 6205-ZZ', (SELECT id FROM categories WHERE code='4414'), (SELECT id FROM stores WHERE code='STR-MEE'), 'M-03', 'pcs', 30, 300, 60, 45, 180),
-  ('4406-001-005', 'Cooking Oil (5L)', (SELECT id FROM categories WHERE code='4406'), (SELECT id FROM stores WHERE code='STR-CAF'), 'C-01', 'litre', 40, 400, 80, 75, 900)
+  ('4402-001-001', 'A4 Photocopy Paper (White)', (SELECT id FROM categories WHERE code='4402' ORDER BY id LIMIT 1), (SELECT id FROM stores WHERE code='STR-MAIN'), 'A-01', 'ream', 50, 500, 100, 320, 220),
+  ('4402-002-004', 'Ballpoint Pen (Blue)', (SELECT id FROM categories WHERE code='4402' ORDER BY id LIMIT 1), (SELECT id FROM stores WHERE code='STR-MAIN'), 'A-02', 'box', 20, 200, 40, 18, 150),
+  ('4405-001-002', 'Digital Multimeter', (SELECT id FROM categories WHERE code='4405' ORDER BY id LIMIT 1), (SELECT id FROM stores WHERE code='STR-EEE'), 'E-05', 'pcs', 5, 60, 10, 34, 1850),
+  ('4411-003-001', 'Arduino Uno R3 Board', (SELECT id FROM categories WHERE code='4411' ORDER BY id LIMIT 1), (SELECT id FROM stores WHERE code='STR-MAIN'), 'B-11', 'pcs', 10, 100, 20, 62, 950),
+  ('4414-002-007', 'Ball Bearing 6205-ZZ', (SELECT id FROM categories WHERE code='4414' ORDER BY id LIMIT 1), (SELECT id FROM stores WHERE code='STR-MEE'), 'M-03', 'pcs', 30, 300, 60, 45, 180),
+  ('4406-001-005', 'Cooking Oil (5L)', (SELECT id FROM categories WHERE code='4406' ORDER BY id LIMIT 1), (SELECT id FROM stores WHERE code='STR-CAF'), 'C-01', 'litre', 40, 400, 80, 75, 900)
 ON CONFLICT (code, store_id) DO NOTHING;
 
 -- Seed a FIFO lot for every item matching its current qty_on_hand, so FIFO
 -- issuing works correctly from the very first transaction after seeding.
 INSERT INTO stock_lots (item_id, received_date, unit_price, qty_received, qty_remaining, source_ref)
 SELECT id, CURRENT_DATE - INTERVAL '10 days', unit_price, qty_on_hand, qty_on_hand, 'SEED-OPENING-BALANCE'
-FROM items;
+FROM items
+WHERE NOT EXISTS (
+  SELECT 1 FROM stock_lots existing
+  WHERE existing.item_id = items.id
+    AND existing.source_ref = 'SEED-OPENING-BALANCE'
+);
 
 INSERT INTO bin_cards (bin, store_id, item_id, last_movement, balance)
-SELECT bin, store_id, id, CURRENT_DATE - INTERVAL '5 days', qty_on_hand FROM items WHERE bin IS NOT NULL;
+SELECT bin, store_id, id, CURRENT_DATE - INTERVAL '5 days', qty_on_hand FROM items WHERE bin IS NOT NULL
+ON CONFLICT (bin, store_id, item_id) DO NOTHING;
 
 -- Approved suppliers/donors. Goods receipts may only reference a registered
 -- supplier — the Goods Receipt form offers these as a dropdown.
@@ -70,9 +101,9 @@ INSERT INTO goods_receipts (grn_ref, supplier, supplier_id, po_ref, received_dat
 ON CONFLICT (grn_ref) DO NOTHING;
 
 INSERT INTO goods_receipt_items (goods_receipt_id, item_id, qty, unit_price) VALUES
-  ((SELECT id FROM goods_receipts WHERE grn_ref='GRN-2026-0001'), (SELECT id FROM items WHERE code='4402-001-001'), 100, 220),
-  ((SELECT id FROM goods_receipts WHERE grn_ref='GRN-2026-0002'), (SELECT id FROM items WHERE code='4405-001-002'), 15, 1850),
-  ((SELECT id FROM goods_receipts WHERE grn_ref='GRN-2026-0003'), (SELECT id FROM items WHERE code='4414-002-007'), 50, 180);
+  ((SELECT id FROM goods_receipts WHERE grn_ref='GRN-2026-0001' ORDER BY id LIMIT 1), (SELECT id FROM items WHERE code='4402-001-001' ORDER BY id LIMIT 1), 100, 220),
+  ((SELECT id FROM goods_receipts WHERE grn_ref='GRN-2026-0002' ORDER BY id LIMIT 1), (SELECT id FROM items WHERE code='4405-001-002' ORDER BY id LIMIT 1), 15, 1850),
+  ((SELECT id FROM goods_receipts WHERE grn_ref='GRN-2026-0003' ORDER BY id LIMIT 1), (SELECT id FROM items WHERE code='4414-002-007' ORDER BY id LIMIT 1), 50, 180);
 
 INSERT INTO requisitions (sr_ref, department, requested_by, date, store_id, status) VALUES
   ('SR-2026-0041', 'Electrical Engineering Dept.', 'Hana Girma', '2026-08-10', (SELECT id FROM stores WHERE code='STR-MAIN'), 'Pending'),
@@ -80,9 +111,9 @@ INSERT INTO requisitions (sr_ref, department, requested_by, date, store_id, stat
 ON CONFLICT (sr_ref) DO NOTHING;
 
 INSERT INTO requisition_items (requisition_id, item_id, qty) VALUES
-  ((SELECT id FROM requisitions WHERE sr_ref='SR-2026-0041'), (SELECT id FROM items WHERE code='4402-001-001'), 10),
-  ((SELECT id FROM requisitions WHERE sr_ref='SR-2026-0041'), (SELECT id FROM items WHERE code='4402-002-004'), 5),
-  ((SELECT id FROM requisitions WHERE sr_ref='SR-2026-0040'), (SELECT id FROM items WHERE code='4414-002-007'), 20);
+  ((SELECT id FROM requisitions WHERE sr_ref='SR-2026-0041' ORDER BY id LIMIT 1), (SELECT id FROM items WHERE code='4402-001-001' ORDER BY id LIMIT 1), 10),
+  ((SELECT id FROM requisitions WHERE sr_ref='SR-2026-0041' ORDER BY id LIMIT 1), (SELECT id FROM items WHERE code='4402-002-004' ORDER BY id LIMIT 1), 5),
+  ((SELECT id FROM requisitions WHERE sr_ref='SR-2026-0040' ORDER BY id LIMIT 1), (SELECT id FROM items WHERE code='4414-002-007' ORDER BY id LIMIT 1), 20);
 
 INSERT INTO fixed_assets (asset_tag, name, category, store_id, assigned_to, status, acquisition_date, value) VALUES
   ('FA-2026-0102', 'HP LaserJet Printer M404', 'Office Equipment', (SELECT id FROM stores WHERE code='STR-MAIN'), 'Registrar Office', 'In Use', '2025-03-10', 18500),
@@ -90,15 +121,15 @@ INSERT INTO fixed_assets (asset_tag, name, category, store_id, assigned_to, stat
 ON CONFLICT (asset_tag) DO NOTHING;
 
 INSERT INTO material_returns (srn_ref, department, item_id, qty, reason, date, status) VALUES
-  ('SRN-2026-0011', 'Chemical Engineering Dept.', (SELECT id FROM items WHERE code='4405-001-002'), 2, 'Excess issued quantity', '2026-08-06', 'Pending')
+  ('SRN-2026-0011', 'Chemical Engineering Dept.', (SELECT id FROM items WHERE code='4405-001-002' ORDER BY id LIMIT 1), 2, 'Excess issued quantity', '2026-08-06', 'Pending')
 ON CONFLICT (srn_ref) DO NOTHING;
 
 INSERT INTO material_transfers (transfer_ref, from_store_id, to_store_id, item_id, qty, date, status) VALUES
-  ('TRF-2026-0007', (SELECT id FROM stores WHERE code='STR-MAIN'), (SELECT id FROM stores WHERE code='STR-EEE'), (SELECT id FROM items WHERE code='4411-003-001'), 15, '2026-08-04', 'Approved')
+  ('TRF-2026-0007', (SELECT id FROM stores WHERE code='STR-MAIN'), (SELECT id FROM stores WHERE code='STR-EEE'), (SELECT id FROM items WHERE code='4411-003-001' ORDER BY id LIMIT 1), 15, '2026-08-04', 'Approved')
 ON CONFLICT (transfer_ref) DO NOTHING;
 
 INSERT INTO disposals (disposal_ref, item_id, store_id, qty, reason, date_flagged, status) VALUES
-  ('DSP-2026-0003', (SELECT id FROM items WHERE code='4402-001-001'), (SELECT id FROM stores WHERE code='STR-MAIN'), 3, 'Obsolete - beyond economical repair', '2026-07-20', 'Pending')
+  ('DSP-2026-0003', (SELECT id FROM items WHERE code='4402-001-001' ORDER BY id LIMIT 1), (SELECT id FROM stores WHERE code='STR-MAIN'), 3, 'Obsolete - beyond economical repair', '2026-07-20', 'Pending')
 ON CONFLICT (disposal_ref) DO NOTHING;
 
 INSERT INTO audit_logs (user_name, action, module) VALUES

@@ -7,6 +7,7 @@ const { mapGoodsReceipt, resolveStoreId, resolveItemId, resolveSupplierId } = re
 const stockService = require('../services/stockService');
 const { assertTransition } = require('../utils/workflow');
 const { notify } = require('../utils/notify');
+const { canAct } = require('../utils/permissions');
 
 const SELECT = `
   SELECT g.*, s.name AS store_name
@@ -131,6 +132,9 @@ const postStock = asyncHandler(async (req, res) => {
 const setStatus = asyncHandler(async (req, res) => {
   const allowed = ['Draft', 'Submitted', 'Pending', 'Pending Evaluation', 'Under Evaluation'];
   if (!allowed.includes(req.body.status)) throw new AppError('Invalid goods receipt workflow status.', 400);
+  if (req.body.status === 'Pending Evaluation' && !canAct('goods-receipts-notify-tec', req.user.role)) {
+    throw new AppError('Only the Store Head can notify the Technical Evaluation Committee.', 403);
+  }
   await withTransaction(async (client) => {
     const { rows: currentRows } = await client.query('SELECT status, grn_ref FROM goods_receipts WHERE id = $1 FOR UPDATE', [req.params.id]);
     if (!currentRows[0]) throw new AppError('Goods receipt not found.', 404);

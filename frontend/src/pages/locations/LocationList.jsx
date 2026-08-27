@@ -9,11 +9,13 @@ export default function LocationList() {
 
     useEffect(() => {
         storeService.list().then(stores => {
-            setStoreOptions(stores.map(s => s.name))
+            setStoreOptions(stores.filter(s => s.active).map(s => s.name))
         }).catch(console.error)
 
         locationService.list().then(locs => {
-            setLocationOptions(locs.map(l => ({ label: `${l.name} (${l.code})`, value: l.id })))
+            setLocationOptions(locs
+                .filter(l => l.active)
+                .map(l => ({ label: `${l.name} (${l.code})`, value: l.id, store: l.store, type: l.type })))
         }).catch(console.error)
     }, [])
 
@@ -37,8 +39,20 @@ export default function LocationList() {
             ]}
             fields={[
                 { name: 'store', label: 'Store Name', type: 'select', required: true, options: storeOptions, placeholder: 'Select a store...' },
-                { name: 'parentId', label: 'Parent Location', type: 'select', options: locationOptions, placeholder: 'Leave empty for a section' },
                 { name: 'type', label: 'Location Level', type: 'select', required: true, options: ['SECTION', 'RACK', 'SHELF', 'BIN'] },
+                {
+                    name: 'parentId',
+                    label: 'Parent Location',
+                    type: 'select',
+                    options: (form) => {
+                        const parentType = { RACK: 'SECTION', SHELF: 'RACK', BIN: 'SHELF' }[form.type]
+                        if (!parentType) return []
+                        return locationOptions
+                            .filter(location => location.store === form.store && location.type === parentType)
+                            .map(({ label, value }) => ({ label, value }))
+                    },
+                    placeholder: 'Select a parent location...'
+                },
                 { name: 'code', label: 'Location Code', required: true, placeholder: 'e.g. E03-02-04' },
                 { name: 'name', label: 'Location Name', required: true },
                 { name: 'active', label: 'Active', type: 'checkbox' }

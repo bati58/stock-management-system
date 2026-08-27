@@ -56,9 +56,9 @@ const READ_PERMISSIONS = {
 };
 
 const ACTION_PERMISSIONS = {
-  'goods-receipts': [ADMIN, STORE_HEAD, STOREKEEPER], // generate-grn / status; TEC acts only via goods-receipts-evaluate
+  'goods-receipts': [ADMIN, STORE_HEAD, STOREKEEPER, TEC], // TEC may claim Pending Evaluation -> Under Evaluation before evaluating
   requisitions: [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
-  'material-returns': [ADMIN, STORE_HEAD, STOREKEEPER],
+  'material-returns': [ADMIN, PAO, STORE_HEAD],
   // Approve/Reject/Return only. Storekeeper is intentionally excluded so it cannot
   // approve its own transfer; it dispatches/receives via 'material-transfers-execute'.
   'material-transfers': [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
@@ -68,6 +68,7 @@ const ACTION_PERMISSIONS = {
 };
 ACTION_PERMISSIONS['issue-voucher-post'] = [ADMIN, STORE_HEAD, STOREKEEPER];
 ACTION_PERMISSIONS['goods-receipts-evaluate'] = [ADMIN, TEC];
+ACTION_PERMISSIONS['goods-receipts-notify-tec'] = [ADMIN, STORE_HEAD];
 ACTION_PERMISSIONS['goods-receipts-post'] = [ADMIN, STORE_HEAD, STOREKEEPER];
 ACTION_PERMISSIONS['material-transfers-execute'] = [ADMIN, STORE_HEAD, STOREKEEPER]; // dispatch/receive: the store operators, not the approver
 ACTION_PERMISSIONS['stock-taking'] = [ADMIN, PAO, STORE_HEAD];

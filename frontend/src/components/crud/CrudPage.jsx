@@ -259,7 +259,8 @@ export default function CrudPage({
             }
 
             if (f.type === 'select') {
-              return <Select key={f.name} {...commonProps} options={f.options} placeholder={f.placeholder} />
+              const options = typeof f.options === 'function' ? f.options(form, rows) : f.options
+              return <Select key={f.name} {...commonProps} options={options} placeholder={f.placeholder} />
             }
             if (f.type === 'textarea') {
               return <Textarea key={f.name} {...commonProps} />

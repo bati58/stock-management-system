@@ -19,8 +19,8 @@ const list = asyncHandler(async (req, res) => {
   let params = [];
 
   if (req.user.role === 'Department Head') {
-    scope = 'WHERE mr.department = $1';
-    params = [req.user.department || req.user.name];
+    scope = 'WHERE mr.department = $1 OR mr.created_by = $2';
+    params = [req.user.department || '', req.user.name];
   } else if (['Store Head', 'Storekeeper'].includes(req.user.role) && req.user.store) {
     scope = 'WHERE s.name = $1';
     params = [req.user.store];
@@ -35,8 +35,8 @@ const getOne = asyncHandler(async (req, res) => {
   let params = [req.params.id];
 
   if (req.user.role === 'Department Head') {
-    scope = ' AND mr.department = $2';
-    params.push(req.user.department || req.user.name);
+    scope = ' AND (mr.department = $2 OR mr.created_by = $3)';
+    params.push(req.user.department || '', req.user.name);
   } else if (['Store Head', 'Storekeeper'].includes(req.user.role) && req.user.store) {
     scope = ' AND s.name = $2';
     params.push(req.user.store);
@@ -58,9 +58,9 @@ const create = asyncHandler(async (req, res) => {
     const srnRef = await nextRef(client, 'SRN');
 
     const { rows } = await client.query(
-      `INSERT INTO material_returns (srn_ref, department, item_id, qty, reason, date, status, condition, original_issue_ref)
-      VALUES ($1,$2,$3,$4,$5,COALESCE($6, CURRENT_DATE),'Draft',$7,$8) RETURNING id`,
-      [srnRef, department, itemId, qty, reason || null, date || null, condition || null, originalIssueRef || null]
+      `INSERT INTO material_returns (srn_ref, department, created_by, item_id, qty, reason, date, status, condition, original_issue_ref)
+      VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7, CURRENT_DATE),'Draft',$8,$9) RETURNING id`,
+      [srnRef, department, req.user.name, itemId, qty, reason || null, date || null, condition || null, originalIssueRef || null]
     );
 
     await logAudit(client, { userName: req.user.name, action: `Created return ${srnRef}`, module: 'Material Return' });

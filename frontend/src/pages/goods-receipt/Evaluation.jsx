@@ -41,13 +41,19 @@ export default function Evaluation() {
   }, [])
 
   async function startReview(row) {
-    if (row.status === GRN_STATUS.PENDING_EVAL) {
-      await api.action('goodsReceipts', row.id, 'status', { status: GRN_STATUS.UNDER_EVAL })
-      row.status = GRN_STATUS.UNDER_EVAL
-    }
     setTarget(row)
     setNote(row.evaluationNote || '')
     setAcceptedQuantities((row.items || []).map((line) => ({ item: line.item, qtyAccepted: line.qty })))
+
+    if (row.status === GRN_STATUS.PENDING_EVAL) {
+      try {
+        await api.action('goodsReceipts', row.id, 'status', { status: GRN_STATUS.UNDER_EVAL })
+        setTarget((current) => current ? { ...current, status: GRN_STATUS.UNDER_EVAL } : current)
+      } catch (err) {
+        setTarget(null)
+        push(err.message || 'Could not start the evaluation.', 'error')
+      }
+    }
   }
 
   async function decide(decision) {

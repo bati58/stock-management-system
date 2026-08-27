@@ -66,36 +66,29 @@ const decide = asyncHandler(async (req, res) => {
     throw new AppError('decision must be "Approved", "Rejected", or "Returned for Correction".', 400);
   }
 
-  await withTransaction((client) =>
-    stockService.decideMaterialTransfer(client, { transferId: req.params.id, decision, actorName: req.user.name })
-  );
+  await withTransaction(async (client) => {
+    await stockService.decideMaterialTransfer(client, { transferId: req.params.id, decision, actorName: req.user.name });
+
+    // Keep the workflow decision and its handoff notification atomic.
+    if (decision === 'Approved' || decision === 'Returned for Correction') {
+      const { rows } = await client.query(`${SELECT} WHERE mt.id = $1`, [req.params.id]);
+      const transfer = rows[0];
+      await notify(client, {
+        role: 'Storekeeper',
+        title: decision === 'Approved' ? 'Transfer Approved' : 'Transfer Returned for Correction',
+        message: decision === 'Approved'
+          ? `Transfer ${transfer.transfer_ref} (${transfer.from_store_name} -> ${transfer.to_store_name}) is approved and ready to dispatch.`
+          : `Transfer ${transfer.transfer_ref} was returned for correction. Update and resubmit it for approval.`,
+        type: decision === 'Approved' ? 'success' : 'warning',
+        route: `/material-transfers/${req.params.id}`,
+        entityType: 'material-transfer',
+        entityId: req.params.id
+      });
+    }
+  });
 
   const { rows } = await query(`${SELECT} WHERE mt.id = $1`, [req.params.id]);
   const transfer = rows[0];
-
-  // Persisted notification for the store operators who must now move the goods
-  // (Phase 5: this event must not live only in the browser).
-  if (decision === 'Approved') {
-    await notify(query, {
-      role: 'Storekeeper',
-      title: 'Transfer Approved',
-      message: `Transfer ${transfer.transfer_ref} (${transfer.from_store_name} → ${transfer.to_store_name}) is approved and ready to dispatch.`,
-      type: 'success',
-      route: `/material-transfers/${req.params.id}`,
-      entityType: 'material-transfer',
-      entityId: req.params.id
-    });
-  } else if (decision === 'Returned for Correction') {
-    await notify(query, {
-      role: 'Storekeeper',
-      title: 'Transfer Returned for Correction',
-      message: `Transfer ${transfer.transfer_ref} was returned for correction. Update and resubmit it for approval.`,
-      type: 'warning',
-      route: `/material-transfers/${req.params.id}`,
-      entityType: 'material-transfer',
-      entityId: req.params.id
-    });
-  }
 
   res.json(mapMaterialTransfer(transfer));
 });

@@ -22,8 +22,9 @@ export default function GrnDocuments() {
         setLoading(true)
         try {
             const data = await goodsReceiptService.list()
-            // Only show GRNs that have been generated
-            setGrns(data.filter((g) => g.status === GRN_STATUS.GRN_GENERATED))
+            // Keep posted receipts in the document history. Posting changes the
+            // receipt status from GRN Generated to Posted.
+            setGrns(data.filter((g) => [GRN_STATUS.GRN_GENERATED, GRN_STATUS.POSTED].includes(g.status)))
         } catch (error) {
             push(error.message || 'Could not load GRN documents.', 'error')
         } finally {

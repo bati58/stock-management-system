@@ -6,34 +6,26 @@ import Table from '../../components/ui/Table'
 import Button from '../../components/ui/Button'
 import StatusBadge from '../../components/ui/StatusBadge'
 import SearchInput from '../../components/ui/SearchInput'
-import { goodsReceiptService, issueVoucherService, materialTransferService } from '../../services'
+import { goodsReceiptService } from '../../services'
 import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatDate } from '../../utils/formatters'
-import { STATUS, GRN_STATUS } from '../../utils/constants'
+import { GRN_STATUS } from '../../utils/constants'
 
 export default function GatePassVerification() {
   const { push } = useToast()
   const { user } = useAuth()
   const [tab, setTab] = useState('incoming')
   const [grns, setGrns] = useState([])
-  const [vouchers, setVouchers] = useState([])
-  const [transfers, setTransfers] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
 
   async function load() {
     setLoading(true)
     try {
-      const [g, v, t] = await Promise.all([
-        goodsReceiptService.list(),
-        issueVoucherService.list(),
-        materialTransferService.list()
-      ])
+      const g = await goodsReceiptService.list()
       setGrns(g)
-      setVouchers(v)
-      setTransfers(t)
     } catch (err) {
       push(err.message || 'Could not load gate-pass records.', 'error')
     } finally {
@@ -54,50 +46,15 @@ export default function GatePassVerification() {
   const incomingRows = useMemo(() => {
     const q = query.trim().toLowerCase()
     return grns
-      .filter((g) => [STATUS.PENDING, STATUS.UNDER_EVALUATION, GRN_STATUS.ACCEPTED, GRN_STATUS.GRN_GENERATED].includes(g.status))
+      .filter((g) => g.status === GRN_STATUS.GRN_GENERATED)
       .filter((g) => !q || `${g.grnRef} ${g.supplier} ${g.store}`.toLowerCase().includes(q))
       .sort((a, b) => new Date(b.receivedDate || 0) - new Date(a.receivedDate || 0))
   }, [grns, query])
 
-  const outgoingRows = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const voucherRows = vouchers
-      .filter((v) => [STATUS.ISSUED, 'Posted'].includes(v.status))
-      .map((v) => ({
-        id: `siv-${v.id}`,
-        serviceId: v.id,
-        resource: 'issueVouchers',
-        ref: v.sivRef,
-        type: v.type || 'SIV',
-        party: v.issuedTo,
-        date: v.date,
-        gateVerified: v.gateVerified,
-        gateVerifiedBy: v.gateVerifiedBy,
-        gateVerifiedAt: v.gateVerifiedAt
-      }))
-
-    const transferRows = transfers
-      .filter((t) => [STATUS.APPROVED, STATUS.COMPLETED].includes(t.status))
-      .map((t) => ({
-        id: `trf-${t.id}`,
-        serviceId: t.id,
-        resource: 'materialTransfers',
-        ref: t.transferRef,
-        type: 'Transfer',
-        party: `${t.fromStore} → ${t.toStore}`,
-        date: t.date,
-        gateVerified: t.gateVerified,
-        gateVerifiedBy: t.gateVerifiedBy,
-        gateVerifiedAt: t.gateVerifiedAt
-      }))
-
-    return [...voucherRows, ...transferRows]
-      .filter((r) => !q || `${r.ref} ${r.party} ${r.type}`.toLowerCase().includes(q))
-      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-  }, [vouchers, transfers, query])
+  const outgoingRows = []
 
   const pendingIncoming = incomingRows.filter((g) => !g.gateVerified).length
-  const pendingOutgoing = outgoingRows.filter((r) => !r.gateVerified).length
+  const pendingOutgoing = 0
 
   const incomingColumns = [
     { key: 'grnRef', header: 'GRN Ref' },
@@ -236,7 +193,7 @@ export default function GatePassVerification() {
             rows={outgoingRows}
             loading={loading}
             emptyTitle="No outgoing movements"
-            emptyMessage="Issued vouchers and approved transfers will appear here for exit clearance."
+            emptyMessage="Internal department issues and store transfers do not require campus gate clearance."
           />
         )}
       </div>

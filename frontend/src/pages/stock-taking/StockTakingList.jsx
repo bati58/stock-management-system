@@ -121,6 +121,16 @@ export default function StockTakingList() {
     }
 
     const handlePostSession = async () => {
+        const missingReasons = (selectedSession?.items || []).filter((item) => {
+            const variance = Number(item.physicalQty) - Number(item.systemQty)
+            return Math.abs(variance) > 0.0001 && !String(item.reason || '').trim()
+        })
+        if (missingReasons.length > 0) {
+            setShowPostDialog(false)
+            push(`Add a reason for each variance before posting: ${missingReasons.map((item) => item.item).join(', ')}.`, 'error')
+            return
+        }
+
         try {
             await stockTakingService.post(selectedSession.id)
             push('Session posted and adjustments applied', 'success')
@@ -147,7 +157,7 @@ export default function StockTakingList() {
     const canApprove = selectedSession?.status === 'Submitted' &&
         [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD].includes(user?.role)
     const canPost = selectedSession?.status === 'Approved' &&
-        [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD, ROLES.STOCK_CLERK].includes(user?.role)
+        [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD].includes(user?.role)
 
     const columns = [
         { key: 'sessionRef', header: 'Reference', width: '15%' },
@@ -403,7 +413,9 @@ export default function StockTakingList() {
                                                                 />
                                                             </div>
                                                             <div>
-                                                                <label className="block text-xs font-medium text-gray-600 mb-1">Reason (optional)</label>
+                                                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                                    Reason {Math.abs(Number(selected.physicalQty || 0) - Number(item.qtyOnHand || 0)) > 0.0001 && <span className="text-red-500">*</span>}
+                                                                </label>
                                                                 <input
                                                                     type="text"
                                                                     value={selected.reason}
@@ -437,7 +449,7 @@ export default function StockTakingList() {
             <ConfirmDialog
                 open={showApproveDialog}
                 title="Approve Stock Taking Session?"
-                message={`Submit session ${selectedSession?.sessionRef} for approval?`}
+                message={`Approve session ${selectedSession?.sessionRef}? The session can be posted after approval.`}
                 confirmLabel="Approve"
                 onConfirm={handleApproveSession}
                 onClose={() => setShowApproveDialog(false)}
@@ -447,7 +459,7 @@ export default function StockTakingList() {
             <ConfirmDialog
                 open={showPostDialog}
                 title="Post Stock Adjustments?"
-                message={`Post all variance adjustments for session ${selectedSession?.session_ref}? This will update stock quantities and create adjustment transactions.`}
+                message={`Post all variance adjustments for session ${selectedSession?.sessionRef}? This will update stock quantities and create adjustment transactions. Every non-zero variance must have a reason.`}
                 confirmLabel="Post & Apply"
                 onConfirm={handlePostSession}
                 onClose={() => setShowPostDialog(false)}

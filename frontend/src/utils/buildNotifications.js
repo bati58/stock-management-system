@@ -28,11 +28,7 @@ export function buildNotifications(user, data) {
   const pendingTransfers = transfers.filter((t) => ![STATUS.COMPLETED, STATUS.CANCELLED, STATUS.REJECTED].includes(t.status))
   const pendingReturns = returns.filter((r) => [STATUS.SUBMITTED, STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(r.status))
   const approvedAwaitingIssue = reqs.filter((r) => r.status === STATUS.APPROVED)
-  const pendingGateIn = grns.filter((g) => !g.gateVerified && [STATUS.APPROVED, STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(g.status))
-  const pendingGateOut = [
-    ...vouchers.filter((v) => v.status === STATUS.ISSUED && !v.gateVerified),
-    ...transfers.filter((t) => [STATUS.APPROVED, STATUS.COMPLETED].includes(t.status) && !t.gateVerified)
-  ]
+  const pendingGateIn = grns.filter((g) => !g.gateVerified && g.status === 'GRN Generated')
 
   function push(id, title, message, type, route, timestamp) {
     notes.push({ id, title, message, type, route, timestamp: timestamp || new Date(), read: false })
@@ -224,17 +220,6 @@ export function buildNotifications(user, data) {
           'info',
           '/gate-pass',
           g.receivedDate
-        )
-      })
-      pendingGateOut.slice(0, 6).forEach((r, idx) => {
-        const ref = r.sivRef || r.transferRef
-        push(
-          `gate-out-${r.id || idx}`,
-          'Outgoing Material',
-          `${ref} requires exit clearance`,
-          'warning',
-          '/gate-pass',
-          r.date
         )
       })
       break
