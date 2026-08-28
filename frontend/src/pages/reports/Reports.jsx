@@ -213,17 +213,18 @@ export default function Reports() {
   }, [])
 
   useEffect(() => {
+    const dateParams = { from: filters.startDate, to: filters.endDate }
     const loaders = {
       'inventory-summary': () => reportService.inventorySummary(),
       'low-stock': () => reportService.lowStock(),
-      'stock-movement': () => reportService.stockMovement({ from: filters.startDate, to: filters.endDate }),
-      'grn-status': () => reportService.grnStatus(),
-      'requisition-status': () => reportService.requisitionStatus(),
-      'siv-report': () => reportService.issueStatus(),
-      'material-return-report': () => reportService.returnStatus(),
-      'transfer-report': () => reportService.transferStatus(),
-      'asset-register': () => reportService.assetSummary(),
-      'disposal-report': () => reportService.disposalStatus(),
+      'stock-movement': () => reportService.stockMovement(dateParams),
+      'grn-status': () => reportService.grnStatus(dateParams),
+      'requisition-status': () => reportService.requisitionStatus(dateParams),
+      'siv-report': () => reportService.issueStatus(dateParams),
+      'material-return-report': () => reportService.returnStatus(dateParams),
+      'transfer-report': () => reportService.transferStatus(dateParams),
+      'asset-register': () => reportService.assetSummary(dateParams),
+      'disposal-report': () => reportService.disposalStatus(dateParams),
       'fifo-valuation': () => reportService.fifoValuation()
     }
     const loadServerReport = loaders[reportType]
@@ -716,7 +717,50 @@ export default function Reports() {
   }
 
   if (serverReportRows && reportType !== 'fifo-valuation') {
-    rows = serverReportRows
+    const serverDateKey = {
+      'grn-status': 'receivedDate',
+      'requisition-status': 'date',
+      'siv-report': 'date',
+      'material-return-report': 'date',
+      'transfer-report': 'date',
+      'asset-register': 'acquisitionDate',
+      'disposal-report': 'date',
+      'stock-movement': 'date'
+    }[reportType]
+    rows = serverReportRows.filter((record) => matchesFilter(record, serverDateKey))
+
+    const summaryDefinitions = {
+      'grn-status': [
+        { title: 'Total GRNs', value: rows.length, format: 'number' },
+        { title: 'Accepted', value: rows.filter((record) => record.status === 'Accepted').length, format: 'number' }
+      ],
+      'requisition-status': [
+        { title: 'Total Requisitions', value: rows.length, format: 'number' },
+        { title: 'Approved', value: rows.filter((record) => record.status === 'Approved').length, format: 'number' }
+      ],
+      'siv-report': [
+        { title: 'Total Vouchers', value: rows.length, format: 'number' },
+        { title: 'Issued', value: rows.filter((record) => record.status === 'Issued').length, format: 'number' }
+      ],
+      'material-return-report': [
+        { title: 'Total Returns', value: rows.length, format: 'number' },
+        { title: 'Approved', value: rows.filter((record) => record.status === 'Approved').length, format: 'number' }
+      ],
+      'transfer-report': [
+        { title: 'Total Transfers', value: rows.length, format: 'number' },
+        { title: 'Completed', value: rows.filter((record) => record.status === 'Completed').length, format: 'number' }
+      ],
+      'asset-register': [
+        { title: 'Total Assets', value: rows.length, format: 'number' },
+        { title: 'Total Value', value: rows.reduce((sum, record) => sum + Number(record.value || 0), 0), format: 'currency' },
+        { title: 'In Use', value: rows.filter((record) => record.status === 'In Use').length, format: 'number' }
+      ],
+      'disposal-report': [
+        { title: 'Total Disposals', value: rows.length, format: 'number' },
+        { title: 'Executed', value: rows.filter((record) => record.status === 'Executed').length, format: 'number' }
+      ]
+    }
+    if (summaryDefinitions[reportType]) summaryCards = summaryDefinitions[reportType]
   }
 
   const reportTitle = reportOptions.find((o) => o.value === reportType)?.label || 'Report'

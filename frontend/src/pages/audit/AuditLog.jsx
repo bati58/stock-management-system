@@ -61,19 +61,6 @@ export default function AuditLog() {
     return [{ value: 'all', label: 'All Roles' }, ...uniqueRoles.map((role) => ({ value: role, label: role }))]
   }, [rows])
 
-  const summary = useMemo(() => {
-    const total = rows.length
-    const today = rows.filter((row) => {
-      const rowDate = new Date(row.timestamp)
-      const now = new Date()
-      return rowDate.toDateString() === now.toDateString()
-    }).length
-    const successful = rows.filter((row) => row.outcome === 'SUCCESS').length
-    const failed = rows.filter((row) => row.outcome === 'FAILED').length
-    const critical = rows.filter((row) => ['GOODS_RECEIPT_ACCEPTED', 'GRN_GENERATED', 'REQUISITION_APPROVED', 'SIV_ISSUED', 'DISPOSAL_EXECUTED', 'SYSTEM_SETTING_CHANGED'].includes(row.action)).length
-    return { total, today, successful, failed, critical }
-  }, [rows])
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     const start = filters.startDate ? new Date(filters.startDate) : null
@@ -117,6 +104,19 @@ export default function AuditLog() {
         }
       })
   }, [rows, query, filters, sortBy])
+
+  const summary = useMemo(() => {
+    const total = filtered.length
+    const today = filtered.filter((row) => {
+      const rowDate = new Date(row.timestamp)
+      const now = new Date()
+      return rowDate.toDateString() === now.toDateString()
+    }).length
+    const successful = filtered.filter((row) => row.outcome === 'SUCCESS').length
+    const failed = filtered.filter((row) => row.outcome === 'FAILED').length
+    const critical = filtered.filter((row) => ['GOODS_RECEIPT_ACCEPTED', 'GRN_GENERATED', 'REQUISITION_APPROVED', 'SIV_ISSUED', 'DISPOSAL_EXECUTED', 'SYSTEM_SETTING_CHANGED'].includes(row.action)).length
+    return { total, today, successful, failed, critical }
+  }, [filtered])
 
   const columns = [
     { key: 'timestamp', header: 'Timestamp', render: (row) => formatDateTime(row.timestamp) },

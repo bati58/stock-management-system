@@ -2,6 +2,19 @@ const { query } = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 const { ROLES } = require('../utils/permissions');
 
+function dateConditions(column, queryParams, values) {
+  const conditions = [];
+  if (queryParams.from) {
+    values.push(queryParams.from);
+    conditions.push(`${column} >= $${values.length}::date`);
+  }
+  if (queryParams.to) {
+    values.push(queryParams.to);
+    conditions.push(`${column} <= $${values.length}::date`);
+  }
+  return conditions;
+}
+
 // GET /api/reports/inventory-summary
 const inventorySummary = asyncHandler(async (req, res) => {
   const { rows } = await query(`
@@ -83,11 +96,14 @@ const stockMovement = asyncHandler(async (req, res) => {
 
 // GET /api/reports/grn-status
 const grnStatus = asyncHandler(async (req, res) => {
+  const params = [];
+  const conditions = dateConditions('g.received_date', req.query, params);
   const { rows } = await query(`
     SELECT g.grn_ref, g.supplier, s.name AS store, g.received_date, g.status
     FROM goods_receipts g JOIN stores s ON s.id = g.store_id
+    ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''}
     ORDER BY g.received_date DESC
-  `);
+  `, params);
   res.json(
     rows.map((r) => ({ grnRef: r.grn_ref, supplier: r.supplier, store: r.store, receivedDate: r.received_date, status: r.status }))
   );
@@ -95,9 +111,13 @@ const grnStatus = asyncHandler(async (req, res) => {
 
 // GET /api/reports/requisition-status
 const requisitionStatus = asyncHandler(async (req, res) => {
+  const params = [];
+  const conditions = dateConditions('date', req.query, params);
   const { rows } = await query(`
-    SELECT sr_ref, department, date, status FROM requisitions ORDER BY date DESC
-  `);
+    SELECT sr_ref, department, date, status FROM requisitions
+    ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''}
+    ORDER BY date DESC
+  `, params);
   res.json(rows.map((r) => ({ srRef: r.sr_ref, department: r.department, date: r.date, status: r.status })));
 });
 
@@ -178,10 +198,12 @@ const dashboardSummary = asyncHandler(async (req, res) => {
 
 // GET /api/reports/issue-status
 const issueStatus = asyncHandler(async (req, res) => {
+  const params = [];
+  const conditions = dateConditions('iv.date', req.query, params);
   const { rows } = await query(`
     SELECT iv.siv_ref, iv.type, iv.sr_ref, iv.issued_to, iv.issued_by, iv.date, iv.status
-    FROM issue_vouchers iv ORDER BY iv.date DESC
-  `);
+    FROM issue_vouchers iv ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''} ORDER BY iv.date DESC
+  `, params);
   res.json(rows.map((r) => ({
     sivRef: r.siv_ref, type: r.type, srRef: r.sr_ref, issuedTo: r.issued_to,
     issuedBy: r.issued_by, date: r.date, status: r.status
@@ -190,11 +212,14 @@ const issueStatus = asyncHandler(async (req, res) => {
 
 // GET /api/reports/return-status
 const returnStatus = asyncHandler(async (req, res) => {
+  const params = [];
+  const conditions = dateConditions('mr.date', req.query, params);
   const { rows } = await query(`
     SELECT mr.srn_ref, mr.department, i.name AS item, mr.qty, mr.status, mr.date
     FROM material_returns mr LEFT JOIN items i ON i.id = mr.item_id
+    ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''}
     ORDER BY mr.date DESC
-  `);
+  `, params);
   res.json(rows.map((r) => ({
     srnRef: r.srn_ref, department: r.department, item: r.item,
     qty: Number(r.qty), status: r.status, date: r.date
@@ -203,6 +228,8 @@ const returnStatus = asyncHandler(async (req, res) => {
 
 // GET /api/reports/transfer-status
 const transferStatus = asyncHandler(async (req, res) => {
+  const params = [];
+  const conditions = dateConditions('mt.date', req.query, params);
   const { rows } = await query(`
     SELECT mt.transfer_ref, fs.name AS from_store, ts.name AS to_store,
            i.name AS item, mt.qty, mt.status, mt.date
@@ -210,8 +237,9 @@ const transferStatus = asyncHandler(async (req, res) => {
     LEFT JOIN stores fs ON fs.id = mt.from_store_id
     LEFT JOIN stores ts ON ts.id = mt.to_store_id
     LEFT JOIN items i ON i.id = mt.item_id
+    ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''}
     ORDER BY mt.date DESC
-  `);
+  `, params);
   res.json(rows.map((r) => ({
     transferRef: r.transfer_ref, fromStore: r.from_store, toStore: r.to_store,
     item: r.item, qty: Number(r.qty), status: r.status, date: r.date
@@ -220,12 +248,15 @@ const transferStatus = asyncHandler(async (req, res) => {
 
 // GET /api/reports/asset-summary
 const assetSummary = asyncHandler(async (req, res) => {
+  const params = [];
+  const conditions = dateConditions('fa.acquisition_date', req.query, params);
   const { rows } = await query(`
     SELECT fa.asset_tag, fa.name, fa.category, s.name AS store, fa.assigned_to,
            fa.status, fa.acquisition_date, fa.value
     FROM fixed_assets fa LEFT JOIN stores s ON s.id = fa.store_id
+    ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''}
     ORDER BY fa.acquisition_date DESC
-  `);
+  `, params);
   res.json(rows.map((r) => ({
     assetTag: r.asset_tag, name: r.name, category: r.category, store: r.store,
     assignedTo: r.assigned_to, status: r.status, acquisitionDate: r.acquisition_date,
@@ -235,14 +266,17 @@ const assetSummary = asyncHandler(async (req, res) => {
 
 // GET /api/reports/disposal-status
 const disposalStatus = asyncHandler(async (req, res) => {
+  const params = [];
+  const conditions = dateConditions('d.date_flagged', req.query, params);
   const { rows } = await query(`
     SELECT d.disposal_ref, i.name AS item, s.name AS store, d.qty, d.reason,
            d.date_flagged, d.status
     FROM disposals d
     LEFT JOIN items i ON i.id = d.item_id
     LEFT JOIN stores s ON s.id = i.store_id
+    ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''}
     ORDER BY d.date_flagged DESC
-  `);
+  `, params);
   res.json(rows.map((r) => ({
     disposalRef: r.disposal_ref, item: r.item, store: r.store,
     qty: Number(r.qty), reason: r.reason, dateFlagged: r.date_flagged, status: r.status
