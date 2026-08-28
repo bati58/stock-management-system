@@ -6,7 +6,7 @@ import Table from '../../components/ui/Table'
 import Button from '../../components/ui/Button'
 import StatusBadge from '../../components/ui/StatusBadge'
 import SearchInput from '../../components/ui/SearchInput'
-import { goodsReceiptService } from '../../services'
+import { goodsReceiptService, issueVoucherService } from '../../services'
 import { api } from '../../services/apiClient'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
@@ -18,14 +18,16 @@ export default function GatePassVerification() {
   const { user } = useAuth()
   const [tab, setTab] = useState('incoming')
   const [grns, setGrns] = useState([])
+  const [vouchers, setVouchers] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
 
   async function load() {
     setLoading(true)
     try {
-      const g = await goodsReceiptService.list()
+      const [g, v] = await Promise.all([goodsReceiptService.list(), issueVoucherService.list()])
       setGrns(g)
+      setVouchers(v)
     } catch (err) {
       push(err.message || 'Could not load gate-pass records.', 'error')
     } finally {
@@ -51,10 +53,27 @@ export default function GatePassVerification() {
       .sort((a, b) => new Date(b.receivedDate || 0) - new Date(a.receivedDate || 0))
   }, [grns, query])
 
-  const outgoingRows = []
+  const outgoingRows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return vouchers
+      .filter((voucher) => ['Approved', 'Posted'].includes(voucher.status))
+      .filter((voucher) => !q || `${voucher.sivRef} ${voucher.issuedTo}`.toLowerCase().includes(q))
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .map((voucher) => ({
+        ref: voucher.sivRef,
+        type: 'Issue Voucher',
+        party: voucher.issuedTo,
+        date: voucher.date,
+        gateVerified: voucher.gateVerified,
+        gateVerifiedBy: voucher.gateVerifiedBy,
+        gateVerifiedAt: voucher.gateVerifiedAt,
+        resource: 'issue-vouchers',
+        serviceId: voucher.id
+      }))
+  }, [vouchers, query])
 
   const pendingIncoming = incomingRows.filter((g) => !g.gateVerified).length
-  const pendingOutgoing = 0
+  const pendingOutgoing = outgoingRows.filter((row) => !row.gateVerified).length
 
   const incomingColumns = [
     { key: 'grnRef', header: 'GRN Ref' },

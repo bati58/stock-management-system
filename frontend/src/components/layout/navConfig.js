@@ -150,7 +150,7 @@ const ROLE_NAV = {
 
   [ROLES.SECURITY]: [
     ['Overview', ['dashboard']],
-    ['Material Movement', ['issueVouchers', 'materialTransfer']],
+    ['Material Movement', ['issueVouchers']],
     ['Gate Verification', ['gatePass']],
     ['Reports & Audit', ['reports', 'auditLog']],
   ],

@@ -32,7 +32,8 @@ const login = asyncHandler(async (req, res) => {
   }
 
   const passwordOk = await bcrypt.compare(password, user.password_hash);
-  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || null;
+  const userAgent = req.get('user-agent') || null;
 
   if (!passwordOk) {
     const attempts = (user.failed_login_attempts || 0) + 1;
@@ -45,7 +46,7 @@ const login = asyncHandler(async (req, res) => {
     await logAudit(query, {
       userId: user.id, userName: user.name, userRole: user.role,
       action: 'Login Failed', module: 'Authentication', outcome: 'FAILED',
-      metadata: { ip, reason: 'Invalid password' }
+      metadata: { ip, userAgent, reason: 'Invalid password' }
     });
 
     throw new AppError('Invalid username or password.', 401);
@@ -55,7 +56,7 @@ const login = asyncHandler(async (req, res) => {
   await logAudit(query, {
     userId: user.id, userName: user.name, userRole: user.role,
     action: 'Login Successful', module: 'Authentication', outcome: 'SUCCESS',
-    metadata: { ip }
+    metadata: { ip, userAgent }
   });
 
   const token = jwt.sign(
@@ -108,7 +109,11 @@ const logout = asyncHandler(async (req, res) => {
     userRole: req.user.role,
     action: 'Logged out',
     module: 'Authentication',
-    entityType: 'session'
+    entityType: 'session',
+    metadata: {
+      ip: req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || null,
+      userAgent: req.get('user-agent') || null
+    }
   });
   res.status(204).send();
 });

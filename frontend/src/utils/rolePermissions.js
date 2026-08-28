@@ -225,7 +225,7 @@ export const ROLE_PERMISSIONS = {
     [ROLES.SECURITY]: {
         name: 'Security Officer',
         // SRS: monitors goods entering and leaving the organization
-        canAccessPages: ['/', '/settings', '/gate-pass', '/goods-receipt', '/issue-vouchers', '/material-transfer', '/audit-log', '/reports'],
+        canAccessPages: ['/', '/settings', '/gate-pass', '/goods-receipt', '/issue-vouchers', '/audit-log', '/reports'],
         canCreate: [],
         canEdit: [],
         canDelete: [],

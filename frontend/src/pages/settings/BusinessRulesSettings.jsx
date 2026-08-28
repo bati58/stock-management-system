@@ -71,7 +71,7 @@ export default function BusinessRulesSettings() {
     }
 
     const handleSave = async (rule) => {
-        if (!editingRules[rule.id]) {
+        if (editingRules[rule.id] === undefined) {
             push('No changes to save', 'info')
             return
         }
@@ -84,7 +84,7 @@ export default function BusinessRulesSettings() {
                 rule.description
             )
             push(`Rule "${rule.rule_name}" updated successfully`, 'success')
-            loadRulesByCategory(selectedCategory)
+            await loadRulesByCategory(selectedCategory)
         } catch (error) {
             push(`Error saving rule: ${error.message}`, 'error')
         } finally {
@@ -152,7 +152,12 @@ export default function BusinessRulesSettings() {
                 )
 
             case 'enum':
-                const allowedValues = rule.allowed_values ? JSON.parse(rule.allowed_values) : []
+                let allowedValues = []
+                try {
+                    allowedValues = rule.allowed_values ? JSON.parse(rule.allowed_values) : []
+                } catch {
+                    allowedValues = []
+                }
                 return (
                     <select
                         value={currentValue}
@@ -211,7 +216,7 @@ export default function BusinessRulesSettings() {
                         {loading && categories.length === 0 ? (
                             <p className="text-gray-500 text-sm">Loading categories...</p>
                         ) : categories.length === 0 ? (
-                            <EmptyState title="No Categories" description="No rule categories found" />
+                            <EmptyState title="No Categories" message="Run the database seed to add the default rule categories." />
                         ) : (
                             <div className="space-y-2">
                                 {categories.map((category) => (
@@ -240,7 +245,7 @@ export default function BusinessRulesSettings() {
                     ) : rules.length === 0 ? (
                         <EmptyState
                             title="No Rules"
-                            description="No rules found for this category"
+                            message="No active rules found for this category."
                         />
                     ) : (
                         <div className="space-y-4">

@@ -115,7 +115,6 @@ const DASHBOARD_DATA_BY_ROLE = {
   },
   [ROLES.SECURITY]: {
     grns: goodsReceiptService,
-    transfers: materialTransferService,
     vouchers: issueVoucherService
   }
 }
@@ -446,36 +445,28 @@ export default function Dashboard() {
   )
 
   // ---- Gate movement (Security) ----
-  const pendingGateIncoming = useMemo(
-    () => grns.filter((g) => !g.gateVerified).length,
+  const gateEligibleIncoming = useMemo(
+    () => grns.filter((g) => g.status === GRN_STATUS.GRN_GENERATED),
     [grns]
   )
-  const outgoingVouchersPending = useMemo(
-    () => vouchers.filter((v) => [SIV_STATUS.APPROVED, SIV_STATUS.POSTED].includes(v.status) && !v.gateVerified),
+  const gateEligibleOutgoing = useMemo(
+    () => vouchers.filter((v) => [SIV_STATUS.APPROVED, SIV_STATUS.POSTED].includes(v.status)),
     [vouchers]
   )
-  const outgoingTransfersPending = useMemo(
-    () => transfers.filter((t) => [TRANSFER_STATUS.APPROVED, TRANSFER_STATUS.DISPATCHED].includes(t.status) && !t.gateVerified),
-    [transfers]
+  const rejectedGateDocuments = useMemo(
+    () => grns.filter((g) => g.status === GRN_STATUS.REJECTED).length + vouchers.filter((v) => v.status === SIV_STATUS.REJECTED).length,
+    [grns, vouchers]
   )
-  const pendingGateOutgoing = outgoingVouchersPending.length + outgoingTransfersPending.length
-  const todaysIncoming = useMemo(
-    () => grns.filter((g) => g.gateVerified && isToday(g.gateVerifiedAt)).length,
-    [grns]
+  const pendingGateIncoming = gateEligibleIncoming.filter((g) => !g.gateVerified)
+  const pendingGateOutgoing = gateEligibleOutgoing.filter((v) => !v.gateVerified)
+  const gatePassesToday = useMemo(
+    () => gateEligibleIncoming.filter((g) => isToday(g.receivedDate)).length + gateEligibleOutgoing.filter((v) => isToday(v.date)).length,
+    [gateEligibleIncoming, gateEligibleOutgoing]
   )
-  const todaysOutgoing = useMemo(
-    () =>
-      vouchers.filter((v) => v.gateVerified && isToday(v.gateVerifiedAt)).length +
-      transfers.filter((t) => t.gateVerified && isToday(t.gateVerifiedAt)).length,
-    [vouchers, transfers]
-  )
-  const verifiedMovements = useMemo(
-    () =>
-      grns.filter((g) => g.gateVerified).length +
-      vouchers.filter((v) => v.gateVerified).length +
-      transfers.filter((t) => t.gateVerified).length,
-    [grns, vouchers, transfers]
-  )
+  const pendingGateVerification = pendingGateIncoming.length + pendingGateOutgoing.length
+  const approvedGatePasses = gateEligibleIncoming.length + gateEligibleOutgoing.length
+  const completedExits = gateEligibleOutgoing.filter((v) => v.gateVerified).length
+  const completedEntries = gateEligibleIncoming.filter((g) => g.gateVerified).length
 
   const pendingIssueActionRows = useMemo(() => {
     const receipts = pendingGrns.map((g) => ({
@@ -1150,16 +1141,16 @@ export default function Dashboard() {
   const renderSecurity = () => (
     <>
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {renderStatCardLink('/gate-pass', 'Pending Gate Passes', pendingGateIncoming + pendingGateOutgoing, ShieldCheck, 'warning', 'Awaiting verification')}
-        {renderStatCardLink('/gate-pass', "Today's Incoming", todaysIncoming, PackageCheck, 'success', 'Verified entering premises')}
-        {renderStatCardLink('/gate-pass', "Today's Outgoing", todaysOutgoing, Send, 'info', 'Verified leaving premises')}
-        {renderStatCardLink('/gate-pass', 'Transfers Awaiting Verification', outgoingTransfersPending.length, Repeat, 'warning', 'Dispatched transfers')}
-        <StatCard label="Verified Movements" value={verifiedMovements} icon={CheckCircle2} tone="success" hint="Total cleared at gate" />
-        <StatCard label="Rejected Movements" value={0} icon={XCircle} tone="danger" hint="Gate rejection not tracked yet" />
+        {renderStatCardLink('/gate-pass', 'Gate Passes Today', gatePassesToday, ShieldCheck, 'brand', 'Approved entries and exits')}
+        {renderStatCardLink('/gate-pass', 'Pending Verification', pendingGateVerification, AlertTriangle, 'warning', 'Waiting at the gate')}
+        {renderStatCardLink('/gate-pass', 'Approved Passes', approvedGatePasses, CheckCircle2, 'success', 'Eligible for verification')}
+        {renderStatCardLink('/gate-pass', 'Rejected Passes', rejectedGateDocuments, XCircle, 'danger', 'Rejected source documents')}
+        {renderStatCardLink('/gate-pass', 'Completed Exits', completedExits, Send, 'info', 'Outgoing issue vouchers cleared')}
+        {renderStatCardLink('/gate-pass', 'Completed Entries', completedEntries, PackageCheck, 'success', 'Incoming deliveries verified')}
       </div>
 
       <Card title="Gate Pass Queue" subtitle="Verify materials at the gate before entry or exit" actions={<Link to="/gate-pass" className="text-sm font-medium text-brand-600 hover:text-brand-700">Open verification</Link>}>
-        {pendingGateIncoming + pendingGateOutgoing === 0 ? (
+        {pendingGateVerification === 0 ? (
           <EmptyState title="Gate queue is clear" message="All recent goods movements have been verified at the gate." icon={ShieldCheck} />
         ) : (
           <ul className="space-y-3">
@@ -1179,15 +1170,6 @@ export default function Dashboard() {
                   <p className="text-xs text-ink-500">Issued to {v.issuedTo}</p>
                 </div>
                 <Link to="/gate-pass" className="text-xs font-medium text-brand-600">Clear</Link>
-              </li>
-            ))}
-            {outgoingTransfersPending.slice(0, 4).map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-2 rounded-lg border border-ink-100 bg-ink-50/40 p-3 text-sm">
-                <div>
-                  <p className="font-medium text-ink-900">{t.transferRef} · Transfer</p>
-                  <p className="text-xs text-ink-500">{t.fromStore} → {t.toStore}</p>
-                </div>
-                <Link to="/gate-pass" className="text-xs font-medium text-brand-600">Verify</Link>
               </li>
             ))}
           </ul>

@@ -1,4 +1,4 @@
-export default function Select({ label, error, className = '', required, options = [], placeholder = 'Select...', ...rest }) {
+export default function Select({ label, error, className = '', inputClassName = '', required, options = [], placeholder = 'Select...', ...rest }) {
   return (
     <div className={className}>
       {label && (
@@ -6,7 +6,7 @@ export default function Select({ label, error, className = '', required, options
           {label} {required && <span className="text-danger-500 font-bold">*</span>}
         </label>
       )}
-      <select className="input cursor-pointer" {...rest}>
+      <select className={`input cursor-pointer ${inputClassName}`} {...rest}>
         <option value="">{placeholder}</option>
         {options.map((opt) => {
           const value = typeof opt === 'string' ? opt : opt.value

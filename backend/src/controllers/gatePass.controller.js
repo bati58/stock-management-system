@@ -4,9 +4,8 @@ const AppError = require('../utils/AppError');
 const { logAudit } = require('../utils/audit');
 
 const TABLES = {
-    // Gate clearance currently covers supplier deliveries entering campus.
-    // Department issues and inter-store transfers are internal movements.
-    'goods-receipts': { table: 'goods_receipts', ref: 'grn_ref' }
+    'goods-receipts': { table: 'goods_receipts', ref: 'grn_ref', eligibleStatuses: ['GRN Generated'] },
+    'issue-vouchers': { table: 'issue_vouchers', ref: 'siv_ref', eligibleStatuses: ['Approved', 'Posted'] }
 };
 
 const verify = asyncHandler(async (req, res) => {
@@ -14,11 +13,10 @@ const verify = asyncHandler(async (req, res) => {
     if (!target) throw new AppError('Unsupported gate-pass document.', 404);
 
     const result = await withTransaction(async (client) => {
-        const eligibleStatuses = ['GRN Generated'];
         const { rows: currentRows } = await client.query(`SELECT id, ${target.ref} AS reference, status, gate_verified FROM ${target.table} WHERE id = $1 FOR UPDATE`, [req.params.id]);
         if (!currentRows[0]) throw new AppError('Gate-pass document not found.', 404);
-        if (!eligibleStatuses.includes(currentRows[0].status)) {
-            throw new AppError('Only a generated GRN for an incoming supplier delivery can be verified at the gate.', 409);
+        if (!target.eligibleStatuses.includes(currentRows[0].status)) {
+            throw new AppError('This document is not approved for gate verification.', 409);
         }
         if (currentRows[0].gate_verified) throw new AppError('This document has already been verified at the gate.', 409);
 

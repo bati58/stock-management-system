@@ -299,6 +299,8 @@ function mapAuditLog(row) {
     beforeData: row.before_data,
     afterData: row.after_data,
     changes: row.changes,
+    ipAddress: row.metadata?.ip || null,
+    userAgent: row.metadata?.userAgent || null,
     metadata: row.metadata,
     timestamp: row.created_at
   };

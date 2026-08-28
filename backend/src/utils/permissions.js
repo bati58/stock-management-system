@@ -45,7 +45,7 @@ const READ_PERMISSIONS = {
   requisitions: [...REPORT_READERS, STOREKEEPER],
   'issue-vouchers': [...REPORT_READERS, STOREKEEPER, SECURITY],
   'material-returns': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, STOCK_CLERK, DEPT_HEAD, ACCOUNTANT],
-  'material-transfers': [...REPORT_READERS, STOREKEEPER, SECURITY],
+  'material-transfers': [...REPORT_READERS, STOREKEEPER],
   'fixed-assets': REPORT_READERS,
   disposals: REPORT_READERS,
   users: [ADMIN],

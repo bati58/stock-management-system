@@ -71,6 +71,12 @@ INSERT INTO items (code, name, category_id, store_id, bin, unit, min_level, max_
   ('4406-001-005', 'Cooking Oil (5L)', (SELECT id FROM categories WHERE code='4406' ORDER BY id LIMIT 1), (SELECT id FROM stores WHERE code='STR-CAF'), 'C-01', 'litre', 40, 400, 80, 75, 900)
 ON CONFLICT (code, store_id) DO NOTHING;
 
+-- Configurable system rules used by the admin settings page and operational UI.
+INSERT INTO business_rules (rule_name, rule_category, rule_value, rule_type, description, min_value, max_value, allowed_values)
+VALUES
+  ('SHELF_LIFE_WARNING_DAYS', 'Inventory', '90', 'integer', 'Number of days before expiry when an item is flagged for attention.', '0', '3650', NULL)
+ON CONFLICT (rule_name) DO NOTHING;
+
 -- Seed a FIFO lot for every item matching its current qty_on_hand, so FIFO
 -- issuing works correctly from the very first transaction after seeding.
 INSERT INTO stock_lots (item_id, received_date, unit_price, qty_received, qty_remaining, source_ref)

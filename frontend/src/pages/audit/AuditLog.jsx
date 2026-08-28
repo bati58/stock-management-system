@@ -159,7 +159,7 @@ export default function AuditLog() {
         }
       />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card title="Total Events">
           <p className="text-2xl font-semibold text-ink-900">{summary.total}</p>
         </Card>
@@ -178,8 +178,10 @@ export default function AuditLog() {
       </div>
 
       <div className="card p-4 sm:p-5">
-        <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
-          <SearchInput value={query} onChange={setQuery} placeholder="Search user, action, module, ref..." />
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="md:col-span-2 lg:col-span-3">
+            <SearchInput value={query} onChange={setQuery} placeholder="Search user, action, module, ref..." />
+          </div>
           <Select label="Sort" value={sortBy} onChange={(e) => setSortBy(e.target.value)} options={[{ value: 'newest', label: 'Newest first' }, { value: 'oldest', label: 'Oldest first' }, { value: 'user', label: 'User' }, { value: 'action', label: 'Action' }, { value: 'module', label: 'Module' }, { value: 'outcome', label: 'Outcome' }]} />
           <Select label="Role" value={filters.role} onChange={(e) => setFilters((prev) => ({ ...prev, role: e.target.value }))} options={roleOptions} />
           <Select label="Module" value={filters.module} onChange={(e) => setFilters((prev) => ({ ...prev, module: e.target.value }))} options={moduleOptions} />
