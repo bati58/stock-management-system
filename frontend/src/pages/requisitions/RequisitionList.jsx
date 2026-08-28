@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus, Eye, CheckCircle2, XCircle, Trash2, Edit, Send, RotateCcw } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
 import PageHeader from '../../components/ui/PageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Table from '../../components/ui/Table'
@@ -26,6 +27,8 @@ const EMPTY_LINE = { item: '', qty: '' }
 export default function RequisitionList() {
   const { push } = useToast()
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const { id: requisitionId } = useParams()
   const [rows, setRows] = useState([])
   const [stores, setStores] = useState([])
   const [items, setItems] = useState([])
@@ -69,6 +72,12 @@ export default function RequisitionList() {
   useEffect(() => {
     load()
   }, [])
+
+  useEffect(() => {
+    if (!requisitionId || loading) return
+    const row = rows.find((requisition) => String(requisition.id) === String(requisitionId))
+    if (row) handleOpenView(row)
+  }, [requisitionId, rows, loading])
 
   const filtered = useMemo(() => {
     if (!query.trim()) return rows
@@ -277,7 +286,10 @@ export default function RequisitionList() {
 
       <Modal
         open={Boolean(viewing)}
-        onClose={() => setViewing(null)}
+        onClose={() => {
+          setViewing(null)
+          if (requisitionId) navigate('/requisitions', { replace: true })
+        }}
         title={viewing?.srRef}
         size="lg"
         footer={

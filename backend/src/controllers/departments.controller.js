@@ -30,11 +30,11 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-    const { code, name, headUserId } = req.body;
+    const { code, name, headUserId, active } = req.body;
     if (!code || !name) throw new AppError('code and name are required.', 400);
     const { rows } = await query(
-        `INSERT INTO departments (code, name, head_user_id) VALUES ($1, $2, $3) RETURNING id`,
-        [code, name, headUserId || null]
+        `INSERT INTO departments (code, name, head_user_id, active) VALUES ($1, $2, $3, $4) RETURNING id`,
+        [code, name, headUserId || null, active !== undefined ? active : true]
     );
     await logAudit(query, { userId: req.user.id, userName: req.user.name, userRole: req.user.role, action: `Created department ${name}`, module: 'Departments', entityType: 'department', entityId: rows[0].id });
     const { rows: full } = await query(`${SELECT} WHERE d.id = $1`, [rows[0].id]);

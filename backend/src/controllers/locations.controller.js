@@ -44,7 +44,7 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-    const { storeId, store, parentId, type, code, name } = req.body;
+    const { storeId, store, parentId, type, code, name, active } = req.body;
     if ((!storeId && !store) || !type || !code || !name) {
         throw new AppError('store or storeId, type, code, and name are required.', 400);
     }
@@ -52,9 +52,9 @@ const create = asyncHandler(async (req, res) => {
     await validateLocationHierarchy({ storeId: resolvedStoreId, parentId, type });
 
     const { rows } = await query(
-        `INSERT INTO locations (store_id, parent_id, type, code, name)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [resolvedStoreId, parentId || null, type, code, name]
+        `INSERT INTO locations (store_id, parent_id, type, code, name, active)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        [resolvedStoreId, parentId || null, type, code, name, active !== undefined ? active : true]
     );
 
     await logAudit(query, {

@@ -29,7 +29,8 @@ export default function UserList() {
         { name: 'name', label: 'Full Name', required: true },
         { name: 'username', label: 'Username', required: true },
         { name: 'email', label: 'Email', type: 'email', required: true },
-        { name: 'role', label: 'Role', type: 'select', required: true, options: ALL_ROLES }
+        { name: 'role', label: 'Role', type: 'select', required: true, options: ALL_ROLES },
+        { name: 'active', label: 'Active', type: 'checkbox' }
       ]}
     />
   )

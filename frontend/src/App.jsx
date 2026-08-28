@@ -53,6 +53,7 @@ export default function App() {
                     <Route path="/bin-cards" element={<BinCardList />} />
                     <Route path="/stock-transfer" element={<StockTransfer />} />
                     <Route path="/requisitions" element={<RequisitionList />} />
+                    <Route path="/requisitions/:id" element={<RequisitionList />} />
                     <Route path="/issue-vouchers" element={<IssueVoucherList />} />
                     <Route path="/material-return" element={<MaterialReturnList />} />
                     <Route path="/material-transfer" element={<MaterialTransferList />} />

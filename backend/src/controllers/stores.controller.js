@@ -16,13 +16,13 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-  const { name, code, type, location, headOfStore, description, contactInfo } = req.body;
+  const { name, code, type, location, headOfStore, description, contactInfo, active } = req.body;
   if (!name || !code || !type) throw new AppError('name, code, and type are required.', 400);
 
   const { rows } = await query(
     `INSERT INTO stores (name, code, type, location, head_of_store, description, contact_info, active)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE) RETURNING *`,
-    [name, code, type, location || null, headOfStore || null, description || null, contactInfo || null]
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+    [name, code, type, location || null, headOfStore || null, description || null, contactInfo || null, active !== undefined ? active : true]
   );
 
   await logAudit(query, { userName: req.user.name, action: `Created store ${name}`, module: 'Store Management' });

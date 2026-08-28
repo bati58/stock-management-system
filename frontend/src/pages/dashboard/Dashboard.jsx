@@ -529,6 +529,19 @@ export default function Dashboard() {
 
   const renderAdmin = () => (
     <>
+      <Card title="System Overview" subtitle="Current master-data and account totals" className="mb-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {renderStatCardLink('/users', 'Total Users', summary?.systemOverview?.totalUsers ?? (loading ? '—' : 0), Landmark, 'brand', 'All user accounts')}
+          {renderStatCardLink('/users', 'Active Users', summary?.systemOverview?.activeUsers ?? (loading ? '—' : 0), CheckCircle2, 'success', 'Currently enabled')}
+          {renderStatCardLink('/users', 'Inactive Users', summary?.systemOverview?.inactiveUsers ?? (loading ? '—' : 0), XCircle, 'danger', 'Currently disabled')}
+          <StatCard label="Total Roles" value={summary?.systemOverview?.totalRoles ?? (loading ? '—' : 0)} icon={ShieldCheck} tone="info" hint="Roles in use" />
+          {renderStatCardLink('/departments', 'Total Departments', summary?.systemOverview?.totalDepartments ?? (loading ? '—' : 0), ClipboardList, 'brand', 'Registered departments')}
+          {renderStatCardLink('/stores', 'Total Stores', summary?.systemOverview?.totalStores ?? (loading ? '—' : 0), Boxes, 'success', 'Registered stores')}
+          {renderStatCardLink('/items', 'Total Items', summary?.systemOverview?.totalItems ?? (loading ? '—' : 0), PackageCheck, 'warning', 'Inventory catalog')}
+          {renderStatCardLink('/suppliers', 'Total Suppliers', summary?.systemOverview?.totalSuppliers ?? (loading ? '—' : 0), FileText, 'info', 'Registered suppliers')}
+        </div>
+      </Card>
+
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total Inventory Value" value={!summary ? '—' : formatCurrency(summary.totalInventoryValue || 0)} icon={Boxes} tone="brand" />
         <StatCard label="Items at Reorder Level" value={!summary ? '—' : summary.itemsAtReorderLevel || 0} icon={AlertTriangle} tone="warning" hint="Needs replenishment" />

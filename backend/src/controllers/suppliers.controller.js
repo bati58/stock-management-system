@@ -24,11 +24,11 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-    const { code, name, contact, address } = req.body;
+    const { code, name, contact, address, active } = req.body;
     if (!code || !name) throw new AppError('code and name are required.', 400);
     const { rows } = await query(
-        `INSERT INTO suppliers (code, name, contact, address) VALUES ($1, $2, $3, $4) RETURNING *`,
-        [code, name, contact || null, address || null]
+        `INSERT INTO suppliers (code, name, contact, address, active) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [code, name, contact || null, address || null, active !== undefined ? active : true]
     );
     await logAudit(query, { userId: req.user.id, userName: req.user.name, userRole: req.user.role, action: `Created supplier ${name}`, module: 'Suppliers', entityType: 'supplier', entityId: rows[0].id });
     res.status(201).json(mapSupplier(rows[0]));

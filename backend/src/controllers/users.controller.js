@@ -17,7 +17,7 @@ const getOne = asyncHandler(async (req, res) => {
 });
 
 const create = asyncHandler(async (req, res) => {
-  const { name, username, email, role, department, password } = req.body;
+  const { name, username, email, role, department, password, active } = req.body;
   if (!name || !username || !role) {
     throw new AppError('name, username, and role are required.', 400);
   }
@@ -25,8 +25,8 @@ const create = asyncHandler(async (req, res) => {
 
   const { rows } = await query(
     `INSERT INTO users (name, username, password_hash, role, email, department, active)
-     VALUES ($1, $2, $3, $4, $5, $6, TRUE) RETURNING *`,
-    [name, username, passwordHash, role, email || null, department || null]
+    VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [name, username, passwordHash, role, email || null, department || null, active !== undefined ? active : true]
   );
 
   await logAudit(query, {

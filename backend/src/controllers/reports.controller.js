@@ -108,6 +108,31 @@ const dashboardSummary = asyncHandler(async (req, res) => {
   const role = req.user.role;
   const summary = {};
 
+  if (role === ROLES.ADMIN) {
+    const overviewQ = await query(`
+      SELECT
+        (SELECT COUNT(*) FROM users) AS total_users,
+        (SELECT COUNT(*) FROM users WHERE active = TRUE) AS active_users,
+        (SELECT COUNT(*) FROM users WHERE active = FALSE) AS inactive_users,
+        (SELECT COUNT(DISTINCT role) FROM users) AS total_roles,
+        (SELECT COUNT(*) FROM departments) AS total_departments,
+        (SELECT COUNT(*) FROM stores) AS total_stores,
+        (SELECT COUNT(*) FROM items) AS total_items,
+        (SELECT COUNT(*) FROM suppliers) AS total_suppliers
+    `);
+    const overview = overviewQ.rows[0];
+    summary.systemOverview = {
+      totalUsers: Number(overview.total_users),
+      activeUsers: Number(overview.active_users),
+      inactiveUsers: Number(overview.inactive_users),
+      totalRoles: Number(overview.total_roles),
+      totalDepartments: Number(overview.total_departments),
+      totalStores: Number(overview.total_stores),
+      totalItems: Number(overview.total_items),
+      totalSuppliers: Number(overview.total_suppliers)
+    };
+  }
+
   const totalValueQ = await query('SELECT COALESCE(SUM(qty_on_hand * unit_price), 0) AS total FROM items');
   summary.totalInventoryValue = Number(totalValueQ.rows[0].total);
 
@@ -290,7 +315,7 @@ const exportCsv = asyncHandler(async (req, res) => {
     json: (data) => { capturedData = data; },
     status: () => fakeRes
   };
-  await REPORT_HANDLERS[reportName](req, fakeRes, () => {});
+  await REPORT_HANDLERS[reportName](req, fakeRes, () => { });
 
   const csv = jsonToCsv(Array.isArray(capturedData) ? capturedData : [capturedData]);
   const filename = `${reportName}_${new Date().toISOString().slice(0, 10)}.csv`;
