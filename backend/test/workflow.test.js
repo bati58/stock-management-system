@@ -23,6 +23,19 @@ test('rejects a receipt that is already posted', () => {
     );
 });
 
+test('goods receipt workflow must follow storekeeper -> store head -> TEC -> posted flow', () => {
+    assert.doesNotThrow(() => assertTransition('goodsReceipt', 'Draft', 'Submitted'));
+    assert.doesNotThrow(() => assertTransition('goodsReceipt', 'Submitted', 'Pending Evaluation'));
+    assert.doesNotThrow(() => assertTransition('goodsReceipt', 'Pending Evaluation', 'Under Evaluation'));
+    assert.doesNotThrow(() => assertTransition('goodsReceipt', 'Under Evaluation', 'Accepted'));
+    assert.doesNotThrow(() => assertTransition('goodsReceipt', 'Accepted', 'GRN Generated'));
+    assert.doesNotThrow(() => assertTransition('goodsReceipt', 'GRN Generated', 'Posted'));
+    assert.throws(
+        () => assertTransition('goodsReceipt', 'Draft', 'Accepted'),
+        (error) => error.statusCode === 409
+    );
+});
+
 test('requires an approved transfer to be dispatched', () => {
     assert.throws(
         () => assertTransition('materialTransfer', 'Pending Approval', 'Dispatched'),
@@ -65,5 +78,9 @@ test('administrator has system-admin access but no operational transaction write
     assert.equal(canWrite('business-rules', 'Administrator'), true);
     assert.equal(canWrite('users', 'Administrator'), true);
     assert.equal(canAct('stock-taking-post', 'Administrator'), false);
+    assert.equal(canAct('goods-receipts-notify-tec', 'Store Head'), true);
+    assert.equal(canAct('goods-receipts-notify-tec', 'Storekeeper'), false);
+    assert.equal(canAct('goods-receipts-post', 'Storekeeper'), true);
+    assert.equal(canAct('goods-receipts-post', 'Store Head'), false);
 });
 

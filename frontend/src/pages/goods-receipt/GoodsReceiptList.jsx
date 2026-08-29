@@ -36,10 +36,11 @@ export default function GoodsReceiptList() {
   const [header, setHeader] = useState({ supplier: '', poRef: '', store: '', receivedDate: '', type: 'Consumable', docRef: '', condition: 'New' })
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
 
-  // Store Head / Storekeeper may record and process receipts. Admin is read-only.
-  const canManage = canPerformAction(user?.role, 'create', 'goodsReceipts')
-  const canPost = [ROLES.STORE_HEAD, ROLES.STOREKEEPER].includes(user?.role)
-  const canNotifyTec = [ROLES.STORE_HEAD].includes(user?.role)
+  const isStorekeeper = user?.role === ROLES.STOREKEEPER
+  const isStoreHead = user?.role === ROLES.STORE_HEAD
+  const canManage = isStorekeeper
+  const canPost = isStorekeeper
+  const canNotifyTec = isStoreHead
 
   async function load() {
     setLoading(true)
