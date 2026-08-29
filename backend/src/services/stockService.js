@@ -110,7 +110,9 @@ async function recordGoodsReceiptEvaluation(client, { grnId, decision, evaluatio
   const { rows: receiptRows } = await client.query('SELECT * FROM goods_receipts WHERE id = $1 FOR UPDATE', [grnId]);
   const receipt = receiptRows[0];
   if (!receipt) throw new AppError('Goods receipt not found.', 404);
-  assertTransition('goodsReceipt', receipt.status, decision === 'Rejected' ? 'Rejected' : decision === 'Partially Approved' ? 'Accepted' : 'Accepted');
+
+  const nextStatus = decision === 'Rejected' ? 'Rejected' : decision === 'Partially Approved' ? 'Partially Accepted' : 'Accepted';
+  assertTransition('goodsReceipt', receipt.status, nextStatus);
 
   const { rows: lines } = await client.query('SELECT gi.*, i.name AS item_name FROM goods_receipt_items gi JOIN items i ON i.id = gi.item_id WHERE gi.goods_receipt_id = $1', [grnId]);
   for (const line of lines) {
@@ -119,8 +121,6 @@ async function recordGoodsReceiptEvaluation(client, { grnId, decision, evaluatio
     const accepted = decision === 'Rejected' ? 0 : Math.max(0, Math.min(requested, Number(submitted?.qtyAccepted ?? requested)));
     await client.query('UPDATE goods_receipt_items SET qty_accepted = $1, qty_rejected = $2 WHERE id = $3', [accepted, requested - accepted, line.id]);
   }
-
-  const nextStatus = decision === 'Rejected' ? 'Rejected' : decision === 'Partially Approved' ? 'Partially Accepted' : 'Accepted';
   await client.query(
     `UPDATE goods_receipts SET status = $1, evaluation_status = $2, evaluation_date = CURRENT_DATE,
        evaluation_note = $3, evaluation_findings = $4, evaluation_condition = $5,

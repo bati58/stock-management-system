@@ -46,6 +46,10 @@ const getOne = asyncHandler(async (req, res) => {
 
 // POST /api/goods-receipts — Backend-SRS §6.1 step 1 (Draft only, no stock change)
 const create = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'Storekeeper') {
+    throw new AppError('Only the Storekeeper can create or edit a goods receipt draft.', 403);
+  }
+
   const { supplier, poRef, receivedDate, receivedBy, store, items } = req.body;
   if (!supplier || !receivedDate || !store || !Array.isArray(items) || items.length === 0) {
     throw new AppError('supplier, receivedDate, store, and at least one item are required.', 400);
@@ -81,6 +85,10 @@ const create = asyncHandler(async (req, res) => {
 
 // POST /api/goods-receipts/:id/evaluate — Backend-SRS §6.1 steps 2-4
 const evaluate = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'Technical Evaluation Committee') {
+    throw new AppError('Only the Technical Evaluation Committee can evaluate goods receipts.', 403);
+  }
+
   const { decision, evaluationNote, findings, condition, evidence, items } = req.body;
   if (!['Approved', 'Rejected', 'Partially Approved'].includes(decision)) {
     throw new AppError('decision must be "Approved", "Partially Approved", or "Rejected".', 400);
@@ -114,6 +122,10 @@ const evaluate = asyncHandler(async (req, res) => {
 });
 
 const generateGrn = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'Storekeeper') {
+    throw new AppError('Only the Storekeeper can generate the official GRN for accepted stock.', 403);
+  }
+
   await withTransaction(async (client) => {
     await stockService.generateGrn(client, {
       grnId: req.params.id,
@@ -125,6 +137,10 @@ const generateGrn = asyncHandler(async (req, res) => {
 });
 
 const postStock = asyncHandler(async (req, res) => {
+  if (req.user.role !== 'Storekeeper') {
+    throw new AppError('Only the Storekeeper can post accepted stock into inventory.', 403);
+  }
+
   await withTransaction((client) => stockService.postGrn(client, { grnId: req.params.id, actorName: req.user.name }));
   res.json(await fetchWithLines(req.params.id));
 });
@@ -132,6 +148,10 @@ const postStock = asyncHandler(async (req, res) => {
 const setStatus = asyncHandler(async (req, res) => {
   const allowed = ['Draft', 'Submitted', 'Pending', 'Pending Evaluation', 'Under Evaluation'];
   if (!allowed.includes(req.body.status)) throw new AppError('Invalid goods receipt workflow status.', 400);
+
+  if (req.body.status === 'Submitted' && req.user.role !== 'Storekeeper') {
+    throw new AppError('Only the Storekeeper can submit a goods receipt for review.', 403);
+  }
   if (req.body.status === 'Pending Evaluation' && !canAct('goods-receipts-notify-tec', req.user.role)) {
     throw new AppError('Only the Store Head can notify the Technical Evaluation Committee.', 403);
   }
