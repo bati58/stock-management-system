@@ -3,7 +3,7 @@
 A full-stack Stock Management System built for university inventory control, covering store setup, item classification, goods receipt, stock transfers, material returns, disposals, requisitions, and audit logging.
 
 This project is divided into two parts, both of which are fully integrated and wired together:
-- **[frontend](./frontend)**: A React 18 SPA (Vite + Tailwind CSS + lucide-react) or nextjs
+- **[frontend](./frontend)**: A React 18 SPA (Vite + Tailwind CSS + lucide-react) or in future we may switch to nextjs
 - **[backend](./backend)**: A Node.js/Express REST API backed by PostgreSQL
 
 ## Features
