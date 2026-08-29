@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { assertTransition } = require('../src/utils/workflow');
+const { canRead, canWrite, canAct } = require('../src/utils/permissions');
 
 test('only reusable return conditions can be restocked', () => {
     const isReusable = (condition) => ['good', 'usable', 'reusable'].includes(String(condition || '').trim().toLowerCase());
@@ -55,3 +56,14 @@ test('stock-taking follows submit -> approve -> post -> close', () => {
         (error) => error.statusCode === 409
     );
 });
+
+test('administrator has system-admin access but no operational transaction write or action rights', () => {
+    assert.equal(canRead('goods-receipts', 'Administrator'), true);
+    assert.equal(canWrite('goods-receipts', 'Administrator'), false);
+    assert.equal(canAct('goods-receipts-evaluate', 'Administrator'), false);
+    assert.equal(canAct('requisitions', 'Administrator'), false);
+    assert.equal(canWrite('business-rules', 'Administrator'), true);
+    assert.equal(canWrite('users', 'Administrator'), true);
+    assert.equal(canAct('stock-taking-post', 'Administrator'), false);
+});
+

@@ -36,15 +36,15 @@ export default function DisposalList() {
   const canDelete = canPerformAction(user?.role, 'delete', 'disposals')
   const canApprove = canPerformAction(user?.role, 'approve', 'disposals')
 
-  // According to roles, Store Head / Administrator approves disposals.
-  const isStoreHead = user?.role === ROLES.STORE_HEAD || user?.role === ROLES.ADMIN
+  // Operational disposal approvals belong to the store leadership; admin is read-only.
+  const isStoreHead = user?.role === ROLES.STORE_HEAD
 
   async function load() {
     setLoading(true)
     try {
       const [dsps, storeList, itemList] = await Promise.all([disposalService.list(), storeService.list(), itemService.list()])
       setRows(dsps)
-      setStores(storeList)
+      setStores(storeList.filter((store) => store.active !== false))
       setItems(itemList)
     } catch (err) {
       push(err.message || 'Could not load disposals.', 'error')

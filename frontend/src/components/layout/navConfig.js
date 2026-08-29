@@ -70,15 +70,10 @@ const NAV_ITEMS = {
 const ROLE_NAV = {
   [ROLES.ADMIN]: [
     ['Overview', ['dashboard']],
-    ['Inventory Setup', ['stores', 'categories', 'items', 'locations', 'suppliers', 'departments']],
-    ['Receiving', ['goodsReceipt', 'evaluation', 'grnDocuments']],
-    ['Stock', ['stockCards', 'binCards', 'stockTransfer']],
-    ['Requisitions & Issues', ['requisitions', 'issueVouchers']],
-    ['Returns & Transfers', ['materialReturn', 'materialTransfer']],
-    ['Stock Control', ['stockTaking', 'reconciliation']],
-    ['Assets & Disposal', ['fixedAssets', 'userCards', 'disposal']],
-    ['Security', ['gatePass']],
-    ['Administration', ['users', 'businessRules', 'reports', 'auditLog']],
+    ['System Administration', ['users', 'businessRules']],
+    ['Master Data', ['stores', 'categories', 'items', 'locations', 'suppliers', 'departments']],
+    ['Operational Monitoring', ['goodsReceipt', 'evaluation', 'grnDocuments', 'stockCards', 'binCards', 'stockTransfer', 'requisitions', 'issueVouchers', 'materialReturn', 'materialTransfer', 'stockTaking', 'reconciliation', 'fixedAssets', 'userCards', 'disposal', 'gatePass']],
+    ['Reports & Audit', ['reports', 'auditLog']],
   ],
 
   [ROLES.PAO]: [

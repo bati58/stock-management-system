@@ -56,23 +56,23 @@ const READ_PERMISSIONS = {
 };
 
 const ACTION_PERMISSIONS = {
-  'goods-receipts': [ADMIN, STORE_HEAD, STOREKEEPER, TEC], // TEC may claim Pending Evaluation -> Under Evaluation before evaluating
-  requisitions: [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
-  'material-returns': [ADMIN, PAO, STORE_HEAD],
+  'goods-receipts': [STORE_HEAD, STOREKEEPER, TEC], // Admin is monitoring-only for goods receipts; operational actions stay with store/TEC roles.
+  requisitions: [PAO, STORE_HEAD, DEPT_HEAD],
+  'material-returns': [PAO, STORE_HEAD],
   // Approve/Reject/Return only. Storekeeper is intentionally excluded so it cannot
   // approve its own transfer; it dispatches/receives via 'material-transfers-execute'.
-  'material-transfers': [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
-  'issue-vouchers': [ADMIN, STORE_HEAD],
-  disposals: [ADMIN, PAO, STORE_HEAD],
-  'gate-pass': [ADMIN, SECURITY]
+  'material-transfers': [PAO, STORE_HEAD, DEPT_HEAD],
+  'issue-vouchers': [STORE_HEAD],
+  disposals: [PAO, STORE_HEAD],
+  'gate-pass': [SECURITY]
 };
-ACTION_PERMISSIONS['issue-voucher-post'] = [ADMIN, STORE_HEAD, STOREKEEPER];
-ACTION_PERMISSIONS['goods-receipts-evaluate'] = [ADMIN, TEC];
-ACTION_PERMISSIONS['goods-receipts-notify-tec'] = [ADMIN, STORE_HEAD];
-ACTION_PERMISSIONS['goods-receipts-post'] = [ADMIN, STORE_HEAD, STOREKEEPER];
-ACTION_PERMISSIONS['material-transfers-execute'] = [ADMIN, STORE_HEAD, STOREKEEPER]; // dispatch/receive: the store operators, not the approver
-ACTION_PERMISSIONS['stock-taking'] = [ADMIN, PAO, STORE_HEAD];
-ACTION_PERMISSIONS['stock-taking-post'] = [ADMIN, PAO, STORE_HEAD]; // Stock Clerk counts/submits but cannot post its own adjustment
+ACTION_PERMISSIONS['issue-voucher-post'] = [STORE_HEAD, STOREKEEPER];
+ACTION_PERMISSIONS['goods-receipts-evaluate'] = [TEC];
+ACTION_PERMISSIONS['goods-receipts-notify-tec'] = [STORE_HEAD];
+ACTION_PERMISSIONS['goods-receipts-post'] = [STORE_HEAD, STOREKEEPER];
+ACTION_PERMISSIONS['material-transfers-execute'] = [STORE_HEAD, STOREKEEPER]; // dispatch/receive: the store operators, not the approver
+ACTION_PERMISSIONS['stock-taking'] = [PAO, STORE_HEAD];
+ACTION_PERMISSIONS['stock-taking-post'] = [PAO, STORE_HEAD]; // Stock Clerk counts/submits but cannot post its own adjustment
 
 ACTION_PERMISSIONS['business-rules'] = [ADMIN];
 
@@ -87,22 +87,22 @@ const WRITE_PERMISSIONS = {
   locations: [ADMIN, STORE_HEAD, STOREKEEPER],
   suppliers: [ADMIN, PAO],
   departments: [ADMIN, PAO],
-  'stock-taking': [ADMIN, STORE_HEAD, STOREKEEPER, STOCK_CLERK],
+  'stock-taking': [STORE_HEAD, STOREKEEPER, STOCK_CLERK],
   reconciliation: [],
-  'goods-receipts': [ADMIN, STORE_HEAD, STOREKEEPER], // TEC writes only via the /evaluate action route
+  'goods-receipts': [STORE_HEAD, STOREKEEPER], // TEC writes only via the /evaluate action route; admin is monitoring-only
   'stock-transactions': [], // system-generated only
-  'bin-cards': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, STOCK_CLERK],
-  requisitions: [ADMIN, PAO, STORE_HEAD, DEPT_HEAD],
-  'issue-vouchers': [ADMIN, STORE_HEAD, STOREKEEPER],
-  'material-returns': [ADMIN, STORE_HEAD, DEPT_HEAD],
-  'material-transfers': [ADMIN, PAO, STORE_HEAD, STOREKEEPER, DEPT_HEAD],
+  'bin-cards': [PAO, STORE_HEAD, STOREKEEPER, STOCK_CLERK],
+  requisitions: [PAO, STORE_HEAD, DEPT_HEAD],
+  'issue-vouchers': [STORE_HEAD, STOREKEEPER],
+  'material-returns': [STORE_HEAD, DEPT_HEAD],
+  'material-transfers': [PAO, STORE_HEAD, STOREKEEPER, DEPT_HEAD],
   'fixed-assets': [ADMIN, PAO, STORE_HEAD],
-  disposals: [ADMIN, PAO, STORE_HEAD],
+  disposals: [PAO, STORE_HEAD],
   users: [ADMIN],
   'audit-logs': [], // system-generated only
   reports: [],
-  'gate-pass': [ADMIN, SECURITY],
-  'user-cards': [ADMIN, STORE_HEAD, STOREKEEPER],
+  'gate-pass': [SECURITY],
+  'user-cards': [STORE_HEAD, STOREKEEPER],
   'business-rules': [ADMIN]
 };
 

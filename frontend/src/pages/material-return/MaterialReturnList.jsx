@@ -51,7 +51,7 @@ export default function MaterialReturnList() {
         departmentService.list()
       ])
       setRows(returns)
-      setStores(storeList)
+      setStores(storeList.filter((store) => store.active !== false))
       setItems(itemList)
       setDepartments(departmentList.filter((department) => department.active))
     } catch (err) {

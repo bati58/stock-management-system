@@ -38,14 +38,14 @@ export default function MaterialTransferList() {
   const canApprove = canPerformAction(user?.role, 'approve', 'materialTransfers')
   const canCreate = canPerformAction(user?.role, 'create', 'materialTransfers')
   // Store operators who physically move goods (backend: material-transfers-execute).
-  const isStorekeeper = [ROLES.STOREKEEPER, ROLES.STORE_HEAD, ROLES.ADMIN].includes(user?.role)
+  const isStorekeeper = [ROLES.STOREKEEPER, ROLES.STORE_HEAD].includes(user?.role)
 
   async function load() {
     setLoading(true)
     try {
       const [transfers, storeList, itemList] = await Promise.all([materialTransferService.list(), storeService.list(), itemService.list()])
       setRows(transfers)
-      setStores(storeList)
+      setStores(storeList.filter((store) => store.active !== false))
       setItems(itemList)
     } catch (err) {
       push(err.message || 'Could not load material transfers.', 'error')

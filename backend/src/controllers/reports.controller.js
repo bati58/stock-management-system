@@ -135,10 +135,10 @@ const dashboardSummary = asyncHandler(async (req, res) => {
         (SELECT COUNT(*) FROM users WHERE active = TRUE) AS active_users,
         (SELECT COUNT(*) FROM users WHERE active = FALSE) AS inactive_users,
         (SELECT COUNT(DISTINCT role) FROM users) AS total_roles,
-        (SELECT COUNT(*) FROM departments) AS total_departments,
-        (SELECT COUNT(*) FROM stores) AS total_stores,
-        (SELECT COUNT(*) FROM items) AS total_items,
-        (SELECT COUNT(*) FROM suppliers) AS total_suppliers
+        (SELECT COUNT(*) FROM departments WHERE active = TRUE) AS total_departments,
+        (SELECT COUNT(*) FROM stores WHERE active = TRUE) AS total_stores,
+        (SELECT COUNT(*) FROM items i JOIN stores s ON s.id = i.store_id WHERE s.active = TRUE) AS total_items,
+        (SELECT COUNT(*) FROM suppliers WHERE active = TRUE) AS total_suppliers
     `);
     const overview = overviewQ.rows[0];
     summary.systemOverview = {
@@ -153,15 +153,28 @@ const dashboardSummary = asyncHandler(async (req, res) => {
     };
   }
 
-  const totalValueQ = await query('SELECT COALESCE(SUM(qty_on_hand * unit_price), 0) AS total FROM items');
+  const totalValueQ = await query(`
+    SELECT COALESCE(SUM(i.qty_on_hand * i.unit_price), 0) AS total
+    FROM items i
+    JOIN stores s ON s.id = i.store_id
+    WHERE s.active = TRUE
+  `);
   summary.totalInventoryValue = Number(totalValueQ.rows[0].total);
 
-  const lowStockQ = await query('SELECT COUNT(*) AS count FROM items WHERE qty_on_hand <= reorder_level');
+  const lowStockQ = await query(`
+    SELECT COUNT(*) AS count
+    FROM items i
+    JOIN stores s ON s.id = i.store_id
+    WHERE s.active = TRUE AND i.qty_on_hand <= i.reorder_level
+  `);
   summary.itemsAtReorderLevel = Number(lowStockQ.rows[0].count);
 
-  const pendingGrnQ = await query(
-    "SELECT COUNT(*) AS count FROM goods_receipts WHERE status IN ('Pending','Under Evaluation')"
-  );
+  const pendingGrnQ = await query(`
+    SELECT COUNT(*) AS count
+    FROM goods_receipts g
+    JOIN stores s ON s.id = g.store_id
+    WHERE s.active = TRUE AND g.status IN ('Pending','Under Evaluation')
+  `);
   summary.pendingGoodsReceipts = Number(pendingGrnQ.rows[0].count);
 
   if (role === ROLES.DEPT_HEAD) {

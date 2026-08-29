@@ -53,7 +53,7 @@ export default function StockTakingList() {
                 storeService.list(),
                 itemService.list()
             ])
-            setStores(storesList)
+            setStores(storesList.filter((store) => store.active !== false))
             setItems(itemsList)
         } catch (error) {
             push(error.message || 'Failed to load stores and items', 'error')
@@ -153,11 +153,11 @@ export default function StockTakingList() {
     }
 
     const canSubmit = selectedSession?.status === 'Draft' &&
-        [ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK].includes(user?.role)
+        [ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK].includes(user?.role)
     const canApprove = selectedSession?.status === 'Submitted' &&
-        [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD].includes(user?.role)
+        [ROLES.PAO, ROLES.STORE_HEAD].includes(user?.role)
     const canPost = selectedSession?.status === 'Approved' &&
-        [ROLES.ADMIN, ROLES.PAO, ROLES.STORE_HEAD].includes(user?.role)
+        [ROLES.PAO, ROLES.STORE_HEAD].includes(user?.role)
 
     const columns = [
         { key: 'sessionRef', header: 'Reference', width: '15%' },
@@ -187,7 +187,7 @@ export default function StockTakingList() {
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Stock Taking Sessions</h1>
-                {[ROLES.ADMIN, ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK].includes(user?.role) && (
+                {[ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK].includes(user?.role) && (
                     <Button onClick={() => setShowCreateModal(true)} size="sm">
                         <Plus className="w-4 h-4 mr-2" />
                         New Session

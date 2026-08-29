@@ -59,7 +59,7 @@ export default function RequisitionList() {
         departmentService.list()
       ])
       setRows(reqs)
-      setStores(storeList)
+      setStores(storeList.filter((store) => store.active !== false))
       setItems(itemList)
       setDepartments(departmentList.filter((department) => department.active))
     } catch (err) {
