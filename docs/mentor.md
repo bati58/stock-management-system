@@ -3,22 +3,7 @@ UI/UX ENGINEER and ENTERPRISE STOCK MANAGEMENT SYSTEM DEVELOPER.
 
 I already have an existing frontend-only Stock Management System project.
 
-IMPORTANT:
-DO NOT rebuild the application from scratch.
 
-DO NOT replace the existing UI design.
-
-DO NOT introduce a completely different visual style.
-
-DO NOT redesign the sidebar, header, tables, cards, buttons, forms,
-spacing, typography, colors, badges, navigation patterns or overall layout
-unless a very small modification is absolutely necessary for functionality.
-
-Your task is to ANALYZE THE EXISTING FRONTEND and EXTEND IT to fully represent
-the operational stock-management workflows defined by the project mentor.
-
-The existing frontend is the starting point and must remain visually
-consistent throughout the implementation.
 
 ============================================================
 1. PROJECT CONTEXT
