@@ -103,4 +103,20 @@ const update = asyncHandler(async (req, res) => {
     res.json(mapLocation(full[0]));
 });
 
-module.exports = { list, getOne, create, update };
+const remove = asyncHandler(async (req, res) => {
+    const { rows } = await query('DELETE FROM locations WHERE id = $1 RETURNING code', [req.params.id]);
+    if (!rows[0]) throw new AppError('Location not found.', 404);
+
+    await logAudit(query, {
+        userId: req.user.id,
+        userName: req.user.name,
+        userRole: req.user.role,
+        action: `Deleted location ${rows[0].code}`,
+        module: 'Locations',
+        entityType: 'location',
+        entityId: Number(req.params.id)
+    });
+    res.status(204).send();
+});
+
+module.exports = { list, getOne, create, update, remove };

@@ -16,12 +16,28 @@ const SELECT = `
 `;
 
 const list = asyncHandler(async (req, res) => {
-  const { rows } = await query(`${SELECT} ORDER BY mt.id DESC`);
+  let scope = '';
+  let params = [];
+
+  if (req.user.role === 'Store Head' && req.user.store) {
+    scope = 'WHERE fs.name = $1 OR ts.name = $1';
+    params = [req.user.store];
+  }
+
+  const { rows } = await query(`${SELECT} ${scope} ORDER BY mt.id DESC`, params);
   res.json(rows.map(mapMaterialTransfer));
 });
 
 const getOne = asyncHandler(async (req, res) => {
-  const { rows } = await query(`${SELECT} WHERE mt.id = $1`, [req.params.id]);
+  let scope = '';
+  let params = [req.params.id];
+
+  if (req.user.role === 'Store Head' && req.user.store) {
+    scope = ' AND (fs.name = $2 OR ts.name = $2)';
+    params.push(req.user.store);
+  }
+
+  const { rows } = await query(`${SELECT} WHERE mt.id = $1${scope}`, params);
   if (!rows[0]) throw new AppError('Material transfer not found.', 404);
   res.json(mapMaterialTransfer(rows[0]));
 });
@@ -50,6 +66,15 @@ const create = asyncHandler(async (req, res) => {
     );
 
     await logAudit(client, { userName: req.user.name, action: `Created transfer ${transferRef}`, module: 'Material Transfer' });
+    await notify(client, {
+      role: 'Property Administration Officer',
+      title: 'Store transfer awaiting approval',
+      message: `Transfer ${transferRef} from ${fromStore} to ${toStore} is awaiting review.`,
+      type: 'info',
+      route: `/material-transfers/${rows[0].id}`,
+      entityType: 'material-transfer',
+      entityId: rows[0].id
+    });
 
     const { rows: full } = await client.query(`${SELECT} WHERE mt.id = $1`, [rows[0].id]);
     return mapMaterialTransfer(full[0]);
@@ -70,16 +95,18 @@ const decide = asyncHandler(async (req, res) => {
     await stockService.decideMaterialTransfer(client, { transferId: req.params.id, decision, actorName: req.user.name });
 
     // Keep the workflow decision and its handoff notification atomic.
-    if (decision === 'Approved' || decision === 'Returned for Correction') {
+    if (decision === 'Approved' || decision === 'Returned for Correction' || decision === 'Rejected') {
       const { rows } = await client.query(`${SELECT} WHERE mt.id = $1`, [req.params.id]);
       const transfer = rows[0];
       await notify(client, {
-        role: 'Storekeeper',
-        title: decision === 'Approved' ? 'Transfer Approved' : 'Transfer Returned for Correction',
+        role: decision === 'Approved' ? 'Storekeeper' : 'Store Head',
+        title: decision === 'Approved' ? 'Transfer Approved' : decision === 'Rejected' ? 'Transfer Rejected' : 'Transfer Returned for Correction',
         message: decision === 'Approved'
           ? `Transfer ${transfer.transfer_ref} (${transfer.from_store_name} -> ${transfer.to_store_name}) is approved and ready to dispatch.`
-          : `Transfer ${transfer.transfer_ref} was returned for correction. Update and resubmit it for approval.`,
-        type: decision === 'Approved' ? 'success' : 'warning',
+          : decision === 'Rejected'
+            ? `Transfer ${transfer.transfer_ref} was rejected and requires attention before resubmission.`
+            : `Transfer ${transfer.transfer_ref} was returned for correction. Update and resubmit it for approval.`,
+        type: decision === 'Approved' ? 'success' : decision === 'Rejected' ? 'danger' : 'warning',
         route: `/material-transfers/${req.params.id}`,
         entityType: 'material-transfer',
         entityId: req.params.id

@@ -46,14 +46,17 @@ router.get('/locations', requireRole('locations'), locationsController.list);
 router.get('/locations/:id', requireRole('locations'), locationsController.getOne);
 router.post('/locations', requireRole('locations'), locationsController.create);
 router.put('/locations/:id', requireRole('locations'), locationsController.update);
+router.delete('/locations/:id', requireRole('locations'), locationsController.remove);
 router.get('/suppliers', requireRole('suppliers'), suppliersController.list);
 router.get('/suppliers/:id', requireRole('suppliers'), suppliersController.getOne);
 router.post('/suppliers', requireRole('suppliers'), suppliersController.create);
 router.put('/suppliers/:id', requireRole('suppliers'), suppliersController.update);
+router.delete('/suppliers/:id', requireRole('suppliers'), suppliersController.remove);
 router.get('/departments', requireRole('departments'), departmentsController.list);
 router.get('/departments/:id', requireRole('departments'), departmentsController.getOne);
 router.post('/departments', requireRole('departments'), departmentsController.create);
 router.put('/departments/:id', requireRole('departments'), departmentsController.update);
+router.delete('/departments/:id', requireRole('departments'), departmentsController.remove);
 
 router.post('/gate-pass/:resource/:id/verify', requireRole('gate-pass', 'action'), gatePassController.verify);
 
@@ -224,10 +227,10 @@ router.get('/reports/export-csv', requireRole('reports'), reportsController.expo
 // ---------------------------------------------------------------------------
 router.get('/business-rules', requireRole('business-rules'), businessRulesController.list);
 router.get('/business-rules/category/:category', requireRole('business-rules'), businessRulesController.listByCategory);
-router.get('/business-rules/rule/:ruleName', businessRulesController.getRule);
+router.get('/business-rules/rule/:ruleName', requireRole('business-rules'), businessRulesController.getRule);
 router.put('/business-rules/rule/:ruleName', requireRole('business-rules', 'action'), businessRulesController.updateRule);
-router.get('/business-rules/categories', businessRulesController.getCategories);
-router.get('/business-rules/all', businessRulesController.getAllRulesAsObject);
+router.get('/business-rules/categories', requireRole('business-rules'), businessRulesController.getCategories);
+router.get('/business-rules/all', requireRole('business-rules'), businessRulesController.getAllRulesAsObject);
 router.get('/notifications', notificationsController.list);
 router.post('/notifications/:id/read', notificationsController.markRead);
 

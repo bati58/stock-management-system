@@ -1,4 +1,4 @@
-import { ROLES, STATUS } from './constants'
+import { ROLES, STATUS } from './constants.js'
 
 /**
  * Build role-relevant notifications from live inventory data (SRS-aligned).
@@ -22,7 +22,7 @@ export function buildNotifications(user, data) {
   const userDept = user.department
 
   const lowStock = items.filter((i) => Number(i.qtyOnHand) <= Number(i.reorderLevel))
-  const pendingReqs = reqs.filter((r) => r.status === STATUS.PENDING)
+  const pendingReqs = reqs.filter((r) => [STATUS.PENDING, 'Submitted', 'Returned for Correction'].includes(r.status))
   const pendingGrns = grns.filter((g) => [STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(g.status))
   const pendingDisposals = disposals.filter((d) => [STATUS.PENDING, STATUS.APPROVED].includes(d.status))
   const pendingTransfers = transfers.filter((t) => ![STATUS.COMPLETED, STATUS.CANCELLED, STATUS.REJECTED].includes(t.status))
@@ -36,7 +36,6 @@ export function buildNotifications(user, data) {
 
   switch (user.role) {
     case ROLES.ADMIN:
-    case ROLES.STORE_HEAD:
       lowStock.slice(0, 5).forEach((item) => {
         push(
           `lowstock-${item.id}`,
@@ -67,6 +66,92 @@ export function buildNotifications(user, data) {
           r.date
         )
       })
+      break
+
+    case ROLES.STORE_HEAD:
+      lowStock
+        .filter((item) => !userStore || item.store === userStore)
+        .slice(0, 5)
+        .forEach((item) => {
+          push(
+            `lowstock-${item.id}`,
+            'Low Stock Alert',
+            `${item.name} at ${item.store} is at ${item.qtyOnHand} ${item.unit} (reorder: ${item.reorderLevel})`,
+            'warning',
+            '/items',
+            item.updatedAt
+          )
+        })
+
+      pendingGrns
+        .filter((g) => !userStore || g.store === userStore)
+        .slice(0, 5)
+        .forEach((g) => {
+          push(
+            `grn-${g.id}`,
+            'Goods Receipt Pending',
+            `${g.grnRef} from ${g.supplier} — ${g.status}`,
+            'info',
+            '/goods-receipt',
+            g.receivedDate
+          )
+        })
+
+      pendingReqs
+        .filter((r) => !userStore || r.store === userStore)
+        .slice(0, 6)
+        .forEach((r) => {
+          push(
+            `req-${r.id}`,
+            'Approval Required',
+            `${r.srRef} from ${r.department} needs store review`,
+            'warning',
+            '/requisitions',
+            r.date
+          )
+        })
+
+      pendingReturns
+        .filter((r) => !userStore || r.store === userStore || r.department === userDept)
+        .slice(0, 6)
+        .forEach((r) => {
+          push(
+            `return-${r.id}`,
+            'Material Return Review',
+            `${r.srnRef} from ${r.department} requires store review`,
+            'info',
+            '/material-return',
+            r.date
+          )
+        })
+
+      pendingTransfers
+        .filter((t) => !userStore || [t.fromStore, t.toStore].includes(userStore))
+        .slice(0, 6)
+        .forEach((t) => {
+          push(
+            `transfer-${t.id}`,
+            'Store Transfer Review',
+            `${t.transferRef}: ${t.fromStore} → ${t.toStore} is awaiting action`,
+            'info',
+            '/material-transfer',
+            t.date
+          )
+        })
+
+      pendingDisposals
+        .filter((d) => !userStore || d.store === userStore)
+        .slice(0, 6)
+        .forEach((d) => {
+          push(
+            `disposal-${d.id}`,
+            'Disposal Approval',
+            `${d.disposalRef} for ${d.item} needs review`,
+            'warning',
+            '/disposal',
+            d.dateFlagged
+          )
+        })
       break
 
     case ROLES.PAO:

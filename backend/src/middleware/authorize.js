@@ -1,5 +1,5 @@
 const AppError = require('../utils/AppError');
-const { canRead, canWrite, canAct } = require('../utils/permissions');
+const { canRead, canWrite, canAct, canDelete } = require('../utils/permissions');
 
 // requireRole('items') -> Express middleware that checks the current
 // request's HTTP method against the Backend-SRS §4 permission matrix for
@@ -13,14 +13,19 @@ function requireRole(resource, mode = 'resource') {
     }
 
     const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+    const isDelete = req.method === 'DELETE';
     const allowed = mode === 'action'
       ? canAct(resource, req.user.role)
-      : isWrite ? canWrite(resource, req.user.role) : canRead(resource, req.user.role);
+      : isWrite
+        ? isDelete
+          ? canDelete(resource, req.user.role)
+          : canWrite(resource, req.user.role)
+        : canRead(resource, req.user.role);
 
     if (!allowed) {
       return next(
         new AppError(
-          `Your role (${req.user.role}) does not have permission to ${mode === 'action' ? 'perform this action on' : isWrite ? 'modify' : 'view'} ${resource}.`,
+          `Your role (${req.user.role}) does not have permission to ${mode === 'action' ? 'perform this action on' : isDelete ? 'delete' : isWrite ? 'modify' : 'view'} ${resource}.`,
           403
         )
       );

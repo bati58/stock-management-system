@@ -5,10 +5,15 @@ const { mapIssueVoucher } = require('./_helpers');
 const { notify } = require('../utils/notify');
 const stockService = require('../services/stockService');
 
-const SELECT = 'SELECT * FROM issue_vouchers';
+const SELECT = `
+  SELECT iv.*, r.store_id, s.name AS store_name
+  FROM issue_vouchers iv
+  LEFT JOIN requisitions r ON r.sr_ref = iv.sr_ref
+  LEFT JOIN stores s ON s.id = r.store_id
+`;
 
 async function fetchWithLines(id, dbClient = { query }) {
-  const { rows } = await dbClient.query(`${SELECT} WHERE id = $1`, [id]);
+  const { rows } = await dbClient.query(`${SELECT} WHERE iv.id = $1`, [id]);
   if (!rows[0]) return null;
   const { rows: lines } = await dbClient.query(
     `SELECT ivi.*, i.name AS item_name FROM issue_voucher_items ivi JOIN items i ON i.id = ivi.item_id WHERE ivi.issue_voucher_id = $1`,
@@ -18,7 +23,15 @@ async function fetchWithLines(id, dbClient = { query }) {
 }
 
 const list = asyncHandler(async (req, res) => {
-  const { rows } = await query(`${SELECT} ORDER BY id DESC`);
+  let scope = '';
+  let params = [];
+
+  if (req.user.role === 'Store Head' && req.user.store) {
+    scope = 'WHERE s.name = $1';
+    params = [req.user.store];
+  }
+
+  const { rows } = await query(`${SELECT} ${scope} ORDER BY iv.id DESC`, params);
   const results = [];
   for (const row of rows) {
     const { rows: lines } = await query(
@@ -31,7 +44,20 @@ const list = asyncHandler(async (req, res) => {
 });
 
 const getOne = asyncHandler(async (req, res) => {
-  const v = await fetchWithLines(req.params.id);
+  let scope = '';
+  let params = [req.params.id];
+
+  if (req.user.role === 'Store Head' && req.user.store) {
+    scope = ' AND s.name = $2';
+    params.push(req.user.store);
+  }
+
+  const v = await fetchWithLines(req.params.id, {
+    query: async (sql, values) => {
+      const { rows } = await query(`${SELECT} WHERE iv.id = $1${scope}`, params);
+      return { rows };
+    }
+  });
   if (!v) throw new AppError('Issue voucher not found.', 404);
   res.json(v);
 });
@@ -55,12 +81,36 @@ const create = asyncHandler(async (req, res) => {
 });
 
 const approve = asyncHandler(async (req, res) => {
-  await withTransaction((client) => stockService.approveIssueVoucher(client, { voucherId: req.params.id, actorName: req.user.name }));
+  await withTransaction(async (client) => {
+    await stockService.approveIssueVoucher(client, { voucherId: req.params.id, actorName: req.user.name });
+    const { rows } = await client.query('SELECT siv_ref FROM issue_vouchers WHERE id = $1', [req.params.id]);
+    await notify(client, {
+      role: 'Storekeeper',
+      title: 'Issue Voucher Approved',
+      message: `SIV ${rows[0]?.siv_ref} has been approved and is ready for posting.`,
+      type: 'success',
+      route: `/issue-vouchers/${req.params.id}`,
+      entityType: 'issue_voucher',
+      entityId: req.params.id
+    });
+  });
   res.json(await fetchWithLines(req.params.id));
 });
 
 const post = asyncHandler(async (req, res) => {
-  await withTransaction((client) => stockService.postIssueVoucher(client, { voucherId: req.params.id, actorName: req.user.name }));
+  await withTransaction(async (client) => {
+    await stockService.postIssueVoucher(client, { voucherId: req.params.id, actorName: req.user.name });
+    const { rows } = await client.query('SELECT siv_ref FROM issue_vouchers WHERE id = $1', [req.params.id]);
+    await notify(client, {
+      role: 'Security Officer',
+      title: 'Issue Voucher Posted',
+      message: `SIV ${rows[0]?.siv_ref} has been posted and stock movement is complete.`,
+      type: 'success',
+      route: `/issue-vouchers/${req.params.id}`,
+      entityType: 'issue_voucher',
+      entityId: req.params.id
+    });
+  });
   res.json(await fetchWithLines(req.params.id));
 });
 

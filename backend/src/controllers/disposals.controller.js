@@ -15,12 +15,28 @@ const SELECT = `
 `;
 
 const list = asyncHandler(async (req, res) => {
-  const { rows } = await query(`${SELECT} ORDER BY d.id DESC`);
+  let scope = '';
+  let params = [];
+
+  if (req.user.role === 'Store Head' && req.user.store) {
+    scope = 'WHERE s.name = $1';
+    params = [req.user.store];
+  }
+
+  const { rows } = await query(`${SELECT} ${scope} ORDER BY d.id DESC`, params);
   res.json(rows.map(mapDisposal));
 });
 
 const getOne = asyncHandler(async (req, res) => {
-  const { rows } = await query(`${SELECT} WHERE d.id = $1`, [req.params.id]);
+  let scope = '';
+  let params = [req.params.id];
+
+  if (req.user.role === 'Store Head' && req.user.store) {
+    scope = ' AND s.name = $2';
+    params.push(req.user.store);
+  }
+
+  const { rows } = await query(`${SELECT} WHERE d.id = $1${scope}`, params);
   if (!rows[0]) throw new AppError('Disposal request not found.', 404);
   res.json(mapDisposal(rows[0]));
 });

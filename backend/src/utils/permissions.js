@@ -66,13 +66,13 @@ const ACTION_PERMISSIONS = {
   disposals: [PAO, STORE_HEAD],
   'gate-pass': [SECURITY]
 };
-ACTION_PERMISSIONS['issue-voucher-post'] = [STORE_HEAD, STOREKEEPER];
+ACTION_PERMISSIONS['issue-voucher-post'] = [STOREKEEPER];
 ACTION_PERMISSIONS['goods-receipts-evaluate'] = [TEC];
 ACTION_PERMISSIONS['goods-receipts-notify-tec'] = [STORE_HEAD];
 ACTION_PERMISSIONS['goods-receipts-post'] = [STOREKEEPER];
 ACTION_PERMISSIONS['material-transfers-execute'] = [STORE_HEAD, STOREKEEPER]; // dispatch/receive: the store operators, not the approver
 ACTION_PERMISSIONS['stock-taking'] = [PAO, STORE_HEAD];
-ACTION_PERMISSIONS['stock-taking-post'] = [PAO, STORE_HEAD]; // Stock Clerk counts/submits but cannot post its own adjustment
+ACTION_PERMISSIONS['stock-taking-post'] = [PAO]; // Store Head may recommend, but PAO/authorized approver performs the actual stock adjustment
 
 ACTION_PERMISSIONS['business-rules'] = [ADMIN];
 
@@ -82,28 +82,33 @@ ACTION_PERMISSIONS['business-rules'] = [ADMIN];
 // as the side effect of another action (see services/stockService.js).
 const WRITE_PERMISSIONS = {
   stores: [ADMIN, PAO, STORE_HEAD],
-  categories: [ADMIN, PAO, STORE_HEAD], // Stock Clerk: read-only
-  items: [ADMIN, STORE_HEAD, STOREKEEPER], // PAO, Stock Clerk: read-only
-  locations: [ADMIN, STORE_HEAD, STOREKEEPER],
+  categories: [ADMIN, PAO],
+  items: [ADMIN, STOREKEEPER],
+  locations: [ADMIN, STOREKEEPER],
   suppliers: [ADMIN, PAO],
   departments: [ADMIN, PAO],
   'stock-taking': [STORE_HEAD, STOREKEEPER, STOCK_CLERK],
   reconciliation: [],
-  'goods-receipts': [STORE_HEAD, STOREKEEPER], // TEC writes only via the /evaluate action route; admin is monitoring-only
+  'goods-receipts': [STOREKEEPER],
   'stock-transactions': [], // system-generated only
-  'bin-cards': [PAO, STORE_HEAD, STOREKEEPER, STOCK_CLERK],
+  'bin-cards': [STOREKEEPER, STOCK_CLERK],
+  'bin-transfers': [STORE_HEAD, STOREKEEPER],
   requisitions: [PAO, STORE_HEAD, DEPT_HEAD],
-  'issue-vouchers': [STORE_HEAD, STOREKEEPER],
+  'issue-vouchers': [STOREKEEPER],
   'material-returns': [STORE_HEAD, DEPT_HEAD],
   'material-transfers': [PAO, STORE_HEAD, STOREKEEPER, DEPT_HEAD],
-  'fixed-assets': [ADMIN, PAO, STORE_HEAD],
-  disposals: [PAO, STORE_HEAD],
+  'fixed-assets': [PAO, STORE_HEAD],
+  disposals: [STORE_HEAD],
   users: [ADMIN],
-  'audit-logs': [], // system-generated only
+  'audit-logs': [],
   reports: [],
   'gate-pass': [SECURITY],
-  'user-cards': [STORE_HEAD, STOREKEEPER],
+  'user-cards': [STOREKEEPER, PAO, STORE_HEAD],
   'business-rules': [ADMIN]
+};
+
+const DELETE_PERMISSIONS = {
+  users: []
 };
 
 // Business Rules configuration permissions
@@ -131,4 +136,10 @@ function canAct(resource, role) {
   return allowed ? allowed.includes(role) : canWrite(resource, role);
 }
 
-module.exports = { ROLES, READ_PERMISSIONS, WRITE_PERMISSIONS, ACTION_PERMISSIONS, canRead, canWrite, canAct };
+function canDelete(resource, role) {
+  const allowed = DELETE_PERMISSIONS[resource];
+  if (allowed !== undefined) return allowed.includes(role);
+  return canWrite(resource, role);
+}
+
+module.exports = { ROLES, READ_PERMISSIONS, WRITE_PERMISSIONS, DELETE_PERMISSIONS, ACTION_PERMISSIONS, canRead, canWrite, canAct, canDelete };

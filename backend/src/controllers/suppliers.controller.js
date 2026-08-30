@@ -48,4 +48,20 @@ const update = asyncHandler(async (req, res) => {
     res.json(mapSupplier(rows[0]));
 });
 
-module.exports = { list, getOne, create, update };
+const remove = asyncHandler(async (req, res) => {
+    const { rows } = await query('DELETE FROM suppliers WHERE id = $1 RETURNING name', [req.params.id]);
+    if (!rows[0]) throw new AppError('Supplier not found.', 404);
+
+    await logAudit(query, {
+        userId: req.user.id,
+        userName: req.user.name,
+        userRole: req.user.role,
+        action: `Deleted supplier ${rows[0].name}`,
+        module: 'Suppliers',
+        entityType: 'supplier',
+        entityId: Number(req.params.id)
+    });
+    res.status(204).send();
+});
+
+module.exports = { list, getOne, create, update, remove };

@@ -121,9 +121,9 @@ const submit = asyncHandler(async (req, res) => {
     await logAudit(client, { userName: req.user.name, action: `Submitted requisition ${reqDoc.sr_ref}`, module: 'Store Requisition' });
 
     await notify(client, {
-      role: 'Department Head',
+      role: 'Property Administration Officer',
       title: 'Requisition Submitted',
-      message: `Requisition ${reqDoc.sr_ref} has been submitted for approval.`,
+      message: `Requisition ${reqDoc.sr_ref} has been submitted and requires approval.`,
       type: 'info',
       route: `/requisitions/${req.params.id}`,
       entityType: 'requisition',

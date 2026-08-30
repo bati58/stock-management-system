@@ -51,15 +51,32 @@ async function fetchSession(id, dbClient = { query }) {
 }
 
 const list = asyncHandler(async (req, res) => {
-    const { rows } = await query(`${SELECT} ORDER BY st.id DESC`);
+    let scope = '';
+    let params = [];
+
+    if (req.user.role === 'Store Head' && req.user.store) {
+        scope = 'WHERE s.name = $1';
+        params = [req.user.store];
+    }
+
+    const { rows } = await query(`${SELECT} ${scope} ORDER BY st.id DESC`, params);
     const results = [];
     for (const row of rows) results.push(await fetchSession(row.id));
     res.json(results);
 });
 
 const getOne = asyncHandler(async (req, res) => {
-    const session = await fetchSession(req.params.id);
-    if (!session) throw new AppError('Stock-taking session not found.', 404);
+    let scope = '';
+    let params = [req.params.id];
+
+    if (req.user.role === 'Store Head' && req.user.store) {
+        scope = ' AND s.name = $2';
+        params.push(req.user.store);
+    }
+
+    const { rows } = await query(`${SELECT} WHERE st.id = $1${scope}`, params);
+    if (!rows[0]) throw new AppError('Stock-taking session not found.', 404);
+    const session = await fetchSession(rows[0].id);
     res.json(session);
 });
 

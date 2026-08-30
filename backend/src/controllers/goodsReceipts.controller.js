@@ -26,7 +26,15 @@ async function fetchWithLines(id, dbClient = { query }) {
 }
 
 const list = asyncHandler(async (req, res) => {
-  const { rows } = await query(`${SELECT} ORDER BY g.id DESC`);
+  let scope = '';
+  let params = [];
+
+  if (req.user.role === 'Store Head' && req.user.store) {
+    scope = 'WHERE s.name = $1';
+    params = [req.user.store];
+  }
+
+  const { rows } = await query(`${SELECT} ${scope} ORDER BY g.id DESC`, params);
   const results = [];
   for (const row of rows) {
     const { rows: lines } = await query(
@@ -39,6 +47,16 @@ const list = asyncHandler(async (req, res) => {
 });
 
 const getOne = asyncHandler(async (req, res) => {
+  let scope = '';
+  let params = [req.params.id];
+
+  if (req.user.role === 'Store Head' && req.user.store) {
+    scope = ' AND s.name = $2';
+    params.push(req.user.store);
+  }
+
+  const { rows } = await query(`${SELECT} WHERE g.id = $1${scope}`, params);
+  if (!rows[0]) throw new AppError('Goods receipt not found.', 404);
   const grn = await fetchWithLines(req.params.id);
   if (!grn) throw new AppError('Goods receipt not found.', 404);
   res.json(grn);

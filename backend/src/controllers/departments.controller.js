@@ -55,4 +55,20 @@ const update = asyncHandler(async (req, res) => {
     res.json(mapDepartment(full[0]));
 });
 
-module.exports = { list, getOne, create, update };
+const remove = asyncHandler(async (req, res) => {
+    const { rows } = await query('DELETE FROM departments WHERE id = $1 RETURNING name', [req.params.id]);
+    if (!rows[0]) throw new AppError('Department not found.', 404);
+
+    await logAudit(query, {
+        userId: req.user.id,
+        userName: req.user.name,
+        userRole: req.user.role,
+        action: `Deleted department ${rows[0].name}`,
+        module: 'Departments',
+        entityType: 'department',
+        entityId: Number(req.params.id)
+    });
+    res.status(204).send();
+});
+
+module.exports = { list, getOne, create, update, remove };
