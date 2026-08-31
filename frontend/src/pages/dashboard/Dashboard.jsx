@@ -953,11 +953,10 @@ export default function Dashboard() {
 
   const renderStorekeeper = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Stock on Hand" value={loading ? '—' : formatNumber(stockOnHandQty)} icon={Boxes} tone="brand" hint="Total units across catalog" />
         {renderStatCardLink('/goods-receipt', 'Pending Receipts', loading ? '—' : pendingGrns.length, PackageCheck, 'info', 'Needs action')}
         {renderStatCardLink('/issue-vouchers', 'Pending Issues', loading ? '—' : pendingSivApprovals.length, Send, 'warning', 'Issue vouchers in progress')}
-        {renderStatCardLink('/material-transfer', 'Approved Transfers', loading ? '—' : readyForDispatchTransfers.length, Repeat, 'success', 'Ready to dispatch/receive')}
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
