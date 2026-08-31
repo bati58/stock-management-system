@@ -43,6 +43,7 @@ export default function RequisitionList() {
 
   const [header, setHeader] = useState({ department: '', store: '', date: '' })
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
+  const [fieldErrors, setFieldErrors] = useState({})
 
   const canCreate = canPerformAction(user?.role, 'create', 'requisitions')
   const canDelete = canPerformAction(user?.role, 'delete', 'requisitions')
@@ -103,6 +104,10 @@ export default function RequisitionList() {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)))
   }
 
+  function removeLine(idx) {
+    setLines((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev))
+  }
+
   function updateApproveLine(idx, patch) {
     setApproveLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)))
   }
@@ -114,6 +119,28 @@ export default function RequisitionList() {
 
   async function handleCreate(e) {
     e.preventDefault()
+
+    const nextErrors = {}
+    if (!header.department) nextErrors.department = 'Department is required.'
+    if (!header.store) nextErrors.store = 'Issuing Store is required.'
+    if (!header.date) nextErrors.date = 'Date is required.'
+
+    lines.forEach((line, idx) => {
+      if (!line.item) nextErrors[`line_${idx}_item`] = `Line ${idx + 1}: Item is required.`
+      if (!line.qty || Number(line.qty) <= 0) nextErrors[`line_${idx}_qty`] = `Line ${idx + 1}: Quantity must be greater than zero.`
+    })
+
+    if (!lines.some((line) => line.item && line.qty)) {
+      nextErrors.items = 'At least one item with quantity is required.'
+    }
+
+    setFieldErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) {
+      const message = Object.values(nextErrors).slice(0, 5).join(' • ')
+      push(`Missing required details: ${message}`, 'error')
+      return
+    }
+
     setSaving(true)
     try {
       const count = rows.length + 1
@@ -126,6 +153,7 @@ export default function RequisitionList() {
         items: lines.filter((l) => l.item && l.qty)
       })
       push(`Requisition ${srRef} submitted for approval.`, 'success')
+      setFieldErrors({})
       setModalOpen(false)
       await load()
     } catch (err) {
@@ -257,13 +285,15 @@ export default function RequisitionList() {
             <Select
               label="Requesting Department"
               required
-              options={departments.map((department) => department.name)}
+              error={fieldErrors.department}
+              options={isDeptHead ? [user?.department].filter(Boolean) : departments.map((department) => department.name)}
               value={header.department}
-              onChange={(e) => setHeader((h) => ({ ...h, department: e.target.value }))}
+              disabled={isDeptHead}
+              onChange={(e) => { setHeader((h) => ({ ...h, department: e.target.value })); setFieldErrors((prev) => ({ ...prev, department: '' })) }}
               placeholder="Select a department..."
             />
-            <Select label="Issuing Store" required options={stores.map((s) => s.name)} value={header.store} onChange={(e) => setHeader((h) => ({ ...h, store: e.target.value }))} />
-            <Input label="Date" type="date" required value={header.date} onChange={(e) => setHeader((h) => ({ ...h, date: e.target.value }))} />
+            <Select label="Issuing Store" required error={fieldErrors.store} options={stores.map((s) => s.name)} value={header.store} onChange={(e) => { setHeader((h) => ({ ...h, store: e.target.value })); setFieldErrors((prev) => ({ ...prev, store: '' })) }} />
+            <Input label="Date" type="date" required error={fieldErrors.date} value={header.date} onChange={(e) => { setHeader((h) => ({ ...h, date: e.target.value })); setFieldErrors((prev) => ({ ...prev, date: '' })) }} />
           </div>
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -275,11 +305,23 @@ export default function RequisitionList() {
             <div className="space-y-2">
               {lines.map((line, idx) => (
                 <div key={idx} className="grid grid-cols-1 gap-2 rounded-lg border border-ink-100 p-3 sm:grid-cols-2">
-                  <Select label="Item" options={items.map((i) => i.name)} value={line.item} onChange={(e) => updateLine(idx, { item: e.target.value })} />
-                  <Input label="Quantity" type="number" value={line.qty} onChange={(e) => updateLine(idx, { qty: e.target.value })} />
+                  <Select label="Item" error={fieldErrors[`line_${idx}_item`]} options={items.map((i) => i.name)} value={line.item} onChange={(e) => { updateLine(idx, { item: e.target.value }); setFieldErrors((prev) => ({ ...prev, [`line_${idx}_item`]: '' })) }} />
+                  <div>
+                    <Input label="Quantity" type="number" error={fieldErrors[`line_${idx}_qty`]} value={line.qty} onChange={(e) => { updateLine(idx, { qty: e.target.value }); setFieldErrors((prev) => ({ ...prev, [`line_${idx}_qty`]: '' })) }} />
+                    {lines.length > 1 && (
+                      <button
+                        type="button"
+                        className="mt-2 rounded border border-danger-200 bg-danger-50 px-2 py-1 text-xs font-medium text-danger-700 hover:bg-danger-100"
+                        onClick={() => removeLine(idx)}
+                      >
+                        Remove line
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
+            {fieldErrors.items && <p className="mt-2 text-xs font-medium text-danger-700">{fieldErrors.items}</p>}
           </div>
         </form>
       </Modal>

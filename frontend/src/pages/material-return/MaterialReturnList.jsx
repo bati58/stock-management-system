@@ -37,6 +37,7 @@ export default function MaterialReturnList() {
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
 
   const canReview = canPerformAction(user?.role, 'approve', 'materialReturns')
+  const canReceive = user?.role === ROLES.STOREKEEPER
   const canCreate = canPerformAction(user?.role, 'create', 'materialReturns')
   const canDelete = canPerformAction(user?.role, 'delete', 'materialReturns')
   const canReviewRow = (row) => [RETURN_STATUS.SUBMITTED, STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(row.status) && canReview
@@ -157,6 +158,20 @@ export default function MaterialReturnList() {
     }
   }
 
+  async function handleReceive() {
+    setSaving(true)
+    try {
+      await api.action('materialReturns', viewing.id, 'receive', {})
+      push(`${viewing.srnRef} received and returned to stock.`, 'success')
+      setViewing(null)
+      await load()
+    } catch (err) {
+      push(err.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function handleDelete() {
     await materialReturnService.remove(deleteTarget.id)
     push('Return request deleted.', 'success')
@@ -231,8 +246,9 @@ export default function MaterialReturnList() {
             <Select
               label="Returning Department"
               required
-              options={departments.map((department) => department.name)}
+              options={user?.role === ROLES.DEPT_HEAD ? [user?.department].filter(Boolean) : departments.map((department) => department.name)}
               value={header.department}
+              disabled={user?.role === ROLES.DEPT_HEAD}
               onChange={(e) => setHeader((h) => ({ ...h, department: e.target.value }))}
               placeholder="Select a department..."
             />
@@ -264,7 +280,12 @@ export default function MaterialReturnList() {
         title={viewing?.srnRef}
         size="lg"
         footer={
-          viewing && canReviewRow(viewing) ? (
+          viewing?.status === RETURN_STATUS.APPROVED && canReceive ? (
+            <>
+              <Button variant="secondary" icon={Printer} onClick={() => printReturnNote(viewing)}>Print SRN</Button>
+              <Button icon={CheckCircle2} loading={saving} onClick={handleReceive}>Receive and Return to Stock</Button>
+            </>
+          ) : viewing && canReviewRow(viewing) ? (
             <>
               <Button variant="danger" icon={XCircle} loading={saving} onClick={() => handleDecide(RETURN_STATUS.REJECTED)}>
                 Reject Return

@@ -119,7 +119,7 @@ const ROLE_NAV = {
   [ROLES.STOCK_CLERK]: [
     ['Overview', ['dashboard']],
     ['Inventory', ['items', 'locations']],
-    ['Stock Records', ['stockCards', 'binCards', 'stockTransfer']],
+    ['Stock Records', ['stockCards', 'binCards']],
     ['Stock Control', ['stockTaking', 'reconciliation']],
     ['Reports', ['reports']],
   ],
@@ -149,8 +149,7 @@ const ROLE_NAV = {
 
   [ROLES.SECURITY]: [
     ['Overview', ['dashboard']],
-    ['Material Movement', ['issueVouchers']],
-    ['Gate Verification', ['gatePass']],
+    ['Campus Movement', ['gatePass']],
     ['Reports & Audit', ['reports', 'auditLog']],
   ],
 }

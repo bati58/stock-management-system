@@ -113,9 +113,9 @@ const REPORT_ACCESS = {
   ],
   [ROLES.ACCOUNTANT]: [
     'inventory-summary', 'inventory-valuation', 'stock-movement',
-    'stock-movement-value', 'supplier-transactions'
+    'stock-movement-value', 'supplier-transactions', 'fifo-valuation'
   ],
-  // Security Officer: goods-movement monitoring only (incoming, outgoing, transfers).
+  // Security Officer: gate-related movement evidence only, including supporting GRN and SIV documents.
   [ROLES.SECURITY]: ['grn-status', 'grn-report', 'siv-report', 'transfer-report']
 }
 

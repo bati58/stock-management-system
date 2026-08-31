@@ -35,6 +35,7 @@ export default function GoodsReceiptList() {
 
   const [header, setHeader] = useState({ supplier: '', poRef: '', store: '', receivedDate: '', type: 'Consumable', docRef: '', condition: 'New' })
   const [lines, setLines] = useState([{ ...EMPTY_LINE }])
+  const [fieldErrors, setFieldErrors] = useState({})
 
   const isStorekeeper = user?.role === ROLES.STOREKEEPER
   const isStoreHead = user?.role === ROLES.STORE_HEAD
@@ -79,10 +80,46 @@ export default function GoodsReceiptList() {
 
   function updateLine(idx, patch) {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)))
+    setFieldErrors((prev) => ({ ...prev }))
+  }
+
+  function removeLine(idx) {
+    setLines((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev))
+  }
+
+  function validateForm() {
+    const nextErrors = {}
+
+    if (!header.supplier) nextErrors.supplier = 'Supplier is required.'
+    if (!header.poRef) nextErrors.poRef = 'PO / Donation Ref is required.'
+    if (!header.store) nextErrors.store = 'Receiving Store is required.'
+    if (!header.receivedDate) nextErrors.receivedDate = 'Received Date is required.'
+    if (!header.type) nextErrors.type = 'Material Type is required.'
+
+    lines.forEach((line, idx) => {
+      if (!line.item) nextErrors[`line_${idx}_item`] = `Line ${idx + 1}: Item is required.`
+      if (!line.qty || Number(line.qty) <= 0) nextErrors[`line_${idx}_qty`] = `Line ${idx + 1}: Quantity must be greater than zero.`
+      if (!line.unitPrice || Number(line.unitPrice) < 0) nextErrors[`line_${idx}_unitPrice`] = `Line ${idx + 1}: Unit Price is required.`
+    })
+
+    if (!lines.some((line) => line.item && line.qty)) {
+      nextErrors.items = 'At least one item with quantity is required.'
+    }
+
+    return nextErrors
   }
 
   async function handleCreate(e) {
     e.preventDefault()
+    const errors = validateForm()
+    setFieldErrors(errors)
+
+    if (Object.keys(errors).length > 0) {
+      const message = Object.values(errors).slice(0, 5).join(' • ')
+      push(`Missing required details: ${message}`, 'error')
+      return
+    }
+
     setSaving(true)
     try {
       const count = rows.length + 1
@@ -97,6 +134,7 @@ export default function GoodsReceiptList() {
         evaluatedBy: ''
       })
       push(`Temporary receipt ${grnRef} created. You can now notify the Technical Evaluation Committee.`, 'success')
+      setFieldErrors({})
       setModalOpen(false)
       await load()
     } catch (err) {
@@ -185,7 +223,7 @@ export default function GoodsReceiptList() {
           <button onClick={() => setViewing(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-ink-100 hover:text-brand-600" title="View">
             <Eye size={15} />
           </button>
-          {canManage && (
+          {canManage && [GRN_STATUS.DRAFT, GRN_STATUS.SUBMITTED, GRN_STATUS.PENDING, GRN_STATUS.PENDING_EVAL].includes(row.status) && (
             <button onClick={() => setDeleteTarget(row)} className="rounded-md p-1.5 text-ink-500 hover:bg-danger-50 hover:text-danger-700" title="Delete">
               <Trash2 size={15} />
             </button>
@@ -243,12 +281,12 @@ export default function GoodsReceiptList() {
       >
         <form onSubmit={handleCreate} className="space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Select label="Supplier" required options={suppliers.filter((s) => s.active).map((s) => s.name)} value={header.supplier} onChange={(e) => setHeader((h) => ({ ...h, supplier: e.target.value }))} />
-            <Input label="PO / Donation Ref" required value={header.poRef} onChange={(e) => setHeader((h) => ({ ...h, poRef: e.target.value }))} />
+            <Select label="Supplier" required error={fieldErrors.supplier} options={suppliers.filter((s) => s.active).map((s) => s.name)} value={header.supplier} onChange={(e) => { setHeader((h) => ({ ...h, supplier: e.target.value })); setFieldErrors((prev) => ({ ...prev, supplier: '' })) }} />
+            <Input label="PO / Donation Ref" required error={fieldErrors.poRef} value={header.poRef} onChange={(e) => { setHeader((h) => ({ ...h, poRef: e.target.value })); setFieldErrors((prev) => ({ ...prev, poRef: '' })) }} />
             <Input label="Supporting Document Ref" placeholder="e.g. Waybill-123" value={header.docRef} onChange={(e) => setHeader((h) => ({ ...h, docRef: e.target.value }))} />
-            <Select label="Receiving Store" required options={stores.map((s) => s.name)} value={header.store} onChange={(e) => setHeader((h) => ({ ...h, store: e.target.value }))} />
-            <Input label="Received Date" type="date" required value={header.receivedDate} onChange={(e) => setHeader((h) => ({ ...h, receivedDate: e.target.value }))} />
-            <Select label="Material Type" required options={['Consumable', 'Fixed Asset']} value={header.type} onChange={(e) => setHeader((h) => ({ ...h, type: e.target.value }))} />
+            <Select label="Receiving Store" required error={fieldErrors.store} options={stores.map((s) => s.name)} value={header.store} onChange={(e) => { setHeader((h) => ({ ...h, store: e.target.value })); setFieldErrors((prev) => ({ ...prev, store: '' })) }} />
+            <Input label="Received Date" type="date" required error={fieldErrors.receivedDate} value={header.receivedDate} onChange={(e) => { setHeader((h) => ({ ...h, receivedDate: e.target.value })); setFieldErrors((prev) => ({ ...prev, receivedDate: '' })) }} />
+            <Select label="Material Type" required error={fieldErrors.type} options={['Consumable', 'Fixed Asset']} value={header.type} onChange={(e) => { setHeader((h) => ({ ...h, type: e.target.value })); setFieldErrors((prev) => ({ ...prev, type: '' })) }} />
             <Select label="Condition on Arrival" options={['New', 'Good', 'Damaged']} value={header.condition} onChange={(e) => setHeader((h) => ({ ...h, condition: e.target.value }))} />
           </div>
 
@@ -262,17 +300,43 @@ export default function GoodsReceiptList() {
             <div className="space-y-2">
               {lines.map((line, idx) => (
                 <div key={idx} className="grid grid-cols-1 gap-2 rounded-lg border border-ink-100 p-3 sm:grid-cols-3 bg-ink-50">
-                  <Select
-                    label="Item"
-                    options={items.map((i) => i.name)}
-                    value={line.item}
-                    onChange={(e) => updateLine(idx, { item: e.target.value })}
-                  />
-                  <Input label="Quantity" type="number" value={line.qty} onChange={(e) => updateLine(idx, { qty: e.target.value })} />
-                  <Input label="Unit Price" type="number" value={line.unitPrice} onChange={(e) => updateLine(idx, { unitPrice: e.target.value })} />
+                  <div className="sm:col-span-1">
+                    <Select
+                      label="Item"
+                      error={fieldErrors[`line_${idx}_item`]}
+                      options={items.map((i) => i.name)}
+                      value={line.item}
+                      onChange={(e) => {
+                        updateLine(idx, { item: e.target.value })
+                        setFieldErrors((prev) => ({ ...prev, [`line_${idx}_item`]: '' }))
+                      }}
+                    />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <Input label="Quantity" type="number" error={fieldErrors[`line_${idx}_qty`]} value={line.qty} onChange={(e) => {
+                      updateLine(idx, { qty: e.target.value })
+                      setFieldErrors((prev) => ({ ...prev, [`line_${idx}_qty`]: '' }))
+                    }} />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <Input label="Unit Price" type="number" error={fieldErrors[`line_${idx}_unitPrice`]} value={line.unitPrice} onChange={(e) => {
+                      updateLine(idx, { unitPrice: e.target.value })
+                      setFieldErrors((prev) => ({ ...prev, [`line_${idx}_unitPrice`]: '' }))
+                    }} />
+                    {lines.length > 1 && (
+                      <button
+                        type="button"
+                        className="mt-2 rounded border border-danger-200 bg-danger-50 px-2 py-1 text-xs font-medium text-danger-700 hover:bg-danger-100"
+                        onClick={() => removeLine(idx)}
+                      >
+                        Remove line
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
+            {fieldErrors.items && <p className="mt-2 text-xs font-medium text-danger-700">{fieldErrors.items}</p>}
           </div>
         </form>
       </Modal>

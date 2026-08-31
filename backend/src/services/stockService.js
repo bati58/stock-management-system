@@ -115,10 +115,20 @@ async function recordGoodsReceiptEvaluation(client, { grnId, decision, evaluatio
   assertTransition('goodsReceipt', receipt.status, nextStatus);
 
   const { rows: lines } = await client.query('SELECT gi.*, i.name AS item_name FROM goods_receipt_items gi JOIN items i ON i.id = gi.item_id WHERE gi.goods_receipt_id = $1', [grnId]);
+  if (items.length !== lines.length || lines.some((line) => items.filter((entry) => entry.item === line.item_name || String(entry.itemId) === String(line.item_id)).length !== 1)) {
+    throw new AppError('Each receipt item must have exactly one valid accepted quantity.', 400);
+  }
+  if ((decision === 'Approved' || decision === 'Partially Approved') && items.every((entry) => Number(entry.qtyAccepted) <= 0)) {
+    throw new AppError('An accepted evaluation must include at least one positive accepted quantity.', 400);
+  }
   for (const line of lines) {
     const requested = Number(line.qty);
     const submitted = items.find((entry) => entry.item === line.item_name || String(entry.itemId) === String(line.item_id));
-    const accepted = decision === 'Rejected' ? 0 : Math.max(0, Math.min(requested, Number(submitted?.qtyAccepted ?? requested)));
+    const acceptedInput = decision === 'Rejected' ? 0 : Number(submitted?.qtyAccepted);
+    if (!Number.isFinite(acceptedInput) || acceptedInput < 0 || acceptedInput > requested) {
+      throw new AppError(`Accepted quantity for "${line.item_name}" must be between zero and the received quantity.`, 400);
+    }
+    const accepted = decision === 'Rejected' ? 0 : acceptedInput;
     await client.query('UPDATE goods_receipt_items SET qty_accepted = $1, qty_rejected = $2 WHERE id = $3', [accepted, requested - accepted, line.id]);
   }
   await client.query(
@@ -145,6 +155,9 @@ async function generateGrn(client, { grnId, generatedBy, actorName }) {
     [grnNumber, grnId, generatedBy]
   );
   const { rows: lines } = await client.query('SELECT * FROM goods_receipt_items WHERE goods_receipt_id = $1', [grnId]);
+  if (!lines.some((line) => Number(line.qty_accepted ?? line.qty) > 0)) {
+    throw new AppError('Cannot generate a GRN without at least one accepted item quantity.', 409);
+  }
   for (const line of lines) {
     const accepted = Number(line.qty_accepted ?? line.qty);
     if (accepted <= 0) continue;
@@ -310,11 +323,29 @@ async function decideMaterialReturn(client, { returnId, decision, qtyApproved, f
   const { rows } = await client.query('SELECT * FROM material_returns WHERE id = $1 FOR UPDATE', [returnId]);
   const ret = rows[0];
   if (!ret) throw new AppError('Material return not found.', 404);
-  assertTransition('materialReturn', ret.status, decision === 'Approved' ? 'Approved' : 'Rejected');
+  assertTransition('materialReturn', ret.status, decision);
+  await client.query(
+    `UPDATE material_returns SET status = $1, qty_approved = $2, evaluated_by = $3,
+       evaluated_at = NOW(), evaluation_findings = $4, evaluation_recommendation = $5, updated_at = NOW()
+     WHERE id = $6`,
+    [decision, decision === 'Approved' ? (qtyApproved == null ? ret.qty : qtyApproved) : 0, actorName, findings || null, recommendation || null, returnId]
+  );
+  await logAudit(client, { userName: actorName, action: `${decision} return ${ret.srn_ref}`, module: 'Material Return' });
+}
+
+async function receiveMaterialReturn(client, { returnId, actorName }) {
+  const { rows } = await client.query('SELECT * FROM material_returns WHERE id = $1 FOR UPDATE', [returnId]);
+  const ret = rows[0];
+  if (!ret) throw new AppError('Material return not found.', 404);
+  assertTransition('materialReturn', ret.status, 'Returned to Stock');
 
   const reusableCondition = ['good', 'usable', 'reusable'].includes(String(ret.condition || '').trim().toLowerCase());
 
-  if (decision === 'Approved' && reusableCondition) {
+  if (!reusableCondition) {
+    throw new AppError('Only good, usable, or reusable returns can be received into stock.', 400);
+  }
+
+  if (reusableCondition) {
     const item = await getItemForUpdate(client, ret.item_id);
     const requestedQty = Number(ret.qty);
     const approvedQty = qtyApproved == null ? requestedQty : Number(qtyApproved);
@@ -367,9 +398,9 @@ async function decideMaterialReturn(client, { returnId, decision, qtyApproved, f
     `UPDATE material_returns SET status = $1, qty_approved = $2, evaluated_by = $3,
        evaluated_at = NOW(), evaluation_findings = $4, evaluation_recommendation = $5, updated_at = NOW()
      WHERE id = $6`,
-    [decision === 'Approved' && reusableCondition ? 'Returned to Stock' : decision, decision === 'Approved' ? (qtyApproved == null ? ret.qty : qtyApproved) : 0, actorName, findings || null, recommendation || null, returnId]
+    ['Returned to Stock', ret.qty_approved == null ? ret.qty : ret.qty_approved, actorName, ret.evaluation_findings || null, ret.evaluation_recommendation || null, returnId]
   );
-  await logAudit(client, { userName: actorName, action: `${decision} return ${ret.srn_ref}`, module: 'Material Return' });
+  await logAudit(client, { userName: actorName, action: `Received return ${ret.srn_ref} into stock`, module: 'Material Return' });
 }
 
 // ---------------------------------------------------------------------------
@@ -556,7 +587,8 @@ async function postStockTaking(client, { sessionId, actorName }) {
   const { nextRef } = require('../utils/refGenerator');
   for (const line of lines) {
     const item = await getItemForUpdate(client, line.item_id);
-    const variance = Number(line.physical_qty) - Number(item.qty_on_hand);
+    const countedQty = line.recount_physical_qty == null ? Number(line.physical_qty) : Number(line.recount_physical_qty);
+    const variance = countedQty - Number(item.qty_on_hand);
     if (Math.abs(variance) < 0.0001) continue;
     if (!line.reason) throw new AppError(`A reason is required for the variance on "${line.name}".`, 400);
     const reference = session.session_ref;
@@ -645,6 +677,7 @@ module.exports = {
   decideRequisition,
 
   decideMaterialReturn,
+  receiveMaterialReturn,
   decideMaterialTransfer,
   createBinTransfer,
   approveStockTaking,

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
+  Archive,
   ArrowRight,
   Boxes,
   CalendarClock,
@@ -43,7 +44,9 @@ import {
   reconciliationService,
   requisitionService,
   issueVoucherService,
+  userCardService,
   stockTransactionService,
+  stockTakingService,
   reportService
 } from '../../services'
 import { formatCurrency, formatDate, formatNumber, formatTimeAgo } from '../../utils/formatters'
@@ -95,13 +98,15 @@ const DASHBOARD_DATA_BY_ROLE = {
     grns: goodsReceiptService,
     reqs: requisitionService,
     returns: materialReturnService,
+    transfers: materialTransferService,
     transactions: stockTransactionService,
     vouchers: issueVoucherService
   },
   [ROLES.STOCK_CLERK]: {
     items: itemService,
     transactions: stockTransactionService,
-    reconciliation: reconciliationService
+    reconciliation: reconciliationService,
+    stockTaking: stockTakingService
   },
   [ROLES.TEC]: {
     grns: goodsReceiptService
@@ -109,7 +114,8 @@ const DASHBOARD_DATA_BY_ROLE = {
   [ROLES.DEPT_HEAD]: {
     items: itemService,
     reqs: requisitionService,
-    returns: materialReturnService
+    returns: materialReturnService,
+    userCards: userCardService
   },
   [ROLES.ACCOUNTANT]: {
     items: itemService,
@@ -199,8 +205,10 @@ export default function Dashboard() {
   const [disposals, setDisposals] = useState([])
   const [transactions, setTransactions] = useState([])
   const [vouchers, setVouchers] = useState([])
+  const [userCards, setUserCards] = useState([])
   const [assets, setAssets] = useState([])
   const [variances, setVariances] = useState([])
+  const [stockTaking, setStockTaking] = useState([])
   const [audit, setAudit] = useState([])
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -217,8 +225,10 @@ export default function Dashboard() {
     setDisposals([])
     setTransactions([])
     setVouchers([])
+    setUserCards([])
     setAssets([])
     setVariances([])
+    setStockTaking([])
     setAudit([])
     setSummary(null)
 
@@ -246,8 +256,10 @@ export default function Dashboard() {
             disposals: setDisposals,
             transactions: setTransactions,
             vouchers: setVouchers,
+            userCards: setUserCards,
             assets: setAssets,
             reconciliation: setVariances,
+            stockTaking: setStockTaking,
             audit: setAudit
           }
           setters[key](result.value)
@@ -278,7 +290,7 @@ export default function Dashboard() {
 
   // GRN receipts still moving through receiving/evaluation (pre-GRN, not rejected).
   const pendingGrns = useMemo(
-    () => grns.filter((g) => [GRN_STATUS.SUBMITTED, GRN_STATUS.PENDING_EVAL, GRN_STATUS.UNDER_EVAL].includes(g.status)),
+    () => grns.filter((g) => [GRN_STATUS.PENDING_EVAL, GRN_STATUS.UNDER_EVAL].includes(g.status)),
     [grns]
   )
 
@@ -319,6 +331,16 @@ export default function Dashboard() {
   const pendingReturns = useMemo(
     () => returns.filter((r) => [RETURN_STATUS.DRAFT, RETURN_STATUS.SUBMITTED, RETURN_STATUS.PENDING_REVIEW].includes(r.status)),
     [returns]
+  )
+
+  const storekeeperPendingReturns = useMemo(
+    () => returns.filter((r) => [RETURN_STATUS.SUBMITTED, RETURN_STATUS.PENDING_REVIEW, RETURN_STATUS.APPROVED].includes(r.status)),
+    [returns]
+  )
+
+  const readyForDispatchTransfers = useMemo(
+    () => transfers.filter((t) => t.status === TRANSFER_STATUS.APPROVED),
+    [transfers]
   )
 
   const pendingTransfersForApproval = useMemo(
@@ -389,7 +411,7 @@ export default function Dashboard() {
     () =>
       reqs.filter(
         (r) =>
-          r.status === REQUISITION_STATUS.PENDING &&
+          [REQUISITION_STATUS.SUBMITTED, REQUISITION_STATUS.PENDING].includes(r.status) &&
           r.department === user?.department &&
           r.requestedBy !== user?.name
       ),
@@ -406,6 +428,16 @@ export default function Dashboard() {
   const approvedReqsAwaitingIssue = useMemo(
     () => reqs.filter((r) => r.status === REQUISITION_STATUS.APPROVED && (!r.issueVoucherRef || !r.issueVoucherRef.trim())),
     [reqs]
+  )
+
+  const rejectedDeptReqs = useMemo(
+    () => myDeptReqs.filter((r) => r.status === REQUISITION_STATUS.REJECTED),
+    [myDeptReqs]
+  )
+
+  const outstandingDeptReqs = useMemo(
+    () => myDeptReqs.filter((r) => ![REQUISITION_STATUS.REJECTED, REQUISITION_STATUS.CANCELLED, 'Fully Issued', 'Closed'].includes(r.status)),
+    [myDeptReqs]
   )
 
   // ---- Fixed-asset statistics (PAO) ----
@@ -1045,10 +1077,22 @@ export default function Dashboard() {
         <StatCard label="Stock on Hand" value={loading ? '—' : formatNumber(stockOnHandQty)} icon={Boxes} tone="brand" hint="Total units across catalog" />
         {renderStatCardLink('/goods-receipt', 'Pending Receipts', loading ? '—' : pendingGrns.length, PackageCheck, 'info', 'Needs action')}
         {renderStatCardLink('/issue-vouchers', 'Pending Issues', loading ? '—' : pendingSivApprovals.length, Send, 'warning', 'Issue vouchers in progress')}
-        {renderStatCardLink('/material-return', 'Pending Returns', loading ? '—' : pendingReturns.length, Undo2, 'info', 'Awaiting processing')}
+        {renderStatCardLink('/material-transfer', 'Approved Transfers', loading ? '—' : readyForDispatchTransfers.length, Repeat, 'success', 'Ready to dispatch/receive')}
+        {renderStatCardLink('/material-return', 'Pending Returns', loading ? '—' : storekeeperPendingReturns.length, Undo2, 'info', 'Awaiting inspection or receipt')}
         <StatCard label="Low Stock" value={loading ? '—' : lowStock.length} icon={AlertTriangle} tone="warning" hint="Replenishment watch" />
         <StatCard label="Today's Transactions" value={loading ? '—' : todaysTransactions.length} icon={TrendingUp} tone="success" hint="Receipts & issues today" />
       </div>
+
+      <Card title="Quick Actions" subtitle="Operational links for daily storekeeping" className="mb-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {renderStatCardLink('/goods-receipt', 'Goods Receipt', loading ? '—' : pendingGrns.length, PackageCheck, 'info', 'Record and review receipts')}
+          {renderStatCardLink('/issue-vouchers', 'Issue Vouchers', loading ? '—' : pendingSivApprovals.length, Send, 'warning', 'Issue approved requests')}
+          {renderStatCardLink('/material-transfer', 'Store Transfers', loading ? '—' : readyForDispatchTransfers.length, Repeat, 'success', 'Dispatch/receive approved transfers')}
+          {renderStatCardLink('/material-return', 'Material Returns', loading ? '—' : storekeeperPendingReturns.length, Undo2, 'info', 'Inspect and receive returns')}
+          {renderStatCardLink('/stock-cards', 'Stock Cards', loading ? '—' : items.length, Archive, 'brand', 'Inventory history and balances')}
+          {renderStatCardLink('/stock-taking', 'Stock Taking', loading ? '—' : '—', ClipboardCheck, 'brand', 'Count and reconcile stock')}
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card title="To Do" subtitle="Action list for today" className="lg:col-span-2">
@@ -1099,13 +1143,30 @@ export default function Dashboard() {
 
   const renderStockClerk = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {renderStatCardLink('/stock-taking', 'Pending Counts', loading ? '—' : stockTaking.filter((s) => s.status === 'Draft').reduce((sum, s) => sum + (s.items || []).length, 0), ClipboardCheck, 'info', 'Continue physical counting')}
+        {renderStatCardLink('/stock-taking', 'Submitted Counts', loading ? '—' : stockTaking.filter((s) => s.status === 'Submitted').length, Send, 'warning', 'Awaiting review')}
+        {renderStatCardLink('/reconciliation', 'Variances Detected', loading ? '—' : variances.length, ClipboardList, 'danger', 'Review stock discrepancies')}
+        {renderStatCardLink('/stock-taking', 'Completed Sessions', loading ? '—' : stockTaking.filter((s) => s.status === 'Closed').length, CheckCircle2, 'success', 'Completed stock counts')}
         <StatCard label="Items at Reorder Level" value={loading ? '—' : lowStock.length} icon={AlertTriangle} tone="warning" hint="Watch list" />
-        <StatCard label="Total Line Items in Catalog" value={loading ? '—' : items.length} icon={Boxes} tone="brand" hint="Inventory records" />
-        {renderStatCardLink('/reconciliation', 'Open Variances', loading ? '—' : variances.length, ClipboardList, 'danger', 'Stock-taking discrepancies')}
+        <StatCard label="Items Verified" value={loading ? '—' : stockTaking.reduce((sum, s) => sum + (s.items || []).length, 0)} icon={Boxes} tone="brand" hint="Counted line items" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card title="Stock-Taking Work Queue" subtitle="Count, submit, and monitor physical verification sessions">
+          {stockTaking.length === 0 ? (
+            <EmptyState title="No stock-taking sessions" message="Assigned or created stock-taking sessions will appear here." />
+          ) : (
+            <ul className="space-y-3">
+              {stockTaking.slice(0, 6).map((session) => (
+                <li key={session.id} className="flex items-center justify-between gap-3 text-sm">
+                  <div><p className="font-medium text-ink-800">{session.sessionRef}</p><p className="text-xs text-ink-400">{session.store} · {session.items?.length || 0} items</p></div>
+                  <StatusBadge status={session.status} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
         <Card title="Recent Stock Movements" subtitle="Full feed for stock activity" actions={<Link to="/stock-cards" className="text-sm font-medium text-brand-600">View Stock Cards</Link>}>
           {transactions.length === 0 ? (
             <EmptyState title="No stock activity" message="Transactions will appear here as items move through the system." />
@@ -1222,12 +1283,14 @@ export default function Dashboard() {
   const renderDeptHead = () => (
     <>
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="My Pending Requisitions" value={loading ? '—' : myDeptReqs.filter((r) => r.status === REQUISITION_STATUS.PENDING).length} icon={ClipboardCheck} tone="info" hint="Submitted, awaiting outcome" />
+        <StatCard label="My Pending Requisitions" value={loading ? '—' : myDeptReqs.filter((r) => [REQUISITION_STATUS.SUBMITTED, REQUISITION_STATUS.PENDING].includes(r.status)).length} icon={ClipboardCheck} tone="info" hint="Submitted, awaiting outcome" />
         {renderStatCardLink('/requisitions', 'Awaiting Your Approval', loading ? '—' : pendingDeptApprovals.length, FileText, 'warning', 'Department requisitions')}
         <StatCard label="Approved Requisitions" value={loading ? '—' : myDeptReqs.filter((r) => r.status === REQUISITION_STATUS.APPROVED).length} icon={CheckCircle2} tone="success" hint="Ready for issue" />
         <StatCard label="Partially Fulfilled" value={loading ? '—' : myDeptReqs.filter((r) => r.status === REQUISITION_STATUS.PARTIALLY_APPROVED).length} icon={PackageCheck} tone="info" hint="Partially approved" />
+        <StatCard label="Rejected Requisitions" value={loading ? '—' : rejectedDeptReqs.length} icon={XCircle} tone="danger" hint="Department requests rejected" />
+        <StatCard label="Outstanding Requests" value={loading ? '—' : outstandingDeptReqs.length} icon={ClipboardList} tone="warning" hint="Not fully fulfilled" />
         {renderStatCardLink('/material-return', 'Pending Returns', loading ? '—' : myDeptReturns.filter((r) => [RETURN_STATUS.DRAFT, RETURN_STATUS.SUBMITTED, RETURN_STATUS.PENDING_REVIEW].includes(r.status)).length, Undo2, 'warning', 'Submitted by your team')}
-        {renderStatCardLink('/items', 'Department Stock', loading ? '—' : items.length, Boxes, 'brand', 'Items available to request')}
+        {renderStatCardLink('/user-cards', 'Assigned User Materials', loading ? '—' : userCards.filter((card) => card.status !== 'Returned').length, Boxes, 'brand', 'Materials assigned in your department')}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

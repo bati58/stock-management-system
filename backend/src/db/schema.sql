@@ -357,6 +357,7 @@ CREATE TABLE IF NOT EXISTS material_returns (
   srn_ref                      TEXT NOT NULL UNIQUE,
   department                   TEXT NOT NULL,
   created_by                   TEXT,
+  store_id                     INTEGER REFERENCES stores(id) ON DELETE RESTRICT,
   item_id                      INTEGER NOT NULL REFERENCES items(id) ON DELETE RESTRICT,
   qty                          NUMERIC(14,2) NOT NULL CHECK (qty > 0),
   reason                       TEXT,
@@ -374,6 +375,8 @@ CREATE TABLE IF NOT EXISTS material_returns (
   updated_at                   TIMESTAMP NOT NULL DEFAULT NOW()
 );
 ALTER TABLE material_returns ADD COLUMN IF NOT EXISTS created_by TEXT;
+ALTER TABLE material_returns ADD COLUMN IF NOT EXISTS store_id INTEGER REFERENCES stores(id) ON DELETE RESTRICT;
+CREATE INDEX IF NOT EXISTS idx_material_returns_store ON material_returns(store_id);
 
 -- ---------- material_transfers — store to store (§5.14) ----------
 CREATE TABLE IF NOT EXISTS material_transfers (
@@ -398,6 +401,9 @@ CREATE TABLE IF NOT EXISTS material_transfers (
   created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at           TIMESTAMP NOT NULL DEFAULT NOW()
 );
+ALTER TABLE material_transfers ADD COLUMN IF NOT EXISTS department TEXT;
+ALTER TABLE material_transfers ADD COLUMN IF NOT EXISTS requested_by TEXT;
+CREATE INDEX IF NOT EXISTS idx_material_transfers_department ON material_transfers(department);
 
 -- ---------- disposals (§5.15) ----------
 CREATE TABLE IF NOT EXISTS disposals (
@@ -459,8 +465,9 @@ CREATE TABLE IF NOT EXISTS stock_taking_sessions (
   store_id     INTEGER NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
   count_date   DATE NOT NULL DEFAULT CURRENT_DATE,
   status       TEXT NOT NULL DEFAULT 'Draft'
-                 CHECK (status IN ('Draft','Submitted','Pending Approval','Approved','Posted','Closed','Rejected')),
+                 CHECK (status IN ('Draft','Submitted','Pending Approval','Approved','Posted','Closed','Rejected','Recount Required')),
   created_by   TEXT NOT NULL,
+  assigned_to  TEXT,
   approved_by  TEXT,
   approved_at  TIMESTAMP,
   closed_by    TEXT,
@@ -482,6 +489,12 @@ CREATE TABLE IF NOT EXISTS stock_taking_items (
   adjustment_ref  TEXT,
   UNIQUE (session_id, item_id, bin)
 );
+ALTER TABLE stock_taking_sessions ADD COLUMN IF NOT EXISTS assigned_to TEXT;
+ALTER TABLE stock_taking_items ADD COLUMN IF NOT EXISTS recount_physical_qty NUMERIC(14,2);
+ALTER TABLE stock_taking_items ADD COLUMN IF NOT EXISTS recount_variance NUMERIC(14,2);
+ALTER TABLE stock_taking_items ADD COLUMN IF NOT EXISTS recounted_by TEXT;
+ALTER TABLE stock_taking_items ADD COLUMN IF NOT EXISTS recounted_at TIMESTAMP;
+CREATE INDEX IF NOT EXISTS idx_stock_taking_assigned_to ON stock_taking_sessions(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_stock_taking_status ON stock_taking_sessions(status);
 CREATE INDEX IF NOT EXISTS idx_stock_taking_items_session ON stock_taking_items(session_id);
 

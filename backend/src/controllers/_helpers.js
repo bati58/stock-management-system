@@ -30,10 +30,23 @@ async function resolveCategoryId(categoryName, client = { query }) {
   return rows[0].id;
 }
 
-async function resolveItemId(itemName, client = { query }) {
+async function resolveItemId(itemName, client = { query }, storeId = null) {
   if (!itemName) return null;
-  const { rows } = await client.query('SELECT id FROM items WHERE name = $1', [itemName]);
-  if (!rows[0]) throw new AppError(`Unknown item: "${itemName}".`, 400);
+
+  const sql = storeId == null
+    ? 'SELECT id FROM items WHERE name = $1'
+    : 'SELECT id FROM items WHERE name = $1 AND store_id = $2';
+  const params = storeId == null
+    ? [itemName]
+    : [itemName, storeId];
+
+  const { rows } = await client.query(sql, params);
+  if (!rows[0]) {
+    throw new AppError(
+      storeId == null ? `Unknown item: "${itemName}".` : `Unknown item: "${itemName}" in the selected store.`,
+      400
+    );
+  }
   return rows[0].id;
 }
 

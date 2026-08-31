@@ -23,7 +23,8 @@ const TRANSITIONS = {
         Draft: ['Submitted', 'Pending Review', 'Approved', 'Rejected'],
         Submitted: ['Pending Review', 'Approved', 'Rejected'],
         Pending: ['Approved', 'Rejected'],
-        'Pending Review': ['Approved', 'Rejected']
+        'Pending Review': ['Approved', 'Rejected'],
+        Approved: ['Returned to Stock']
     },
     materialTransfer: {
         Draft: ['Submitted', 'Pending', 'Pending Approval', 'Approved', 'Rejected'],
@@ -36,7 +37,8 @@ const TRANSITIONS = {
     },
     stockTaking: {
         Draft: ['Submitted'],
-        Submitted: ['Pending Approval', 'Approved', 'Rejected'],
+        Submitted: ['Pending Approval', 'Approved', 'Rejected', 'Recount Required'],
+        'Recount Required': ['Submitted'],
         'Pending Approval': ['Approved', 'Rejected'],
         Approved: ['Posted'],
         Posted: ['Closed']

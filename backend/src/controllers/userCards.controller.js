@@ -25,12 +25,22 @@ function map(row) {
 }
 
 const list = asyncHandler(async (req, res) => {
-    const { rows } = await query(`${SELECT} ORDER BY uc.id DESC`);
+    if (req.user.role === 'Department Head' && !req.user.department) {
+        return res.json([]);
+    }
+    const params = req.user.role === 'Department Head' ? [req.user.department] : [];
+    const scope = req.user.role === 'Department Head' ? ' WHERE uc.department = $1' : '';
+    const { rows } = await query(`${SELECT}${scope} ORDER BY uc.id DESC`, params);
     res.json(rows.map(map));
 });
 
 const getOne = asyncHandler(async (req, res) => {
-    const { rows } = await query(`${SELECT} WHERE uc.id = $1`, [req.params.id]);
+    if (req.user.role === 'Department Head' && !req.user.department) {
+        throw new AppError('Your account is not assigned to a department.', 403);
+    }
+    const params = req.user.role === 'Department Head' ? [req.params.id, req.user.department] : [req.params.id];
+    const scope = req.user.role === 'Department Head' ? ' AND uc.department = $2' : '';
+    const { rows } = await query(`${SELECT} WHERE uc.id = $1${scope}`, params);
     if (!rows[0]) throw new AppError('User card not found.', 404);
     res.json(map(rows[0]));
 });

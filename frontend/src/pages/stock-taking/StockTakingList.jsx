@@ -22,6 +22,7 @@ export default function StockTakingList() {
     const [showDetailModal, setShowDetailModal] = useState(false)
     const [selectedSession, setSelectedSession] = useState(null)
     const [selectedVarianceItem, setSelectedVarianceItem] = useState(null)
+    const [countDraft, setCountDraft] = useState([])
     const [showApproveDialog, setShowApproveDialog] = useState(false)
     const [showPostDialog, setShowPostDialog] = useState(false)
     const [createForm, setCreateForm] = useState({
@@ -108,6 +109,30 @@ export default function StockTakingList() {
         }
     }
 
+    const handleSaveCount = async () => {
+        try {
+            const updated = await stockTakingService.update(selectedSession.id, countDraft)
+            setSelectedSession(updated)
+            push('Physical counts saved. Official stock remains unchanged.', 'success')
+            loadSessions()
+        } catch (error) {
+            push(error.message || 'Failed to save count', 'error')
+        }
+    }
+
+    const handleRequestRecount = async () => {
+        const reason = window.prompt('Reason for recount')
+        if (!reason?.trim()) return
+        try {
+            const updated = await stockTakingService.requestRecount(selectedSession.id, reason.trim())
+            setSelectedSession(updated)
+            push('Recount requested from the Stock Clerk.', 'success')
+            loadSessions()
+        } catch (error) {
+            push(error.message || 'Failed to request recount', 'error')
+        }
+    }
+
     const handleApproveSession = async () => {
         try {
             await stockTakingService.approve(selectedSession.id)
@@ -146,14 +171,17 @@ export default function StockTakingList() {
         const variant = {
             'Draft': 'default',
             'Submitted': 'warning',
+            'Recount Required': 'warning',
             'Approved': 'info',
             'Closed': 'success'
         }[session.status] || 'default'
         return <Badge variant={variant}>{session.status}</Badge>
     }
 
-    const canSubmit = selectedSession?.status === 'Draft' &&
+    const canSubmit = ['Draft', 'Recount Required'].includes(selectedSession?.status) &&
         [ROLES.STORE_HEAD, ROLES.STOREKEEPER, ROLES.STOCK_CLERK].includes(user?.role)
+    const canEditCount = selectedSession && ['Draft', 'Recount Required'].includes(selectedSession.status) && user?.role === ROLES.STOCK_CLERK
+    const canRequestRecount = selectedSession?.status === 'Submitted' && user?.role === ROLES.STORE_HEAD
     const canApprove = selectedSession?.status === 'Submitted' &&
         [ROLES.PAO, ROLES.STORE_HEAD].includes(user?.role)
     const canPost = selectedSession?.status === 'Approved' &&
@@ -174,6 +202,7 @@ export default function StockTakingList() {
                     variant="outline"
                     onClick={() => {
                         setSelectedSession(row)
+                        setCountDraft((row.items || []).map((item) => ({ itemId: item.itemId, physicalQty: item.recountPhysicalQty ?? item.physicalQty, reason: item.reason || '' })))
                         setShowDetailModal(true)
                     }}
                 >
@@ -256,12 +285,12 @@ export default function StockTakingList() {
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs uppercase">Physical Qty</p>
-                                                                <p className="font-semibold">{Number(item.physicalQty).toFixed(2)}</p>
+                                                                <p className="font-semibold">{Number(item.recountPhysicalQty ?? item.physicalQty).toFixed(2)}</p>
                                                             </div>
                                                             <div>
                                                                 <p className="text-xs uppercase">Variance</p>
                                                                 <p className={`font-semibold ${variance > 0 ? 'text-green-600' : variance < 0 ? 'text-red-600' : ''}`}>
-                                                                    {variance > 0 ? '+' : ''}{Number(variance).toFixed(2)}
+                                                                    {variance > 0 ? '+' : ''}{Number(item.recountVariance ?? variance).toFixed(2)}
                                                                 </p>
                                                             </div>
                                                             <div>
@@ -277,6 +306,12 @@ export default function StockTakingList() {
                                                         )}
                                                         {item.verifiedBy && (
                                                             <p className="text-xs text-gray-500">Verified by: {item.verifiedBy}</p>
+                                                        )}
+                                                        {canEditCount && (
+                                                            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                                                <input type="number" min="0" step="any" value={countDraft.find((draft) => draft.itemId === item.itemId)?.physicalQty ?? ''} onChange={(e) => setCountDraft((drafts) => drafts.map((draft) => draft.itemId === item.itemId ? { ...draft, physicalQty: e.target.value } : draft))} className="rounded-md border border-gray-300 px-2 py-1 text-sm" placeholder="Physical quantity" />
+                                                                <input value={countDraft.find((draft) => draft.itemId === item.itemId)?.reason ?? ''} onChange={(e) => setCountDraft((drafts) => drafts.map((draft) => draft.itemId === item.itemId ? { ...draft, reason: e.target.value } : draft))} className="rounded-md border border-gray-300 px-2 py-1 text-sm" placeholder="Reason if variance" />
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
@@ -299,6 +334,12 @@ export default function StockTakingList() {
                                     <Send className="w-4 h-4 mr-2" />
                                     Submit Session
                                 </Button>
+                            )}
+                            {canEditCount && (
+                                <Button onClick={handleSaveCount} variant="outline">Save Count</Button>
+                            )}
+                            {canRequestRecount && (
+                                <Button onClick={handleRequestRecount} variant="outline">Request Recount</Button>
                             )}
                             {canApprove && (
                                 <Button

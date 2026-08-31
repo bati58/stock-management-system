@@ -58,10 +58,10 @@ const READ_PERMISSIONS = {
 const ACTION_PERMISSIONS = {
   'goods-receipts': [STORE_HEAD, STOREKEEPER, TEC], // Admin is monitoring-only for goods receipts; operational actions stay with store/TEC roles.
   requisitions: [PAO, STORE_HEAD, DEPT_HEAD],
-  'material-returns': [PAO, STORE_HEAD],
+  'material-returns': [STORE_HEAD],
   // Approve/Reject/Return only. Storekeeper is intentionally excluded so it cannot
   // approve its own transfer; it dispatches/receives via 'material-transfers-execute'.
-  'material-transfers': [PAO, STORE_HEAD, DEPT_HEAD],
+  'material-transfers': [PAO, STORE_HEAD],
   'issue-vouchers': [STORE_HEAD],
   disposals: [PAO, STORE_HEAD],
   'gate-pass': [SECURITY]
@@ -70,9 +70,11 @@ ACTION_PERMISSIONS['issue-voucher-post'] = [STOREKEEPER];
 ACTION_PERMISSIONS['goods-receipts-evaluate'] = [TEC];
 ACTION_PERMISSIONS['goods-receipts-notify-tec'] = [STORE_HEAD];
 ACTION_PERMISSIONS['goods-receipts-post'] = [STOREKEEPER];
+ACTION_PERMISSIONS['material-returns-receive'] = [STOREKEEPER];
 ACTION_PERMISSIONS['material-transfers-execute'] = [STORE_HEAD, STOREKEEPER]; // dispatch/receive: the store operators, not the approver
 ACTION_PERMISSIONS['stock-taking'] = [PAO, STORE_HEAD];
 ACTION_PERMISSIONS['stock-taking-post'] = [PAO]; // Store Head may recommend, but PAO/authorized approver performs the actual stock adjustment
+ACTION_PERMISSIONS['stock-taking-recount'] = [STORE_HEAD];
 
 ACTION_PERMISSIONS['business-rules'] = [ADMIN];
 
@@ -83,8 +85,8 @@ ACTION_PERMISSIONS['business-rules'] = [ADMIN];
 const WRITE_PERMISSIONS = {
   stores: [ADMIN, PAO, STORE_HEAD],
   categories: [ADMIN, PAO],
-  items: [ADMIN, STOREKEEPER],
-  locations: [ADMIN, STOREKEEPER],
+  items: [ADMIN],
+  locations: [ADMIN],
   suppliers: [ADMIN, PAO],
   departments: [ADMIN, PAO],
   'stock-taking': [STORE_HEAD, STOREKEEPER, STOCK_CLERK],
@@ -108,7 +110,11 @@ const WRITE_PERMISSIONS = {
 };
 
 const DELETE_PERMISSIONS = {
-  users: []
+  users: [],
+  requisitions: [],
+  'material-returns': [],
+  'material-transfers': [],
+  'user-cards': []
 };
 
 // Business Rules configuration permissions

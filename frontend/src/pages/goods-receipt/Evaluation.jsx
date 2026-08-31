@@ -57,6 +57,14 @@ export default function Evaluation() {
   }
 
   async function decide(decision) {
+    if (!note.trim()) {
+      push('Evaluation findings or a decision note is required.', 'error')
+      return
+    }
+    if (decision !== GRN_STATUS.REJECTED && acceptedQuantities.every((line) => Number(line.qtyAccepted) <= 0)) {
+      push('Accept at least one positive quantity or reject the receipt.', 'error')
+      return
+    }
     setSaving(true)
     try {
       await api.action('goodsReceipts', target.id, 'evaluate', {

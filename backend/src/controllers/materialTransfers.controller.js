@@ -22,6 +22,9 @@ const list = asyncHandler(async (req, res) => {
   if (req.user.role === 'Store Head' && req.user.store) {
     scope = 'WHERE fs.name = $1 OR ts.name = $1';
     params = [req.user.store];
+  } else if (req.user.role === 'Department Head') {
+    scope = 'WHERE mt.department = $1 OR mt.requested_by = $2';
+    params = [req.user.department || '', req.user.name];
   }
 
   const { rows } = await query(`${SELECT} ${scope} ORDER BY mt.id DESC`, params);
@@ -35,6 +38,9 @@ const getOne = asyncHandler(async (req, res) => {
   if (req.user.role === 'Store Head' && req.user.store) {
     scope = ' AND (fs.name = $2 OR ts.name = $2)';
     params.push(req.user.store);
+  } else if (req.user.role === 'Department Head') {
+    scope = ' AND (mt.department = $2 OR mt.requested_by = $3)';
+    params.push(req.user.department || '', req.user.name);
   }
 
   const { rows } = await query(`${SELECT} WHERE mt.id = $1${scope}`, params);
@@ -52,7 +58,7 @@ const create = asyncHandler(async (req, res) => {
   const result = await withTransaction(async (client) => {
     const fromStoreId = await resolveStoreId(fromStore, client);
     const toStoreId = await resolveStoreId(toStore, client);
-    const itemId = await resolveItemId(item, client);
+    const itemId = await resolveItemId(item, client, fromStoreId);
     if (!itemId) throw new AppError(`Unknown item: "${item}".`, 400);
     const { rows: sourceItems } = await client.query('SELECT id FROM items WHERE id = $1 AND store_id = $2', [itemId, fromStoreId]);
     if (!sourceItems[0]) throw new AppError('The selected item does not belong to the source store.', 400);
@@ -60,9 +66,9 @@ const create = asyncHandler(async (req, res) => {
     const transferRef = await nextRef(client, 'TRF');
 
     const { rows } = await client.query(
-      `INSERT INTO material_transfers (transfer_ref, from_store_id, to_store_id, item_id, qty, date, status, destination_bin)
-       VALUES ($1,$2,$3,$4,$5,COALESCE($6, CURRENT_DATE),'Pending Approval',$7) RETURNING id`,
-      [transferRef, fromStoreId, toStoreId, itemId, qty, date || null, destinationBin || null]
+      `INSERT INTO material_transfers (transfer_ref, from_store_id, to_store_id, item_id, qty, date, status, destination_bin, department, requested_by)
+       VALUES ($1,$2,$3,$4,$5,COALESCE($6, CURRENT_DATE),'Pending Approval',$7,$8,$9) RETURNING id`,
+      [transferRef, fromStoreId, toStoreId, itemId, qty, date || null, destinationBin || null, req.user.department || null, req.user.name]
     );
 
     await logAudit(client, { userName: req.user.name, action: `Created transfer ${transferRef}`, module: 'Material Transfer' });
@@ -128,9 +134,23 @@ const execute = asyncHandler(async (req, res) => {
     throw new AppError('decision must be "Dispatched" or "Received".', 400);
   }
 
-  await withTransaction((client) =>
-    stockService.decideMaterialTransfer(client, { transferId: req.params.id, decision, actorName: req.user.name })
-  );
+  await withTransaction(async (client) => {
+    await stockService.decideMaterialTransfer(client, { transferId: req.params.id, decision, actorName: req.user.name });
+
+    const { rows } = await client.query(`${SELECT} WHERE mt.id = $1`, [req.params.id]);
+    const transfer = rows[0];
+    if (decision === 'Dispatched') {
+      await notify(client, {
+        role: 'Storekeeper',
+        title: 'Transfer Ready to Receive',
+        message: `Transfer ${transfer.transfer_ref} has been dispatched from ${transfer.from_store_name} and is ready to receive at ${transfer.to_store_name}.`,
+        type: 'info',
+        route: '/material-transfer',
+        entityType: 'material-transfer',
+        entityId: req.params.id
+      });
+    }
+  });
 
   const { rows } = await query(`${SELECT} WHERE mt.id = $1`, [req.params.id]);
   res.json(mapMaterialTransfer(rows[0]));

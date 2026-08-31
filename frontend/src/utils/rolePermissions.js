@@ -118,7 +118,7 @@ export const ROLE_PERMISSIONS = {
             '/user-cards'
         ],
         canCreate: ['materialTransfers', 'fixedAssets', 'userCards'],
-        canEdit: ['stores', 'locations', 'fixedAssets', 'userCards'],
+        canEdit: ['stores', 'fixedAssets', 'userCards'],
         canDelete: [],
         canApprove: ['issueVouchers', 'requisitions', 'materialReturns', 'materialTransfers', 'stockTaking'],
         canReject: ['issueVouchers', 'requisitions', 'materialReturns', 'materialTransfers', 'stockTaking'],
@@ -134,9 +134,9 @@ export const ROLE_PERMISSIONS = {
     [ROLES.STOREKEEPER]: {
         name: 'Storekeeper',
         // SRS: receives and issues stock, updates inventory records (bin cards)
-        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/locations', '/goods-receipt', '/grn-documents', '/stock-cards', '/bin-cards', '/requisitions', '/issue-vouchers', '/stock-transfer', '/material-return', '/material-transfer', '/user-cards', '/suppliers', '/stock-taking', '/reports'],
-        canCreate: ['goodsReceipts', 'issueVouchers', 'stockTransfer', 'materialTransfers', 'userCards', 'locations'],
-        canEdit: ['goodsReceipts', 'userCards', 'locations'],
+        canAccessPages: ['/', '/settings', '/items', '/locations', '/goods-receipt', '/grn-documents', '/stock-cards', '/bin-cards', '/requisitions', '/issue-vouchers', '/stock-transfer', '/material-return', '/material-transfer', '/user-cards', '/stock-taking', '/reports'],
+        canCreate: ['goodsReceipts', 'issueVouchers', 'stockTransfer', 'materialTransfers', 'userCards'],
+        canEdit: ['goodsReceipts', 'userCards'],
         canDelete: [],
         canApprove: [],
         canReject: [],
@@ -152,8 +152,8 @@ export const ROLE_PERMISSIONS = {
     [ROLES.STOCK_CLERK]: {
         name: 'Stock Clerk',
         // SRS: maintains stock records, updates transactions, prepares reports
-        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/locations', '/stock-cards', '/bin-cards', '/stock-transfer', '/reports', '/stock-taking', '/reconciliation', '/suppliers'],
-        canCreate: ['stockTransfer'],
+        canAccessPages: ['/', '/settings', '/items', '/locations', '/stock-cards', '/bin-cards', '/reports', '/stock-taking', '/reconciliation'],
+        canCreate: [],
         canEdit: [],
         canDelete: [],
         canApprove: [],
@@ -169,7 +169,7 @@ export const ROLE_PERMISSIONS = {
 
     [ROLES.TEC]: {
         name: 'Technical Evaluation Committee',
-        canAccessPages: ['/', '/settings', '/stores', '/categories', '/items', '/locations', '/goods-receipt', '/goods-receipt/evaluation', '/grn-documents', '/reports'],
+        canAccessPages: ['/', '/goods-receipt/evaluation', '/grn-documents', '/reports'],
         canCreate: [],
         canEdit: [],
         canDelete: [],
@@ -189,9 +189,9 @@ export const ROLE_PERMISSIONS = {
         // SRS: approves requisitions from their department
         canAccessPages: ['/', '/settings', '/items', '/requisitions', '/material-return', '/material-transfer', '/user-cards', '/reports'],
         canCreate: ['requisitions', 'materialReturns', 'materialTransfers'],
-        canEdit: ['requisitions', 'materialReturns', 'materialTransfers'],
+        canEdit: [],
         canDelete: [],
-        canApprove: ['requisitions', 'materialTransfers'],
+        canApprove: ['requisitions'],
         canReject: ['requisitions'],
         canEvaluate: [],
         canVerifyGatePass: false,
@@ -222,8 +222,8 @@ export const ROLE_PERMISSIONS = {
 
     [ROLES.SECURITY]: {
         name: 'Security Officer',
-        // SRS: monitors goods entering and leaving the organization
-        canAccessPages: ['/', '/settings', '/gate-pass', '/goods-receipt', '/issue-vouchers', '/audit-log', '/reports'],
+        // SRS: gate verification only; view supporting delivery and issue docs at the campus boundary
+        canAccessPages: ['/', '/settings', '/gate-pass', '/goods-receipt', '/issue-vouchers', '/reports', '/audit-log'],
         canCreate: [],
         canEdit: [],
         canDelete: [],
@@ -323,7 +323,7 @@ export function canApproveRequisition(user, requisition) {
     if (!REQUISITION_AWAITING_DECISION.includes(requisition.status)) return false
     if (user.role === ROLES.DEPT_HEAD) {
         const dept = user.department || ''
-        return requisition.department === dept || requisition.requestedBy === user.name
+        return requisition.department === dept && requisition.requestedBy !== user.name
     }
     return true
 }
@@ -334,7 +334,7 @@ export function canRejectRequisition(user, requisition) {
     if (!REQUISITION_AWAITING_DECISION.includes(requisition.status)) return false
     if (user.role === ROLES.DEPT_HEAD) {
         const dept = user.department || ''
-        return requisition.department === dept || requisition.requestedBy === user.name
+        return requisition.department === dept && requisition.requestedBy !== user.name
     }
     return true
 }

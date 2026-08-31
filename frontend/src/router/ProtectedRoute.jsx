@@ -29,7 +29,6 @@ export default function ProtectedRoute() {
             Your role ({user?.role}) does not have access to this page.
           </p>
         </div>
-        <Navigate to="/" replace />
       </div>
     )
   }

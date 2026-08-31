@@ -4,7 +4,7 @@ const AppError = require('../utils/AppError');
 const { logAudit } = require('../utils/audit');
 
 const TABLES = {
-    'goods-receipts': { table: 'goods_receipts', ref: 'grn_ref', eligibleStatuses: ['GRN Generated'] },
+    'goods-receipts': { table: 'goods_receipts', ref: 'grn_ref', eligibleStatuses: ['Submitted', 'Pending Evaluation', 'Under Evaluation', 'Accepted', 'Partially Accepted', 'Rejected', 'GRN Generated', 'Posted'] },
     'issue-vouchers': { table: 'issue_vouchers', ref: 'siv_ref', eligibleStatuses: ['Approved', 'Posted'] }
 };
 

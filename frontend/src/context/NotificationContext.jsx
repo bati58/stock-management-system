@@ -8,7 +8,8 @@ import {
   materialReturnService,
   materialTransferService,
   requisitionService
-  , notificationService
+  , notificationService,
+  stockTakingService
 } from '../services'
 import { buildNotifications } from '../utils/buildNotifications'
 
@@ -58,7 +59,7 @@ export function NotificationProvider({ children }) {
     if (!user) return
     setLoading(true)
     try {
-      const [items, grns, reqs, returns, transfers, disposals, vouchers, persisted] = await Promise.all([
+      const [items, grns, reqs, returns, transfers, disposals, vouchers, stockTaking, persisted] = await Promise.all([
         itemService.list(),
         goodsReceiptService.list(),
         requisitionService.list(),
@@ -66,10 +67,11 @@ export function NotificationProvider({ children }) {
         materialTransferService.list(),
         disposalService.list(),
         issueVoucherService.list(),
+        stockTakingService.list(),
         notificationService.list().catch(() => [])
       ])
 
-      const built = buildNotifications(user, { items, grns, reqs, returns, transfers, disposals, vouchers })
+      const built = buildNotifications(user, { items, grns, reqs, returns, transfers, disposals, vouchers, stockTaking })
       const dismissed = loadIds(dismissedKey(user.id))
       const read = loadIds(readKey(user.id))
 

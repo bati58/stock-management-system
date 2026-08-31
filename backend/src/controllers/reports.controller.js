@@ -7,6 +7,11 @@ function scopeForStoreHead(req) {
   return { where: 's.name = $1', params: [req.user.store] };
 }
 
+function scopeForDepartmentHead(req, column) {
+  if (req.user.role !== ROLES.DEPT_HEAD) return null;
+  return { column, value: req.user.department || '' };
+}
+
 function dateConditions(column, queryParams, values) {
   const conditions = [];
   if (queryParams.from) {
@@ -137,6 +142,11 @@ const requisitionStatus = asyncHandler(async (req, res) => {
   if (storeScope.where) {
     params.push(storeScope.params[0]);
     conditions.push(`s.name = $${params.length}`);
+  }
+  const departmentScope = scopeForDepartmentHead(req, 'r.department');
+  if (departmentScope) {
+    params.push(departmentScope.value);
+    conditions.push(`${departmentScope.column} = $${params.length}`);
   }
   const { rows } = await query(`
     SELECT r.sr_ref, r.department, r.date, r.status, s.name AS store
@@ -309,6 +319,11 @@ const issueStatus = asyncHandler(async (req, res) => {
     params.push(storeScope.params[0]);
     conditions.push(`s.name = $${params.length}`);
   }
+  const departmentScope = scopeForDepartmentHead(req, 'r.department');
+  if (departmentScope) {
+    params.push(departmentScope.value);
+    conditions.push(`${departmentScope.column} = $${params.length}`);
+  }
   const { rows } = await query(`
     SELECT iv.siv_ref, iv.type, iv.sr_ref, iv.issued_to, iv.issued_by, iv.date, iv.status
     FROM issue_vouchers iv
@@ -330,6 +345,11 @@ const returnStatus = asyncHandler(async (req, res) => {
   if (storeScope.where) {
     params.push(storeScope.params[0]);
     conditions.push(`s.name = $${params.length}`);
+  }
+  const departmentScope = scopeForDepartmentHead(req, 'mr.department');
+  if (departmentScope) {
+    params.push(departmentScope.value);
+    conditions.push(`${departmentScope.column} = $${params.length}`);
   }
   const { rows } = await query(`
     SELECT mr.srn_ref, mr.department, i.name AS item, mr.qty, mr.status, mr.date
@@ -353,6 +373,11 @@ const transferStatus = asyncHandler(async (req, res) => {
   if (storeScope.where) {
     params.push(storeScope.params[0]);
     conditions.push(`(fs.name = $${params.length} OR ts.name = $${params.length})`);
+  }
+  const departmentScope = scopeForDepartmentHead(req, 'mt.department');
+  if (departmentScope) {
+    params.push(departmentScope.value);
+    conditions.push(`${departmentScope.column} = $${params.length}`);
   }
   const { rows } = await query(`
     SELECT mt.transfer_ref, fs.name AS from_store, ts.name AS to_store,

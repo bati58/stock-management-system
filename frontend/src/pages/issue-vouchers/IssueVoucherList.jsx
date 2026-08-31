@@ -31,6 +31,16 @@ export default function IssueVoucherList() {
   const canGenerate = canPerformAction(user?.role, 'create', 'issueVouchers')
   const canApprove = canPerformAction(user?.role, 'approve', 'issueVouchers')
 
+  const selectedReq = useMemo(
+    () => approvedReqs.find((r) => r.srRef === selectedSr) || null,
+    [approvedReqs, selectedSr]
+  )
+
+  const selectedReqHasStockWarning = useMemo(
+    () => (selectedReq ? amendLines.some((line) => Number(line.qtyIssued || 0) > Number(line.stockAvailable || 0)) : false),
+    [selectedReq, amendLines]
+  )
+
   async function load() {
     setLoading(true)
     try {
@@ -82,13 +92,20 @@ export default function IssueVoucherList() {
 
   async function handleGenerate(e) {
     e.preventDefault()
-    const req = approvedReqs.find((r) => r.srRef === selectedSr)
+    const req = selectedReq
     if (!req) return
+
+    const invalidLines = amendLines.filter((line) => Number(line.qtyIssued || 0) > Number(line.stockAvailable || 0))
+    if (invalidLines.length > 0) {
+      const itemNames = invalidLines.map((line) => line.item).join(', ')
+      push(`Not enough stock available to issue the selected quantity for: ${itemNames}. Reduce the issue quantity or update stock before creating the voucher.`, 'error')
+      return
+    }
+
     setSaving(true)
     try {
       const count = rows.length + 1
       const sivRef = `SIV-2026-${String(9 + count).padStart(4, '0')}`
-      const isInterStore = req.department.toLowerCase().includes('store')
 
       await issueVoucherService.create({ srRef: req.srRef })
       push(`Preliminary Model 22 Issue Voucher ${sivRef} created. Stock remains unchanged until posting.`, 'success')
@@ -114,6 +131,22 @@ export default function IssueVoucherList() {
 
   async function handlePost(row) {
     try {
+      const stockIssues = (row.items || []).map((line) => {
+        const stockItem = itemsCatalog.find((item) => item.name === line.item)
+        return {
+          item: line.item,
+          qtyRequested: Number(line.qty || 0),
+          stockAvailable: Number(stockItem?.qtyOnHand || 0)
+        }
+      })
+
+      const insufficient = stockIssues.filter((line) => line.qtyRequested > line.stockAvailable)
+      if (insufficient.length > 0) {
+        const names = insufficient.map((line) => `${line.item} (${line.qtyRequested} > ${line.stockAvailable})`).join(', ')
+        push(`Cannot post ${row.sivRef}: insufficient stock for ${names}.`, 'error')
+        return
+      }
+
       await api.action('issueVouchers', row.id, 'post', {})
       push(`${row.sivRef} posted. Stock levels updated.`, 'success')
       await load()
@@ -170,7 +203,7 @@ export default function IssueVoucherList() {
             <Button variant="secondary" onClick={() => setModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleGenerate} loading={saving} disabled={!selectedSr}>
+            <Button onClick={handleGenerate} loading={saving} disabled={!selectedSr || selectedReqHasStockWarning}>
               Create Preliminary Voucher
             </Button>
           </>
@@ -191,6 +224,11 @@ export default function IssueVoucherList() {
           {selectedSr && amendLines.length > 0 && (
             <div className="mt-6 border-t border-ink-100 pt-4">
               <p className="mb-2 font-medium text-ink-700">Amend Quantities & Verify Stock</p>
+              {selectedReqHasStockWarning && (
+                <div className="mb-3 rounded border border-danger-200 bg-danger-50 px-3 py-2 text-sm text-danger-700">
+                  One or more requested issue quantities exceed current stock availability. Reduce the quantities before creating the voucher.
+                </div>
+              )}
               <table className="w-full text-left text-sm">
                 <thead className="text-ink-500 border-b border-ink-100">
                   <tr>

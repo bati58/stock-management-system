@@ -73,7 +73,8 @@ const getOne = asyncHandler(async (req, res) => {
 // POST /api/requisitions — Backend-SRS §6.2 step 1 (Pending only, no stock change)
 const create = asyncHandler(async (req, res) => {
   const { department, requestedBy, date, store, items } = req.body;
-  if (!department || !store || !Array.isArray(items) || items.length === 0) {
+  const effectiveDepartment = req.user.role === 'Department Head' ? req.user.department : department;
+  if (!effectiveDepartment || !store || !Array.isArray(items) || items.length === 0) {
     throw new AppError('department, store, and at least one item are required.', 400);
   }
 
@@ -84,12 +85,12 @@ const create = asyncHandler(async (req, res) => {
     const { rows } = await client.query(
       `INSERT INTO requisitions (sr_ref, department, requested_by, date, store_id, status)
        VALUES ($1,$2,$3,COALESCE($4, CURRENT_DATE),$5,'Draft') RETURNING id`,
-      [srRef, department, requestedBy || req.user.name, date || null, storeId]
+      [srRef, effectiveDepartment, req.user.role === 'Department Head' ? req.user.name : (requestedBy || req.user.name), date || null, storeId]
     );
     const reqId = rows[0].id;
 
     for (const line of items) {
-      const itemId = await resolveItemId(line.item, client);
+      const itemId = await resolveItemId(line.item, client, storeId);
       if (!itemId) throw new AppError(`Unknown item on this requisition: "${line.item}".`, 400);
       await client.query('INSERT INTO requisition_items (requisition_id, item_id, qty) VALUES ($1,$2,$3)', [
         reqId,
@@ -111,9 +112,18 @@ const create = asyncHandler(async (req, res) => {
 // POST /api/requisitions/:id/submit
 const submit = asyncHandler(async (req, res) => {
   const result = await withTransaction(async (client) => {
-    const { rows } = await client.query('SELECT status, sr_ref FROM requisitions WHERE id = $1 FOR UPDATE', [req.params.id]);
+    const { rows } = await client.query(
+      `SELECT r.status, r.sr_ref, r.department, r.requested_by, dh.id AS department_head_id
+       FROM requisitions r
+       LEFT JOIN users dh ON dh.role = 'Department Head' AND dh.department = r.department AND dh.active = TRUE
+       WHERE r.id = $1 FOR UPDATE OF r`,
+      [req.params.id]
+    );
     const reqDoc = rows[0];
     if (!reqDoc) throw new AppError('Requisition not found.', 404);
+    if (req.user.role === 'Department Head' && reqDoc.department !== req.user.department && reqDoc.requested_by !== req.user.name) {
+      throw new AppError('You can only submit requisitions from your department.', 403);
+    }
     if (!['Draft', 'Pending', 'Returned for Correction'].includes(reqDoc.status)) {
       throw new AppError(`Cannot submit requisition in status: ${reqDoc.status}`, 400);
     }
@@ -121,9 +131,10 @@ const submit = asyncHandler(async (req, res) => {
     await logAudit(client, { userName: req.user.name, action: `Submitted requisition ${reqDoc.sr_ref}`, module: 'Store Requisition' });
 
     await notify(client, {
-      role: 'Property Administration Officer',
+      userId: req.user.role === 'Department Head' ? undefined : (reqDoc.department_head_id || undefined),
+      role: req.user.role === 'Department Head' || !reqDoc.department_head_id ? 'Property Administration Officer' : undefined,
       title: 'Requisition Submitted',
-      message: `Requisition ${reqDoc.sr_ref} has been submitted and requires approval.`,
+      message: `Requisition ${reqDoc.sr_ref} from ${reqDoc.department} has been submitted and requires approval.`,
       type: 'info',
       route: `/requisitions/${req.params.id}`,
       entityType: 'requisition',
@@ -143,6 +154,16 @@ const decide = asyncHandler(async (req, res) => {
   }
 
   await withTransaction(async (client) => {
+    if (req.user.role === 'Department Head') {
+      const { rows } = await client.query('SELECT department, requested_by FROM requisitions WHERE id = $1 FOR UPDATE', [req.params.id]);
+      if (!rows[0]) throw new AppError('Requisition not found.', 404);
+      if (rows[0].department !== req.user.department) {
+        throw new AppError('You can only approve requisitions from your department.', 403);
+      }
+      if (rows[0].requested_by === req.user.name) {
+        throw new AppError('You cannot approve a requisition that you created yourself.', 403);
+      }
+    }
     await stockService.decideRequisition(client, { requisitionId: req.params.id, decision, items, comments, actorName: req.user.name });
 
     const { rows } = await client.query('SELECT sr_ref FROM requisitions WHERE id = $1', [req.params.id]);
@@ -176,7 +197,11 @@ const decide = asyncHandler(async (req, res) => {
 });
 
 const remove = asyncHandler(async (req, res) => {
-  const { rows: check } = await query('SELECT status FROM requisitions WHERE id = $1', [req.params.id]);
+  const scope = req.user.role === 'Department Head' ? ' AND (department = $2 OR requested_by = $3)' : '';
+  const params = req.user.role === 'Department Head'
+    ? [req.params.id, req.user.department, req.user.name]
+    : [req.params.id];
+  const { rows: check } = await query(`SELECT status FROM requisitions WHERE id = $1${scope}`, params);
   if (!check[0]) throw new AppError('Requisition not found.', 404);
   if (!['Draft', 'Pending'].includes(check[0].status)) throw new AppError('Cannot delete a requisition that has already been processed.', 400);
 

@@ -14,7 +14,8 @@ export function buildNotifications(user, data) {
     returns = [],
     transfers = [],
     disposals = [],
-    vouchers = []
+    vouchers = [],
+    stockTaking = []
   } = data
 
   const notes = []
@@ -23,12 +24,17 @@ export function buildNotifications(user, data) {
 
   const lowStock = items.filter((i) => Number(i.qtyOnHand) <= Number(i.reorderLevel))
   const pendingReqs = reqs.filter((r) => [STATUS.PENDING, 'Submitted', 'Returned for Correction'].includes(r.status))
-  const pendingGrns = grns.filter((g) => [STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(g.status))
+  const pendingGrns = grns.filter((g) => [
+    STATUS.PENDING,
+    'Submitted',
+    'Pending Evaluation',
+    STATUS.UNDER_EVALUATION
+  ].includes(g.status))
   const pendingDisposals = disposals.filter((d) => [STATUS.PENDING, STATUS.APPROVED].includes(d.status))
   const pendingTransfers = transfers.filter((t) => ![STATUS.COMPLETED, STATUS.CANCELLED, STATUS.REJECTED].includes(t.status))
   const pendingReturns = returns.filter((r) => [STATUS.SUBMITTED, STATUS.PENDING, STATUS.UNDER_EVALUATION].includes(r.status))
   const approvedAwaitingIssue = reqs.filter((r) => r.status === STATUS.APPROVED)
-  const pendingGateIn = grns.filter((g) => !g.gateVerified && g.status === 'GRN Generated')
+  const pendingGateIn = grns.filter((g) => !g.gateVerified && ['Submitted', 'Pending Evaluation', 'Under Evaluation', 'Accepted', 'Partially Accepted', 'Rejected', 'GRN Generated', 'Posted'].includes(g.status))
 
   function push(id, title, message, type, route, timestamp) {
     notes.push({ id, title, message, type, route, timestamp: timestamp || new Date(), read: false })
@@ -198,6 +204,35 @@ export function buildNotifications(user, data) {
           g.receivedDate
         )
       })
+      grns
+        .filter((g) => ['Accepted', 'Partially Accepted'].includes(g.status))
+        .slice(0, 6)
+        .forEach((g) => {
+          push(
+            `grn-accepted-${g.id}`,
+            'Goods Receipt Accepted',
+            `${g.grnRef} at ${g.store} was accepted by TEC. Generate the official GRN and post stock.`,
+            'success',
+            '/goods-receipt',
+            g.receivedDate
+          )
+        })
+      pendingTransfers
+        .filter((t) => !userStore || t.fromStore === userStore || t.toStore === userStore)
+        .filter((t) => ['Approved', 'Dispatched'].includes(t.status))
+        .slice(0, 6)
+        .forEach((t) => {
+          push(
+            `transfer-${t.id}`,
+            t.status === 'Dispatched' ? 'Transfer Ready to Receive' : 'Transfer Approved',
+            t.status === 'Dispatched'
+              ? `${t.transferRef}: ${t.fromStore} → ${t.toStore} was dispatched and is ready to receive`
+              : `${t.transferRef}: ${t.fromStore} → ${t.toStore} is approved and ready to dispatch`,
+            t.status === 'Dispatched' ? 'info' : 'success',
+            '/material-transfer',
+            t.date
+          )
+        })
       approvedAwaitingIssue.slice(0, 6).forEach((r) => {
         push(
           `issue-${r.id}`,
@@ -218,9 +253,35 @@ export function buildNotifications(user, data) {
           r.date
         )
       })
+      returns
+        .filter((r) => r.status === 'Approved')
+        .slice(0, 6)
+        .forEach((r) => {
+          push(
+            `return-approved-${r.id}`,
+            'Material Return Approved',
+            `${r.srnRef} was approved by the Store Head. Receive it and return it to stock.`,
+            'success',
+            '/material-return',
+            r.date
+          )
+        })
       break
 
     case ROLES.STOCK_CLERK:
+      stockTaking
+        .filter((s) => ['Draft', 'Submitted', 'Approved'].includes(s.status))
+        .slice(0, 6)
+        .forEach((session) => {
+          push(
+            `stock-taking-${session.id}`,
+            session.status === 'Draft' ? 'Stock Count In Progress' : session.status === 'Submitted' ? 'Stock Count Submitted' : 'Stock Count Approved',
+            `${session.sessionRef} at ${session.store} requires stock-control attention.`,
+            session.status === 'Submitted' ? 'warning' : 'info',
+            '/stock-taking',
+            session.countDate
+          )
+        })
       lowStock.slice(0, 6).forEach((item) => {
         push(
           `lowstock-${item.id}`,
@@ -234,7 +295,7 @@ export function buildNotifications(user, data) {
       break
 
     case ROLES.TEC:
-      grns.filter((g) => g.status === STATUS.UNDER_EVALUATION).slice(0, 6).forEach((g) => {
+      grns.filter((g) => [STATUS.UNDER_EVALUATION, 'Pending Evaluation'].includes(g.status)).slice(0, 6).forEach((g) => {
         push(
           `eval-grn-${g.id}`,
           'Technical Evaluation',
@@ -248,7 +309,7 @@ export function buildNotifications(user, data) {
 
     case ROLES.DEPT_HEAD:
       reqs
-        .filter((r) => r.status === STATUS.PENDING && r.department === userDept && r.requestedBy !== user.name)
+        .filter((r) => [STATUS.PENDING, 'Submitted'].includes(r.status) && r.department === userDept && r.requestedBy !== user.name)
         .slice(0, 6)
         .forEach((r) => {
           push(

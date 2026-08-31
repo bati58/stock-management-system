@@ -125,7 +125,9 @@ router.get('/bin-cards/:id/movements', requireRole('bin-cards'), binCardsControl
 router.get('/stock-taking', requireRole('stock-taking'), stockTakingController.list);
 router.get('/stock-taking/:id', requireRole('stock-taking'), stockTakingController.getOne);
 router.post('/stock-taking', requireRole('stock-taking'), stockTakingController.create);
+router.put('/stock-taking/:id', requireRole('stock-taking'), stockTakingController.update);
 router.post('/stock-taking/:id/submit', requireRole('stock-taking'), stockTakingController.submit);
+router.post('/stock-taking/:id/request-recount', requireRole('stock-taking-recount', 'action'), stockTakingController.requestRecount);
 router.post('/stock-taking/:id/approve', requireRole('stock-taking', 'action'), stockTakingController.approve);
 router.post('/stock-taking/:id/post', requireRole('stock-taking-post', 'action'), stockTakingController.post);
 router.get('/reconciliation', requireRole('reconciliation'), stockTakingController.reconciliation);
@@ -164,6 +166,7 @@ router.get('/material-returns/:id', requireRole('material-returns'), materialRet
 router.post('/material-returns', requireRole('material-returns'), materialReturnsController.create);
 router.post('/material-returns/:id/submit', requireRole('material-returns'), materialReturnsController.submit);
 router.post('/material-returns/:id/approve', requireRole('material-returns', 'action'), materialReturnsController.decide);
+router.post('/material-returns/:id/receive', requireRole('material-returns-receive', 'action'), materialReturnsController.receive);
 router.delete('/material-returns/:id', requireRole('material-returns'), materialReturnsController.remove);
 
 // ---------------------------------------------------------------------------
