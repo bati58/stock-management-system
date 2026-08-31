@@ -695,45 +695,17 @@ export default function Dashboard() {
       <Card title="System Overview" subtitle="Current master-data and account totals" className="mb-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {renderStatCardLink('/users', 'Total Users', summary?.systemOverview?.totalUsers ?? (loading ? '—' : 0), Landmark, 'brand', 'All user accounts')}
-          {renderStatCardLink('/users', 'Active Users', summary?.systemOverview?.activeUsers ?? (loading ? '—' : 0), CheckCircle2, 'success', 'Currently enabled')}
-          {renderStatCardLink('/users', 'Inactive Users', summary?.systemOverview?.inactiveUsers ?? (loading ? '—' : 0), XCircle, 'danger', 'Currently disabled')}
-          {renderStatCardLink('/users', 'Pending User Activations', summary?.systemOverview?.pendingUserActivations ?? (loading ? '—' : 0), ShieldCheck, 'warning', 'Awaiting activation')}
           {renderStatCardLink('/stores', 'Total Stores', summary?.systemOverview?.totalStores ?? (loading ? '—' : 0), Boxes, 'success', 'Registered stores')}
-          {renderStatCardLink('/departments', 'Total Departments', summary?.systemOverview?.totalDepartments ?? (loading ? '—' : 0), ClipboardList, 'brand', 'Registered departments')}
-          {renderStatCardLink('/suppliers', 'Total Suppliers', summary?.systemOverview?.totalSuppliers ?? (loading ? '—' : 0), FileText, 'info', 'Registered suppliers')}
-          {renderStatCardLink('/users', 'Total Roles', summary?.systemOverview?.totalRoles ?? (loading ? '—' : 0), ShieldCheck, 'info', 'Roles in use')}
+          {renderStatCardLink('/items', 'Total Items', summary?.systemOverview?.totalItems ?? (loading ? '—' : 0), PackageCheck, 'warning', 'Inventory catalog')}
+          {renderStatCardLink('/items', 'Inventory Value', !summary ? '—' : formatCurrency(summary.totalInventoryValue || 0), Coins, 'success', 'Current stock value')}
         </div>
       </Card>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {renderStatCardLink('/items', 'Total Items', summary?.systemOverview?.totalItems ?? (loading ? '—' : 0), PackageCheck, 'warning', 'Inventory catalog')}
-        {renderStatCardLink('/categories', 'Total Categories', summary?.systemOverview?.totalCategories ?? (loading ? '—' : 0), Tags, 'brand', 'Active categories')}
-        {renderStatCardLink('/locations', 'Total Locations', summary?.systemOverview?.totalLocations ?? (loading ? '—' : 0), MapPinned, 'info', 'Storage locations')}
-        {renderStatCardLink('/items', 'Inventory Value', !summary ? '—' : formatCurrency(summary.totalInventoryValue || 0), Coins, 'success', 'Current stock value')}
-      </div>
-
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {renderStatCardLink('/goods-receipt', 'Pending Goods Receipts', !summary ? '—' : summary.pendingGoodsReceipts || 0, PackageCheck, 'info', 'Awaiting evaluation')}
-        {renderStatCardLink('/goods-receipt/evaluation', 'Pending Technical Evaluations', summary?.systemOverview?.pendingTechnicalEvaluations ?? (loading ? '—' : 0), ClipboardCheck, 'warning', 'Awaiting technical review')}
-        {renderStatCardLink('/grn-documents', 'Pending GRNs', summary?.systemOverview?.pendingGrns ?? (loading ? '—' : 0), FileText, 'brand', 'GRN documents to post')}
         {renderStatCardLink('/requisitions', 'Pending Requisitions', !summary ? '—' : summary.pendingRequisitions || 0, FileText, 'success', 'Awaiting approval')}
         {renderStatCardLink('/issue-vouchers', 'Pending SIV Approvals', summary?.systemOverview?.pendingSivApprovals ?? (loading ? '—' : 0), Send, 'warning', 'Issue vouchers in review')}
-        {renderStatCardLink('/material-return', 'Pending Returns', summary?.systemOverview?.pendingReturns ?? (loading ? '—' : 0), Undo2, 'info', 'Awaiting disposition')}
         {renderStatCardLink('/material-transfer', 'Pending Transfers', summary?.systemOverview?.pendingMaterialTransfers ?? (loading ? '—' : 0), Repeat, 'brand', 'Cross-store transfers in review')}
-        {renderStatCardLink('/stock-taking', 'Pending Stock-Taking', summary?.systemOverview?.pendingStockTaking ?? (loading ? '—' : 0), ClipboardList, 'danger', 'Counts awaiting closeout')}
-        {renderStatCardLink('/reconciliation', 'Pending Reconciliation', summary?.systemOverview?.pendingReconciliation ?? (loading ? '—' : 0), AlertTriangle, 'danger', 'Variances pending closure')}
-        {renderStatCardLink('/disposal', 'Pending Disposal Requests', summary?.systemOverview?.pendingDisposalRequests ?? (loading ? '—' : 0), Trash2, 'danger', 'Items awaiting disposal review')}
-        {renderStatCardLink('/gate-pass', 'Pending Gate Verification', summary?.systemOverview?.pendingGateVerification ?? (loading ? '—' : 0), ShieldCheck, 'warning', 'Materials waiting at the gate')}
-        {renderStatCardLink('/items', 'Low-Stock Items', !summary ? '—' : summary.itemsAtReorderLevel || 0, AlertTriangle, 'warning', 'Items at reorder threshold')}
-      </div>
-
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {renderStatCardLink('/items', 'Expiring Soon', summary?.systemOverview?.expiringItems ?? summary?.expiringItems ?? (loading ? '—' : 0), CalendarClock, 'warning', 'Items expiring within 30 days')}
-        {renderStatCardLink('/items', 'Expired Items', summary?.systemOverview?.expiredItems ?? summary?.expiredItems ?? (loading ? '—' : 0), XCircle, 'danger', 'Past expiry date')}
-        {renderStatCardLink('/items', 'Damaged Items', summary?.systemOverview?.damagedItems ?? (loading ? '—' : 0), AlertTriangle, 'danger', 'Condition flagged as damaged')}
-        {renderStatCardLink('/items', 'Quarantine Items', summary?.systemOverview?.quarantineItems ?? (loading ? '—' : 0), Shield, 'info', 'Items held for quarantine')}
-        {renderStatCardLink('/disposal', 'Disposal Flags', summary?.systemOverview?.disposalFlags ?? (loading ? '—' : 0), Trash2, 'warning', 'Open disposal flags')}
-        {renderStatCardLink('/audit-log', 'Failed Operations', summary?.systemOverview?.failedOperations ?? summary?.failedOperations ?? (loading ? '—' : 0), Shield, 'danger', 'Failed actions in the last 7 days')}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -832,94 +804,6 @@ export default function Dashboard() {
         {renderStatCardLink('/fixed-assets', 'Asset Portfolio', loading ? '—' : assetStats.total, Landmark, 'success', formatCurrency(assetStats.totalValue))}
       </div>
 
-      {/* ---- RECEIVING ---- */}
-      <Card title="Receiving & Evaluation" subtitle="Goods receipt workflow" className="mb-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {renderStatCardLink('/goods-receipt', 'Pending Receipts', loading ? '—' : grnsPendingTecEval.length, PackageCheck, 'warning', 'Awaiting TEC evaluation')}
-          {renderStatCardLink('/goods-receipt/evaluation', 'TEC Evaluations', loading ? '—' : grnsUnderReview.length, ClipboardCheck, 'info', 'Technical review in progress')}
-          {renderStatCardLink('/grn-documents', 'Accepted Awaiting GRN', loading ? '—' : grnsAcceptedAwaitingGrn.length, FileText, 'success', 'Ready to generate documents')}
-          {renderStatCardLink('/goods-receipt', 'Rejected', loading ? '—' : grnsRejected.length, XCircle, 'danger', 'Failed evaluation')}
-          {renderStatCardLink('/goods-receipt', 'Partial Acceptance', loading ? '—' : grnsPartiallyAccepted.length, PackageCheck, 'brand', 'Some lines rejected')}
-        </div>
-      </Card>
-
-      {/* ---- REQUISITIONS ---- */}
-      <Card title="Requisition Approvals" subtitle="Material request workflow" className="mb-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {renderStatCardLink('/requisitions', 'Pending Approval', loading ? '—' : pendingReqsForApproval.length, FileText, 'warning', 'Awaiting your decision')}
-          {renderStatCardLink('/requisitions', 'Approved', loading ? '—' : approvedReqsPending.length, CheckCircle2, 'success', 'Ready for issue')}
-          {renderStatCardLink('/issue-vouchers', 'Awaiting Issue', loading ? '—' : approvedReqsAwaitingIssue.length, Send, 'info', 'Approved but not issued')}
-          {renderStatCardLink('/requisitions', 'Partially Approved', loading ? '—' : partiallyApprovedReqs.length, PackageCheck, 'brand', 'Partial qty approved')}
-          {renderStatCardLink('/requisitions', 'Rejected', loading ? '—' : rejectedReqs.length, XCircle, 'danger', 'Not approved')}
-        </div>
-      </Card>
-
-      {/* ---- ISSUE VOUCHERS ---- */}
-      <Card title="Issue & Dispensing" subtitle="Stock issue workflow" className="mb-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {renderStatCardLink('/issue-vouchers', 'Preliminary SIVs', loading ? '—' : sivsPreliminary.length, FileText, 'info', 'Awaiting approval')}
-          {renderStatCardLink('/issue-vouchers', 'Awaiting Finalization', loading ? '—' : sivsApprovedPending.length, ClipboardCheck, 'warning', 'Approved but not posted')}
-          {renderStatCardLink('/issue-vouchers', 'Posted', loading ? '—' : sivsPosted.length, CheckCircle2, 'success', 'Completed')}
-        </div>
-      </Card>
-
-      {/* ---- MATERIAL RETURNS ---- */}
-      <Card title="Returns Processing" subtitle="Material return workflow" className="mb-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {renderStatCardLink('/material-return', 'Pending Returns', loading ? '—' : pendingReturns.length, Undo2, 'warning', 'Submitted or under review')}
-          {renderStatCardLink('/material-return', 'Awaiting Approval', loading ? '—' : returnsAwaitingApproval.length, ClipboardCheck, 'info', 'Pending your decision')}
-          {renderStatCardLink('/material-return', 'Approved', loading ? '—' : returnsApproved.length, CheckCircle2, 'success', 'Return accepted')}
-        </div>
-      </Card>
-
-      {/* ---- MATERIAL TRANSFERS ---- */}
-      <Card title="Inter-Store Transfers" subtitle="Material transfer workflow" className="mb-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {renderStatCardLink('/material-transfer', 'Pending Approval', loading ? '—' : transfersPending.length + transfersAwaitingApproval.length, ClipboardCheck, 'warning', 'Awaiting your decision')}
-          {renderStatCardLink('/material-transfer', 'Approved Pending Dispatch', loading ? '—' : transfersApprovedPending.length, TrendingUp, 'info', 'Ready for dispatch')}
-          {renderStatCardLink('/material-transfer', 'All Transfers', loading ? '—' : transfers.length, Repeat, 'brand', 'Total in system')}
-        </div>
-      </Card>
-
-      {/* ---- STOCK CONTROL & RECONCILIATION ---- */}
-      <Card title="Stock Control" subtitle="Inventory accuracy & reconciliation" className="mb-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {renderStatCardLink('/stock-taking', 'Open Sessions', loading ? '—' : '—', ClipboardList, 'info', 'Active stock-taking')}
-          {renderStatCardLink('/reconciliation', 'Open Variances', loading ? '—' : openReconcilationItems.length, AlertTriangle, 'warning', 'Discrepancies pending closure')}
-          {renderStatCardLink('/reconciliation', 'Significant Variances', loading ? '—' : significantVariances.length, AlertTriangle, 'danger', 'Major discrepancies (>5 units)')}
-        </div>
-      </Card>
-
-      {/* ---- FIXED ASSETS ---- */}
-      <Card title="Fixed Assets" subtitle="Asset registration & management" className="mb-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {renderStatCardLink('/fixed-assets', 'Total Assets', loading ? '—' : assetStats.total, Landmark, 'brand', formatCurrency(assetStats.totalValue))}
-          {renderStatCardLink('/fixed-assets', 'Unregistered', loading ? '—' : unregisteredAssets.length, AlertTriangle, 'warning', 'Awaiting registration')}
-          {renderStatCardLink('/fixed-assets', 'Assigned', loading ? '—' : assignedAssets.length, CheckCircle2, 'success', 'In use')}
-          {renderStatCardLink('/fixed-assets', 'Unassigned', loading ? '—' : unassignedAssets.length, FileText, 'info', 'Available')}
-        </div>
-      </Card>
-
-      {/* ---- DISPOSAL REQUESTS ---- */}
-      <Card title="Disposal Management" subtitle="Asset and material disposal" className="mb-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {renderStatCardLink('/disposal', 'Flagged Items', loading ? '—' : disposalsFlagged.length, Trash2, 'brand', 'Initial flags')}
-          {renderStatCardLink('/disposal', 'Pending Review', loading ? '—' : disposalsPendingReview.length, ClipboardList, 'info', 'Awaiting your review')}
-          {renderStatCardLink('/disposal', 'Awaiting Approval', loading ? '—' : disposalsAwaitingApproval.length, ClipboardCheck, 'warning', 'Ready for your decision')}
-        </div>
-      </Card>
-
-      {/* ---- EXCEPTIONS & ALERTS ---- */}
-      <Card title="Inventory Exceptions" subtitle="Stock conditions requiring attention" className="mb-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {renderStatCardLink('/items', 'Low Stock', loading ? '—' : lowStock.length, AlertTriangle, 'warning', 'At reorder level')}
-          {renderStatCardLink('/items', 'Expiring Soon', loading ? '—' : expiringItems.length, CalendarClock, 'warning', 'Within 90 days')}
-          {renderStatCardLink('/items', 'Expired', loading ? '—' : expiredItems.length, XCircle, 'danger', 'Past expiry')}
-          {renderStatCardLink('/items', 'Damaged', loading ? '—' : damagedItems.length, Shield, 'danger', 'Condition flagged')}
-          {renderStatCardLink('/items', 'Quarantine', loading ? '—' : quarantinedItems.length, AlertTriangle, 'info', 'On hold')}
-        </div>
-      </Card>
-
       {/* ---- APPROVAL QUEUE ---- */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card title="Awaiting Your Approval" subtitle="Newest items first" className="lg:col-span-1">
@@ -988,11 +872,7 @@ export default function Dashboard() {
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {renderStatCardLink('/goods-receipt', 'Receipts Awaiting Review', loading ? '—' : storeFilteredGrns.filter((g) => g.status === GRN_STATUS.SUBMITTED).length, PackageCheck, 'warning', 'Needs store-head decision')}
         {renderStatCardLink('/goods-receipt/evaluation', 'Receipts Awaiting TEC', loading ? '—' : storeFilteredGrns.filter((g) => [GRN_STATUS.PENDING_EVAL, GRN_STATUS.UNDER_EVAL].includes(g.status)).length, ClipboardCheck, 'info', 'Technical evaluation queue')}
-        {renderStatCardLink('/goods-receipt', 'Evaluations Completed', loading ? '—' : storeFilteredGrns.filter((g) => [GRN_STATUS.ACCEPTED, GRN_STATUS.PARTIALLY_ACCEPTED, GRN_STATUS.REJECTED].includes(g.status)).length, CheckCircle2, 'success', 'Latest review outcomes')}
-        {renderStatCardLink('/goods-receipt', 'Receipts Awaiting GRN', loading ? '—' : storeFilteredGrns.filter((g) => [GRN_STATUS.ACCEPTED, GRN_STATUS.PARTIALLY_ACCEPTED].includes(g.status)).length, FileText, 'brand', 'Ready for official GRN')}
-        {renderStatCardLink('/items', 'Items at Reorder Level', loading ? '—' : storeFilteredLowStock.length, AlertTriangle, 'warning', isStoreScoped ? `${userStore} store` : 'Company-wide view')}
         {renderStatCardLink('/requisitions', 'Pending Requisitions', loading ? '—' : pendingReqs.filter((r) => (isStoreScoped ? r.store === userStore : true)).length, FileText, 'brand', isStoreScoped ? 'Targeting your store' : 'Current overview')}
-        {renderStatCardLink('/issue-vouchers', 'Approved Reqs Awaiting Issue', loading ? '—' : approvedReqsAwaitingIssue.length, Send, 'success', 'Convert to issue voucher')}
         {renderStatCardLink('/material-transfer', 'Transfers Pending Approval', loading ? '—' : transfers.filter((t) => [TRANSFER_STATUS.SUBMITTED, TRANSFER_STATUS.PENDING_APPROVAL].includes(t.status) && (isStoreScoped ? [t.fromStore, t.toStore].includes(userStore) : true)).length, Repeat, 'info', 'Store-to-store review queue')}
       </div>
 
@@ -1073,26 +953,20 @@ export default function Dashboard() {
 
   const renderStorekeeper = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Stock on Hand" value={loading ? '—' : formatNumber(stockOnHandQty)} icon={Boxes} tone="brand" hint="Total units across catalog" />
         {renderStatCardLink('/goods-receipt', 'Pending Receipts', loading ? '—' : pendingGrns.length, PackageCheck, 'info', 'Needs action')}
         {renderStatCardLink('/issue-vouchers', 'Pending Issues', loading ? '—' : pendingSivApprovals.length, Send, 'warning', 'Issue vouchers in progress')}
         {renderStatCardLink('/material-transfer', 'Approved Transfers', loading ? '—' : readyForDispatchTransfers.length, Repeat, 'success', 'Ready to dispatch/receive')}
-        {renderStatCardLink('/material-return', 'Pending Returns', loading ? '—' : storekeeperPendingReturns.length, Undo2, 'info', 'Awaiting inspection or receipt')}
-        <StatCard label="Low Stock" value={loading ? '—' : lowStock.length} icon={AlertTriangle} tone="warning" hint="Replenishment watch" />
-        <StatCard label="Today's Transactions" value={loading ? '—' : todaysTransactions.length} icon={TrendingUp} tone="success" hint="Receipts & issues today" />
       </div>
 
-      <Card title="Quick Actions" subtitle="Operational links for daily storekeeping" className="mb-6">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {renderStatCardLink('/goods-receipt', 'Goods Receipt', loading ? '—' : pendingGrns.length, PackageCheck, 'info', 'Record and review receipts')}
-          {renderStatCardLink('/issue-vouchers', 'Issue Vouchers', loading ? '—' : pendingSivApprovals.length, Send, 'warning', 'Issue approved requests')}
-          {renderStatCardLink('/material-transfer', 'Store Transfers', loading ? '—' : readyForDispatchTransfers.length, Repeat, 'success', 'Dispatch/receive approved transfers')}
-          {renderStatCardLink('/material-return', 'Material Returns', loading ? '—' : storekeeperPendingReturns.length, Undo2, 'info', 'Inspect and receive returns')}
-          {renderStatCardLink('/stock-cards', 'Stock Cards', loading ? '—' : items.length, Archive, 'brand', 'Inventory history and balances')}
-          {renderStatCardLink('/stock-taking', 'Stock Taking', loading ? '—' : '—', ClipboardCheck, 'brand', 'Count and reconcile stock')}
-        </div>
-      </Card>
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {renderStatCardLink('/goods-receipt', 'Goods Receipt', loading ? '—' : pendingGrns.length, PackageCheck, 'info', 'Record and review receipts')}
+        {renderStatCardLink('/issue-vouchers', 'Issue Vouchers', loading ? '—' : pendingSivApprovals.length, Send, 'warning', 'Issue approved requests')}
+        {renderStatCardLink('/material-transfer', 'Store Transfers', loading ? '—' : readyForDispatchTransfers.length, Repeat, 'success', 'Dispatch/receive approved transfers')}
+        {renderStatCardLink('/stock-cards', 'Stock Cards', loading ? '—' : items.length, Archive, 'brand', 'Inventory history and balances')}
+        {renderStatCardLink('/stock-taking', 'Stock Taking', loading ? '—' : '—', ClipboardCheck, 'brand', 'Count and reconcile stock')}
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card title="To Do" subtitle="Action list for today" className="lg:col-span-2">
@@ -1143,13 +1017,10 @@ export default function Dashboard() {
 
   const renderStockClerk = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {renderStatCardLink('/stock-taking', 'Pending Counts', loading ? '—' : stockTaking.filter((s) => s.status === 'Draft').reduce((sum, s) => sum + (s.items || []).length, 0), ClipboardCheck, 'info', 'Continue physical counting')}
-        {renderStatCardLink('/stock-taking', 'Submitted Counts', loading ? '—' : stockTaking.filter((s) => s.status === 'Submitted').length, Send, 'warning', 'Awaiting review')}
         {renderStatCardLink('/reconciliation', 'Variances Detected', loading ? '—' : variances.length, ClipboardList, 'danger', 'Review stock discrepancies')}
         {renderStatCardLink('/stock-taking', 'Completed Sessions', loading ? '—' : stockTaking.filter((s) => s.status === 'Closed').length, CheckCircle2, 'success', 'Completed stock counts')}
-        <StatCard label="Items at Reorder Level" value={loading ? '—' : lowStock.length} icon={AlertTriangle} tone="warning" hint="Watch list" />
-        <StatCard label="Items Verified" value={loading ? '—' : stockTaking.reduce((sum, s) => sum + (s.items || []).length, 0)} icon={Boxes} tone="brand" hint="Counted line items" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -1207,12 +1078,8 @@ export default function Dashboard() {
 
   const renderTec = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
         {renderStatCardLink('/goods-receipt/evaluation', 'Pending Evaluations', loading ? '—' : pendingGrns.length, ClipboardCheck, 'warning', 'Awaiting your decision')}
-        <StatCard label="Under Review" value={loading ? '—' : grnsUnderReview.length} icon={ClipboardList} tone="info" hint="Currently being evaluated" />
-        <StatCard label="Approved" value={loading ? '—' : grnsApproved.length} icon={CheckCircle2} tone="success" hint="Accepted receipts" />
-        <StatCard label="Partially Accepted" value={loading ? '—' : grnsPartiallyAccepted.length} icon={PackageCheck} tone="info" hint="Some lines rejected" />
-        <StatCard label="Rejected" value={loading ? '—' : grnsRejected.length} icon={XCircle} tone="danger" hint="Failed evaluation" />
         <StatCard label="Evaluation History" value={loading ? '—' : grnsHistory.length} icon={History} tone="brand" hint="Completed evaluations" />
       </div>
 
@@ -1282,13 +1149,9 @@ export default function Dashboard() {
 
   const renderDeptHead = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="My Pending Requisitions" value={loading ? '—' : myDeptReqs.filter((r) => [REQUISITION_STATUS.SUBMITTED, REQUISITION_STATUS.PENDING].includes(r.status)).length} icon={ClipboardCheck} tone="info" hint="Submitted, awaiting outcome" />
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {renderStatCardLink('/requisitions', 'Awaiting Your Approval', loading ? '—' : pendingDeptApprovals.length, FileText, 'warning', 'Department requisitions')}
-        <StatCard label="Approved Requisitions" value={loading ? '—' : myDeptReqs.filter((r) => r.status === REQUISITION_STATUS.APPROVED).length} icon={CheckCircle2} tone="success" hint="Ready for issue" />
-        <StatCard label="Partially Fulfilled" value={loading ? '—' : myDeptReqs.filter((r) => r.status === REQUISITION_STATUS.PARTIALLY_APPROVED).length} icon={PackageCheck} tone="info" hint="Partially approved" />
-        <StatCard label="Rejected Requisitions" value={loading ? '—' : rejectedDeptReqs.length} icon={XCircle} tone="danger" hint="Department requests rejected" />
-        <StatCard label="Outstanding Requests" value={loading ? '—' : outstandingDeptReqs.length} icon={ClipboardList} tone="warning" hint="Not fully fulfilled" />
+        <StatCard label="My Pending Requisitions" value={loading ? '—' : myDeptReqs.filter((r) => [REQUISITION_STATUS.SUBMITTED, REQUISITION_STATUS.PENDING].includes(r.status)).length} icon={ClipboardCheck} tone="info" hint="Submitted, awaiting outcome" />
         {renderStatCardLink('/material-return', 'Pending Returns', loading ? '—' : myDeptReturns.filter((r) => [RETURN_STATUS.DRAFT, RETURN_STATUS.SUBMITTED, RETURN_STATUS.PENDING_REVIEW].includes(r.status)).length, Undo2, 'warning', 'Submitted by your team')}
         {renderStatCardLink('/user-cards', 'Assigned User Materials', loading ? '—' : userCards.filter((card) => card.status !== 'Returned').length, Boxes, 'brand', 'Materials assigned in your department')}
       </div>
@@ -1380,12 +1243,10 @@ export default function Dashboard() {
 
   const renderAccountant = () => (
     <>
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Inventory Value" value={loading ? '—' : formatCurrency(summary?.totalInventoryValue ?? totalValue)} icon={Boxes} tone="brand" />
         <StatCard label="Receipts Value" value={loading ? '—' : formatCurrency(receiptsValue)} icon={PackageCheck} tone="success" hint="Goods received (to date)" />
         <StatCard label="Issue Value" value={loading ? '—' : formatCurrency(issueValue)} icon={Send} tone="info" hint="Materials issued (to date)" />
-        <StatCard label="Return Value" value={loading ? '—' : formatCurrency(returnValue)} icon={Undo2} tone="warning" hint="Returned to stock (indicative)" />
-        <StatCard label="Adjustments" value={loading ? '—' : adjustmentsCount} icon={ClipboardList} tone="danger" hint="Adjustment transactions" />
         {renderStatCardLink('/reconciliation', 'Reconciliation Variances', loading ? '—' : variances.length, AlertTriangle, 'warning', 'Open variance items')}
       </div>
 
@@ -1433,12 +1294,9 @@ export default function Dashboard() {
   const renderSecurity = () => (
     <>
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {renderStatCardLink('/gate-pass', 'Gate Passes Today', gatePassesToday, ShieldCheck, 'brand', 'Approved entries and exits')}
         {renderStatCardLink('/gate-pass', 'Pending Verification', pendingGateVerification, AlertTriangle, 'warning', 'Waiting at the gate')}
+        {renderStatCardLink('/gate-pass', 'Gate Passes Today', gatePassesToday, ShieldCheck, 'brand', 'Approved entries and exits')}
         {renderStatCardLink('/gate-pass', 'Approved Passes', approvedGatePasses, CheckCircle2, 'success', 'Eligible for verification')}
-        {renderStatCardLink('/gate-pass', 'Rejected Passes', rejectedGateDocuments, XCircle, 'danger', 'Rejected source documents')}
-        {renderStatCardLink('/gate-pass', 'Completed Exits', completedExits, Send, 'info', 'Outgoing issue vouchers cleared')}
-        {renderStatCardLink('/gate-pass', 'Completed Entries', completedEntries, PackageCheck, 'success', 'Incoming deliveries verified')}
       </div>
 
       <Card title="Gate Pass Queue" subtitle="Verify materials at the gate before entry or exit" actions={<Link to="/gate-pass" className="text-sm font-medium text-brand-600 hover:text-brand-700">Open verification</Link>}>
